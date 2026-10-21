@@ -10,7 +10,7 @@ namespace UnityInvader.Editor
     public static class InvaderFormationSceneSetup
     {
         public const string TexturePath = "Assets/Sprites/Invader/InvaderSprites.png";
-        public const int CellWidth = 1086;
+        public const int CellWidth = 480;
         public const int CellHeight = 241;
         public static readonly string[] FrameNames =
             { "TopFrameA", "TopFrameB", "MiddleFrameA", "MiddleFrameB", "BottomFrameA", "BottomFrameB" };
@@ -51,7 +51,8 @@ namespace UnityInvader.Editor
                     name = name,
                     spriteID = existing.FirstOrDefault(rect => rect.name == name)?.spriteID ?? GUID.Generate(),
                     // Unity rects start at bottom-left. Exclude source bottom row y=0.
-                    rect = new Rect(index % 2 * CellWidth, 1 + (2 - index / 2) * CellHeight, CellWidth, CellHeight),
+                    rect = new Rect(index % 2 == 0 ? 540 : 1150,
+                        1 + (2 - index / 2) * CellHeight, CellWidth, CellHeight),
                     alignment = SpriteAlignment.Center,
                     pivot = new Vector2(0.5f, 0.5f)
                 };
@@ -73,7 +74,7 @@ namespace UnityInvader.Editor
             serialized.FindProperty("gameState").objectReferenceValue = state;
             serialized.FindProperty("spriteMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(
                 "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
-            serialized.FindProperty("cellDisplayScale").vector2Value = new Vector2(1f, CellWidth / (float)CellHeight);
+            serialized.FindProperty("cellDisplayScale").vector2Value = Vector2.one;
             var sprites = AssetDatabase.LoadAllAssetsAtPath(TexturePath).OfType<Sprite>().ToArray();
             var frames = serialized.FindProperty("frames");
             frames.arraySize = 6;
@@ -83,7 +84,7 @@ namespace UnityInvader.Editor
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             InvaderFormationVerification.Verify();
-            Debug.Log("INVADER_FORMATION_SETUP_PASS: six 1086x241 centered cells; bottom 1px excluded; Arcade connected.");
+            Debug.Log("INVADER_FORMATION_SETUP_PASS: six 480x241 centered rects; PPU 30; unit display scale; Arcade connected.");
         }
     }
 }

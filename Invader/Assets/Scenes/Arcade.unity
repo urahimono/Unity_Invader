@@ -460,7 +460,7 @@ MonoBehaviour:
   - {fileID: 1420704182, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   - {fileID: -1863489634, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
-  cellDisplayScale: {x: 1, y: 4.506224}
+  cellDisplayScale: {x: 1, y: 1}
 --- !u!4 &1597011361
 Transform:
   m_ObjectHideFlags: 0

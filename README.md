@@ -50,19 +50,22 @@ InvaderFormationは上1行Top、中2行Middle、下2行Bottomの5×11体を、�
 `InvaderFormationController` はモデルからSpriteRendererと表示座標を更新し、Transformをゲームルールに使いません。
 Playerの更新と入力処理は変更していません。
 
-指定素材 `Assets/Sprites/Invader/InvaderSprites.png` は画像を変更せず、最下部1pxを除く2172×723pxを使います。
-2列×3行の1086×241pxセルをTop A/B、Middle A/B、Bottom A/Bとして切り出し、全6枚でCenter Pivot・Full Rectを維持します。
-個別トリミングは行いません。PPU=67.875、共通表示スケール=(1,1086/241)で全セルを論理16×16pxとして扱います。
+指定素材 `Assets/Sprites/Invader/InvaderSprites.png` は画像を変更せず、最下部1pxを除く範囲から切り出します。
+全6枚のSprite Rectは480×241px、Center Pivot・Full Rectで統一します。
+A列のX=540、B列のX=1150、YはTop=483、Middle=242、Bottom=1です。
+白い絵の外接矩形による個別トリミングは行いません。PPU=30、共通表示スケール=(1,1)で
+アスペクト比を維持し、Sprite全体は論理16×約8.03pxになります。Formationの間隔・端判定は従来どおりです。
 importはSprite Multiple / Point / 圧縮なし / Mip Mapsなし / NPOTリサイズなし / 最大4096です。
 `Unity Invader > Configure Invader Formation` はUnity Editor APIでimport・slicing・Arcade接続を再適用します。
 既存のSprite IDは名前ごとに保持するため、再実行時も参照が維持されます。
 `Unity Invader > Verify Invader Formation Logic` は55体の構成、A/B同期、両端の下降反転、停止再開と
 30/60/120fps相当の20秒間の同一結果を検証し、既存Playerのロジック検証も実行します。
 batchでは `-executeMethod UnityInvader.Editor.InvaderFormationPlayVerification.Verify` で
-Bootstrap起動、表示参照、Playerの存在・表示、全非Playing Stateの停止・非表示を検証できます。
+Bootstrap起動、表示参照、480×241px矩形・Center Pivot・PPU 30・等倍表示、A/Bのみの交換での
+論理位置・表示位置の不変、Playerの存在・表示、全非Playing Stateの停止・非表示を検証できます。
 このPlay Mode検証は自らEditorを終了するため、`-quit`を付けず専用のbatchプロセスで実行してください。
 GUIではBootstrapからPlayし、3種類の行配置、A/Bの見た目、端での下降反転とPlayer左右移動を確認してください。
-最終的な見た目・素材内の黒余白・表示サイズの妥当性はGameビューでの確認事項です。
+縦長の歪みとA/B時の左右ぶれが解消した見た目・表示サイズの妥当性はGameビューでの確認事項です。
 
 Sceneは `Assets/Editor/ArcadeSceneSetup.cs` のUnity Editor APIで生成しています。
 `Unity Invader > Create Initial Scenes` はSceneが未作成の場合のみ使用できます。

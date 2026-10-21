@@ -30,8 +30,10 @@ namespace UnityInvader.Editor
             {
                 int index = Array.IndexOf(InvaderFormationSceneSetup.FrameNames, sprite.name);
                 Require(index >= 0, "Unexpected sprite name.");
-                Require(sprite.rect == new Rect(index % 2 * 1086, 1 + (2 - index / 2) * 241, 1086, 241), "Sprite rect mismatch.");
-                Require(sprite.pivot == new Vector2(543, 120.5f), "Centered pivot required.");
+                Require(sprite.rect == new Rect(index % 2 == 0 ? 540 : 1150,
+                    1 + (2 - index / 2) * 241, 480, 241), "Sprite rect mismatch.");
+                Require(sprite.pivot == new Vector2(240, 120.5f), "Centered pivot required.");
+                Require(sprite.pixelsPerUnit == 30, "PPU must be 30.");
             }
             EditorSceneManager.OpenScene("Assets/Scenes/Bootstrap.unity");
             // Preserve the callback across the Play Mode domain reload through InitializeOnLoadMethod.
@@ -71,6 +73,7 @@ namespace UnityInvader.Editor
                 else if (stage == 10)
                 {
                     CheckDisplay(true);
+                    VerifyFrameSwitch();
                     Require(player.GetComponent<SpriteRenderer>().enabled, "Player must remain visible in Playing.");
                     // Step the model to the opposite frame, then let the normal Update display it.
                     for (int tick = 0; tick < InvaderFormation.TicksPerStep; tick++) controller.Formation.Tick();
@@ -102,7 +105,7 @@ namespace UnityInvader.Editor
                 {
                     CheckDisplay(true);
                     Require(controller.Formation.StepCount > pausedStep, "Formation must resume in Playing.");
-                    Debug.Log("INVADER_FORMATION_PLAY_PASS: Bootstrap -> Arcade -> Playing; 55 renderers; six sprites/rects/pivots; synchronized display; Player present/visible; all five non-Playing states hidden/stopped; resume. Keyboard input requires GUI verification.");
+                    Debug.Log("INVADER_FORMATION_PLAY_PASS: Bootstrap -> Arcade -> Playing; 55 renderers; six 480x241 centered sprites; PPU 30; unit scale; A/B-only switching preserves logical/display positions; synchronized display; Player present/visible; all five non-Playing states hidden/stopped; resume. Keyboard input requires GUI verification.");
                     Finish(0);
                 }
             }
@@ -135,8 +138,35 @@ namespace UnityInvader.Editor
                 var expected = new Vector3(controller.Formation.X + slot.Column * 16 - 112,
                     controller.Formation.Y - slot.Row * 16 - 128, 0);
                 Require(renderer.transform.position == expected, "Logical-to-display position mismatch.");
+                Require(renderer.transform.localScale == Vector3.one && renderer.transform.lossyScale == Vector3.one,
+                    "Display must use unit scale without non-uniform stretching.");
                 Require(Mathf.Abs(renderer.bounds.size.x - 16) < 0.001f &&
-                    Mathf.Abs(renderer.bounds.size.y - 16) < 0.001f, "All displayed cells must be 16x16.");
+                    Mathf.Abs(renderer.bounds.size.y - 241f / 30f) < 0.001f, "Displayed rects must be 16 x 241/30.");
+            }
+        }
+
+        private static void VerifyFrameSwitch()
+        {
+            var sprites = AssetDatabase.LoadAllAssetsAtPath(InvaderFormationSceneSetup.TexturePath).OfType<Sprite>().ToArray();
+            var formation = controller.Formation;
+            int x = formation.X, y = formation.Y, step = formation.StepCount, direction = formation.Direction;
+            var renderers = controller.GetComponentsInChildren<SpriteRenderer>();
+            foreach (var slot in formation.Invaders)
+            {
+                var renderer = renderers[slot.Id];
+                var original = renderer.sprite;
+                var position = renderer.transform.position;
+                var boundsCenter = renderer.bounds.center;
+                foreach (int frame in new[] { 0, 1 })
+                {
+                    string name = InvaderFormationSceneSetup.FrameNames[(int)slot.Type * 2 + frame];
+                    renderer.sprite = sprites.Single(sprite => sprite.name == name);
+                    Require(renderer.transform.position == position && renderer.bounds.center == boundsCenter,
+                        "A/B-only switching must preserve display position and bounds center.");
+                    Require(formation.X == x && formation.Y == y && formation.StepCount == step && formation.Direction == direction,
+                        "A/B-only switching must not change logical formation state.");
+                }
+                renderer.sprite = original;
             }
         }
 

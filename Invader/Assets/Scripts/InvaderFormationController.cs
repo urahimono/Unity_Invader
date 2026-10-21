@@ -8,7 +8,7 @@ namespace UnityInvader
         // Top A/B, Middle A/B, Bottom A/B.
         [SerializeField] private Sprite[] frames = new Sprite[6];
         [SerializeField] private Material spriteMaterial;
-        // The source cells are wide; every frame uses this same display scale.
+        // Preserve the source aspect ratio with the same unit scale for every frame.
         [SerializeField] private Vector2 cellDisplayScale = Vector2.one;
         private SpriteRenderer[] renderers;
         private readonly InvaderFormationSimulation simulation = new InvaderFormationSimulation();
