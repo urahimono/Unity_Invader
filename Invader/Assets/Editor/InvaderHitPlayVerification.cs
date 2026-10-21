@@ -15,11 +15,15 @@ namespace UnityInvader.Editor
         private static int stage, stateIndex, shotX, initialPlayerX, pausedX, pausedY, pausedStep, heldStep;
         private static double deadline, nextCheck;
         private static PlayerController player;
+        private static PlayingController playing;
         private static InvaderFormationController formation;
         private static GameStateController state;
         private static SpriteRenderer shotRenderer;
         private static Keyboard keyboard;
         private static InputSettings settings;
+        private static int steppedFrames, lastFrame, clockStartX, clockStartY, clockStartStep;
+        private static double steppedTime;
+        private static PlayingClockProbe clockProbe;
         private static InputSettings.BackgroundBehavior backgroundBehavior;
         private static InputSettings.EditorInputBehaviorInPlayMode editorBehavior;
         private static readonly GameState[] PausedStates = {
@@ -57,6 +61,9 @@ namespace UnityInvader.Editor
                     player = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
                     formation = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
                     state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
+                    var drivers = UnityEngine.Object.FindObjectsByType<PlayingController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                    Require(drivers.Length == 1 && drivers[0].isActiveAndEnabled, "Arcade must have exactly one enabled PlayingController.");
+                    playing = drivers[0];
                     Require(player != null && formation != null && state != null, "Arcade components missing.");
                     if (state.CurrentState != GameState.Playing) return;
                     Require(ReferenceEquals(player.Player, state.Playing.Player) && ReferenceEquals(player.Shot, state.Playing.Shot) &&
@@ -149,11 +156,65 @@ namespace UnityInvader.Editor
                     stage = 9;
                     nextCheck = EditorApplication.timeSinceStartup + 0.05;
                 }
-                else
+                else if (stage == 9)
                 {
                     Require(state.CurrentState == GameState.Playing && formation.Formation.AliveCount == 0 && state.Playing.Score == 10,
                         "Zero alive must not trigger WaveClear, reset Score or spawn another wave.");
                     CheckFormationDisplay(true);
+                    // Editor stepping uses its own delta; compare every frame with its actual elapsed time.
+                    EditorApplication.isPaused = true;
+                    playing.enabled = false; // Discard partial accumulated time for an exact reference.
+                    playing.enabled = true;
+                    InvaderHitVerification.PrepareShot(state.Playing, player.Player.X, 32);
+                    player.enabled = false;
+                    Require(!player.GetComponent<SpriteRenderer>().enabled && !shotRenderer.enabled, "Disabling the view must hide its renderers.");
+                    clockStartX = player.Player.X;
+                    clockStartY = player.Shot.Y;
+                    clockStartStep = formation.Formation.StepCount;
+                    steppedFrames = 0;
+                    steppedTime = 0;
+                    clockProbe = new PlayingClockProbe();
+                    stage = 10;
+                    StepFrame();
+                }
+                else if (stage == 10 || stage == 11)
+                {
+                    if (clockProbe.Frames == lastFrame) return;
+                    Require(clockProbe.Frames == lastFrame + 1, "Each Editor step must complete exactly one rendered frame.");
+                    steppedFrames++;
+                    if (stage == 10)
+                    {
+                        steppedTime = clockProbe.Elapsed;
+                        int expectedTicks = (int)System.Math.Floor((steppedTime + 1e-12) / PlayingSimulation.TickDuration);
+                        Require(clockStartY + expectedTicks * PlayerShot.SpeedPerTick < PlayerModel.ScreenHeight,
+                            "Clock test requires Shot to remain within the screen.");
+                        Require(player.Shot.Active && player.Shot.Y == clockStartY + expectedTicks * PlayerShot.SpeedPerTick,
+                            $"Frame {steppedFrames}: exactly one Advance per frame expected; elapsed={steppedTime}; ticks={expectedTicks}; ShotY={player.Shot.Y}.");
+                    }
+                    if (steppedFrames < 20)
+                    {
+                        StepFrame();
+                        return;
+                    }
+                    if (stage == 10)
+                    {
+                        Require(formation.Formation.StepCount > clockStartStep,
+                            "Formation must advance even with PlayerController disabled.");
+                        playing.enabled = false;
+                        player.enabled = true;
+                        clockStartX = player.Player.X;
+                        clockStartY = player.Shot.Y;
+                        clockStartStep = formation.Formation.StepCount;
+                        steppedFrames = 0;
+                        stage = 11;
+                        StepFrame();
+                        return;
+                    }
+                    Require(player.Player.X == clockStartX && player.Shot.Y == clockStartY && formation.Formation.StepCount == clockStartStep,
+                        "Enabled views must not advance the simulation when PlayingController is disabled.");
+                    Require(player.GetComponent<SpriteRenderer>().enabled && player.transform.position == new Vector3(player.Player.X - 112, player.Player.Y - 128, 0),
+                        "Player display must still synchronize while the clock is disabled.");
+                    Debug.Log("PLAYING_CONTROLLER_CLOCK_PASS: exactly one driver; each of 20 rendered frames matches one Advance of actual deltaTime with Player view disabled; 20 frames frozen with driver disabled and views enabled.");
                     Debug.Log("INVADER_HIT_PLAY_PASS: Bootstrap -> Arcade -> Playing; one shared simulation; virtual Space/arrow input through controllers; fixed Shot X; one Bottom hit/Score 10; Dead renderer hidden with all 55 objects retained; Shot hidden; held Fire/release/re-press; movement continues; all five non-Playing states stop/hide/preserve; resume; zero alive stays Playing.");
                     Finish(0);
                 }
@@ -163,6 +224,12 @@ namespace UnityInvader.Editor
                 Debug.LogException(exception);
                 Finish(1);
             }
+        }
+
+        private static void StepFrame()
+        {
+            lastFrame = clockProbe.Frames;
+            EditorApplication.Step();
         }
 
         private static void Pause()
@@ -198,12 +265,14 @@ namespace UnityInvader.Editor
         {
             SessionState.SetBool(SessionKey, false);
             EditorApplication.update -= Check;
+            clockProbe?.Dispose();
             if (keyboard != null && keyboard.added) InputSystem.RemoveDevice(keyboard);
             if (settings != null)
             {
                 settings.backgroundBehavior = backgroundBehavior;
                 settings.editorInputBehaviorInPlayMode = editorBehavior;
             }
+            EditorApplication.isPaused = false;
             EditorApplication.Exit(code);
         }
 

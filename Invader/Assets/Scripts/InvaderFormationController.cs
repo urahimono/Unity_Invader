@@ -29,7 +29,7 @@ namespace UnityInvader
             ApplyDisplay();
         }
 
-        // PlayerController advances the shared PlayingSimulation in Update.
+        // PlayingController advances the shared PlayingSimulation in Update.
         private void LateUpdate()
         {
             ApplyDisplay();

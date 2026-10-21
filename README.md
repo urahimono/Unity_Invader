@@ -20,13 +20,15 @@ Arcadeの `GameState` オブジェクトにある `GameStateController` が現�
 本来の開始遷移や各Stateのルール、WaveClear / 次Wave、Score HUDはまだ実装していません。
 
 Player移動の確認はBootstrapからPlayし、Gameビューにフォーカスして左右矢印キーを押してください。
-ArcadeのPlayerにある `Development Start Playing` が、開発確認用にGameStateをPlayingへ変更します。
+ArcadeのGameStateにある `PlayingController` の `Development Start Playing` が、開発確認用にGameStateをPlayingへ変更します。
 本来のAttract / Credit / PlayerReady遷移ではありません。このフラグを無効にすればAttractのまま開始します。
 Playing以外ではPlayerの移動を更新せず、Spriteも非表示にします。左右同時押しはRight優先で右へ移動します。
 
 `PlayerInputReader` がInput SystemのLeft / Right / Fireボタンをboolの `PlayerInputState` に変換します。
 Unity非依存の `PlayingSimulation` はフレーム時間を蓄積して1/60秒ごとにPlayer・Shot・Formation・Collisionを処理します。
-`GameStateController.Playing` が共通モデルを保持し、`PlayerController.Update` が入力を渡して一度だけ時間を進めます。
+`GameStateController.Playing` が共通モデルを保持し、`PlayingController` が `PlayerInputReader` を所有します。
+`PlayingController.Update` だけが入力を渡し、1描画フレームにつき1回だけ時間を進めます。
+Player / Shot / FormationのControllerはLateUpdateで表示だけを同期し、入力・時計・State遷移を担当しません。
 Playing以外では蓄積時間を破棄し、再開時の追いつき移動を防ぎます。
 速度は暫定で1論理ピクセル/tick（60ピクセル/秒）、初期位置は(112, 24)、X範囲は8〜216です。
 原作の厳密な速度・左右端位置の再現は後続工程です。
@@ -119,6 +121,9 @@ AliveCountが0でもPlayingのままです。WaveClearと次Wave（Issue #8）�
 `-executeMethod UnityInvader.Editor.InvaderHitPlayVerification.Verify` はBootstrapから起動し、
 仮想KeyboardのSpace/左右キーを実際のControllerへ渡して命中・表示・release待ち・再発射、
 非Playing停止/非表示・再開、AliveCount=0でPlaying維持を検証します。
+Play検証では単一PlayingControllerを確認し、Player表示を無効にした20描画フレームの各フレームで実測deltaTimeの1回分だけ進むことと、
+PlayingControllerを無効にすると表示側だけでは進まないことも検証します。
+`Unity Invader > Configure Playing Controller` はUnity Editor APIでArcadeのGameStateへ専用Controllerを接続します。
 Play検証は自身でEditorを終了するため、専用batchで`-quit`を付けず実行してください。
 GUIでは狙ったInvaderとShotだけが消えること、残った編隊の移動・A/B同期・下降反転、
 左右移動と押しっぱなし禁止・release後再発射を確認してください。Scoreは `GameStateController.Playing.Score` で取得できます。

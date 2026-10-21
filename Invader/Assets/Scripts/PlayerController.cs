@@ -6,10 +6,6 @@ namespace UnityInvader
     {
         [SerializeField] private GameStateController gameState;
         [SerializeField] private SpriteRenderer playerRenderer;
-        [Tooltip("Temporary path for Issue #4; real game-start transitions are not implemented.")]
-        [SerializeField] private bool developmentStartPlaying;
-
-        private PlayerInputReader input;
         private PlayingSimulation Simulation => gameState.Playing;
         private SpriteRenderer shotRenderer;
         private Texture2D shotTexture;
@@ -20,7 +16,6 @@ namespace UnityInvader
 
         private void OnEnable()
         {
-            input = new PlayerInputReader();
             if (shotRenderer == null)
             {
                 var shotObject = new GameObject("PlayerShot");
@@ -35,18 +30,8 @@ namespace UnityInvader
             ApplyDisplay();
         }
 
-        private void Start()
+        private void LateUpdate()
         {
-            if (developmentStartPlaying)
-            {
-                gameState.ChangeState(GameState.Playing);
-            }
-        }
-
-        private void Update()
-        {
-            bool playing = gameState.CurrentState == GameState.Playing;
-            Simulation.Advance(Time.deltaTime, playing, input.Read());
             ApplyDisplay();
         }
 
@@ -63,9 +48,7 @@ namespace UnityInvader
 
         private void OnDisable()
         {
-            Simulation.Advance(0, false, default);
-            input?.Dispose();
-            input = null;
+            playerRenderer.enabled = false;
             if (shotRenderer != null) shotRenderer.enabled = false;
         }
 
