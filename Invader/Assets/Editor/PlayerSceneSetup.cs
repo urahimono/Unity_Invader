@@ -54,8 +54,8 @@ namespace UnityInvader.Editor
             var serialized = new SerializedObject(controller);
             serialized.FindProperty("gameState").objectReferenceValue = state;
             serialized.FindProperty("playerRenderer").objectReferenceValue = renderer;
-            serialized.FindProperty("developmentStartPlaying").boolValue = true;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            PlayingSceneSetup.ConfigureInScene(state);
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             Debug.Log("PLAYER_SCENE_SETUP_PASS");

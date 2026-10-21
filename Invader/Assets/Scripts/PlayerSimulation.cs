@@ -21,10 +21,16 @@ namespace UnityInvader
             accumulatedTime += elapsedSeconds;
             while (accumulatedTime + 1e-12 >= TickDuration)
             {
-                Player.Tick(input);
-                Shot.Tick(Player);
+                Tick(input);
                 accumulatedTime -= TickDuration;
             }
+        }
+
+        // PlayingSimulation owns the live clock; Advance remains available for isolated verification.
+        internal void Tick(PlayerInputState input)
+        {
+            Player.Tick(input);
+            Shot.Tick(Player);
         }
     }
 }
