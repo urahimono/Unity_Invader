@@ -16,7 +16,7 @@ namespace UnityInvader
 
         public void Tick(PlayerInputState input)
         {
-            int direction = (input.Right ? 1 : 0) - (input.Left ? 1 : 0);
+            int direction = input.Right ? 1 : input.Left ? -1 : 0;
             X = Math.Max(MinimumX, Math.Min(MaximumX, X + direction));
         }
     }

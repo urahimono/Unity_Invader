@@ -22,7 +22,7 @@ Arcadeの `GameState` オブジェクトにある `GameStateController` が現�
 Player移動の確認はBootstrapからPlayし、Gameビューにフォーカスして左右矢印キーを押してください。
 ArcadeのPlayerにある `Development Start Playing` が、開発確認用にGameStateをPlayingへ変更します。
 本来のAttract / Credit / PlayerReady遷移ではありません。このフラグを無効にすればAttractのまま開始します。
-Playing以外ではPlayerの移動を更新せず、Spriteも非表示にします。左右同時押しは停止です。
+Playing以外ではPlayerの移動を更新せず、Spriteも非表示にします。左右同時押しはRight優先で右へ移動します。
 
 `PlayerInputReader` がInput SystemのLeft / Rightボタンをboolの `PlayerInputState` に変換します。
 Unity非依存の `PlayerSimulation` はフレーム時間を蓄積して1/60秒ごとに `PlayerModel.Tick` を呼びます。
