@@ -6,6 +6,7 @@ namespace UnityInvader
         private double accumulatedTime;
 
         public PlayerModel Player { get; } = new PlayerModel();
+        public PlayerShot Shot { get; } = new PlayerShot();
 
         public void Advance(double elapsedSeconds, bool playing, PlayerInputState input)
         {
@@ -15,10 +16,13 @@ namespace UnityInvader
                 return;
             }
 
+            // Sample every render frame so release/press between logical ticks is retained.
+            Shot.ReadFire(input.Fire);
             accumulatedTime += elapsedSeconds;
             while (accumulatedTime + 1e-12 >= TickDuration)
             {
                 Player.Tick(input);
+                Shot.Tick(Player);
                 accumulatedTime -= TickDuration;
             }
         }

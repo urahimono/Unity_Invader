@@ -6,7 +6,7 @@ Unityを使用してSpace Invadersの挙動を再現する個人開発・学習�
 
 - Unity Project Root: `Invader/`
 - Unity: `6000.6.4f1`
-- 現在の状態: Bootstrap → Arcadeの起動経路とGameStateの土台に、Playing上のPlayer左右移動と55体のInvaderFormationを実装しています。
+- 現在の状態: Bootstrap → Arcadeの起動経路とGameStateの土台に、Playing上のPlayer左右移動、55体のInvaderFormation、単一PlayerShotを実装しています。
 
 Unity Hubから `Invader/` を指定して、上記バージョンのEditorで開いてください。
 
@@ -17,7 +17,7 @@ Arcadeの `GameState` オブジェクトにある `GameStateController` が現�
 後続コードは `UnityInvader.GameStateController.CurrentState` で現在Stateを参照し、
 `ChangeState(GameState nextState)` で変更できます。`UnityInvader.GameState` は
 `Attract` / `PlayerReady` / `Playing` / `PlayerDead` / `WaveClear` / `GameOver` の6値です。
-本来の開始遷移や各Stateのルール、Shot、撃破、Score / Waveはまだ実装していません。
+本来の開始遷移や各Stateのルール、Collision、撃破、Score / Waveはまだ実装していません。
 
 Player移動の確認はBootstrapからPlayし、Gameビューにフォーカスして左右矢印キーを押してください。
 ArcadeのPlayerにある `Development Start Playing` が、開発確認用にGameStateをPlayingへ変更します。
@@ -48,7 +48,7 @@ InvaderFormationは上1行Top、中2行Middle、下2行Bottomの5×11体を、�
 移動ステップごとに全55体のA/Bフレームを切り替え、Playing以外では停止・非表示になります。
 これらの配置・速度・左右端は暫定値で、厳密な原作再現は後続の調整対象です。
 `InvaderFormationController` はモデルからSpriteRendererと表示座標を更新し、Transformをゲームルールに使いません。
-Playerの更新と入力処理は変更していません。
+FormationはPlayerとは独立した更新・表示です。
 
 指定素材 `Assets/Sprites/Invader/InvaderSprites.png` は画像を変更せず、最下部1pxを除く範囲から切り出します。
 全6枚のSprite Rectは480×241px、Center Pivot・Full Rectで統一します。
@@ -72,3 +72,25 @@ Sceneは `Assets/Editor/ArcadeSceneSetup.cs` のUnity Editor APIで生成して�
 既存Sceneの上書きを防ぐため、作成済みのプロジェクトで再実行するとエラーになります。
 
 開発はIssueを起点に、`develop` から `codex/` ブランチを作成し、検証後に `develop` 向けDraft PRでレビューします。作業ルールは [AGENTS.md](AGENTS.md) と [Invader/AGENTS.md](Invader/AGENTS.md) を参照してください。
+
+PlayerShot（Issue #6）は `PlayerSimulation.Shot` の単一スロットです。
+Spaceを `PlayerInputReader` のInput System Actionから `PlayerInputState.Fire` へ渡します。
+通常C#の `PlayerShot` がActive/X/Y/FireReadyと次tickへの発射要求を保持し、
+Active中の押下も消費して、release→再押下がない限り再発射しません。
+入力は各フレームで読み、Player移動後の60Hz tickで現在X・Y+8から発射します。
+発射tickは初期位置を保持し、以後Y+=4、Y>=256で非Activeになります。
+Xは発射時のコピーで、Playerへ追従しません。Collisionは未実装です。
+Playing以外は入力・更新を止め、状態を保持して非表示にします。
+`PlayerController` は1×4の白い矩形を実行時生成し、(X-112,Y-128)へ表示します。
+Transformは表示専用で、Sceneや素材の追加設定は不要です。
+
+`Unity Invader > Verify Player Shot Logic` またはbatchの
+`-executeMethod UnityInvader.Editor.PlayerShotVerification.Verify` で単一スロット、
+release待ち、固定X、4px/tick、上端消滅、非Playing停止、30/60/120fps相当の一致と
+既存Player/Formationの回帰検証を実行できます。
+`-executeMethod UnityInvader.Editor.PlayerShotPlayVerification.Verify` はInput Systemの仮想Keyboardによる
+左右キー・Spaceの押下／release、Bootstrap起動、単一Shot表示と座標変換、全非Playing Stateでの
+非表示・停止・状態保持と再開を検証します。自身でEditorを終了するため`-quit`を付けず、専用batchで実行します。
+GUIではBootstrapからPlayし、Gameビューで左右キーとSpaceを操作してください。
+押しっぱなしで再発射しないこと、離して再押下で発射すること、Player移動中もShotのXが
+固定されること、非Playing時の非表示・停止と、Player/Formationの従来動作を確認してください。
