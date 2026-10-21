@@ -44,14 +44,12 @@ namespace UnityInvader.Editor
             new GameObject("GameState").AddComponent<GameStateController>();
             EditorSceneManager.SaveScene(arcade, ArcadePath);
 
-            // Preserve the sample scene entry while making Bootstrap the entry point.
-            var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>
+            // Keep the build limited to the two game scenes; retain sample assets on disk.
+            EditorBuildSettings.scenes = new[]
             {
                 new EditorBuildSettingsScene(BootstrapPath, true),
                 new EditorBuildSettingsScene(ArcadePath, true)
             };
-            scenes.AddRange(EditorBuildSettings.scenes);
-            EditorBuildSettings.scenes = scenes.ToArray();
             EditorSceneManager.OpenScene(BootstrapPath);
             Debug.Log("Bootstrap and Arcade scenes created.");
         }
