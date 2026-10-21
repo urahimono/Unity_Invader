@@ -11,9 +11,8 @@ namespace UnityInvader
         // Preserve the source aspect ratio with the same unit scale for every frame.
         [SerializeField] private Vector2 cellDisplayScale = Vector2.one;
         private SpriteRenderer[] renderers;
-        private readonly InvaderFormationSimulation simulation = new InvaderFormationSimulation();
 
-        public InvaderFormation Formation => simulation.Formation;
+        public InvaderFormation Formation => gameState.Playing.Formation;
 
         private void Awake()
         {
@@ -30,9 +29,9 @@ namespace UnityInvader
             ApplyDisplay();
         }
 
-        private void Update()
+        // PlayerController advances the shared PlayingSimulation in Update.
+        private void LateUpdate()
         {
-            simulation.Advance(Time.deltaTime, gameState.CurrentState == GameState.Playing);
             ApplyDisplay();
         }
 
@@ -42,7 +41,7 @@ namespace UnityInvader
             foreach (var slot in Formation.Invaders)
             {
                 var renderer = renderers[slot.Id];
-                renderer.enabled = playing;
+                renderer.enabled = playing && slot.Alive;
                 renderer.sprite = frames[(int)slot.Type * 2 + Formation.AnimationFrame];
                 // Transform is output only. No game rule reads display positions.
                 renderer.transform.position = new Vector3(
@@ -53,7 +52,6 @@ namespace UnityInvader
 
         private void OnDisable()
         {
-            simulation.Advance(0, false);
             if (renderers == null) return;
             foreach (var renderer in renderers) renderer.enabled = false;
         }

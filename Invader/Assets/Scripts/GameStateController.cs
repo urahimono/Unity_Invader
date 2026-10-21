@@ -8,6 +8,7 @@ namespace UnityInvader
         [SerializeField] private GameState currentState = GameState.Attract;
 
         public GameState CurrentState => currentState;
+        public PlayingSimulation Playing { get; } = new PlayingSimulation();
 
         public void ChangeState(GameState nextState)
         {

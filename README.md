@@ -6,7 +6,7 @@ Unityを使用してSpace Invadersの挙動を再現する個人開発・学習�
 
 - Unity Project Root: `Invader/`
 - Unity: `6000.6.4f1`
-- 現在の状態: Bootstrap → Arcadeの起動経路とGameStateの土台に、Playing上のPlayer左右移動、55体のInvaderFormation、単一PlayerShotを実装しています。
+- 現在の状態: Bootstrap → Arcadeの起動経路とGameStateの土台に、Playing上のPlayer左右移動、55体のInvaderFormation、単一PlayerShot、論理命中・撃破・Score加算を実装しています。
 
 Unity Hubから `Invader/` を指定して、上記バージョンのEditorで開いてください。
 
@@ -17,15 +17,16 @@ Arcadeの `GameState` オブジェクトにある `GameStateController` が現�
 後続コードは `UnityInvader.GameStateController.CurrentState` で現在Stateを参照し、
 `ChangeState(GameState nextState)` で変更できます。`UnityInvader.GameState` は
 `Attract` / `PlayerReady` / `Playing` / `PlayerDead` / `WaveClear` / `GameOver` の6値です。
-本来の開始遷移や各Stateのルール、Collision、撃破、Score / Waveはまだ実装していません。
+本来の開始遷移や各Stateのルール、WaveClear / 次Wave、Score HUDはまだ実装していません。
 
 Player移動の確認はBootstrapからPlayし、Gameビューにフォーカスして左右矢印キーを押してください。
 ArcadeのPlayerにある `Development Start Playing` が、開発確認用にGameStateをPlayingへ変更します。
 本来のAttract / Credit / PlayerReady遷移ではありません。このフラグを無効にすればAttractのまま開始します。
 Playing以外ではPlayerの移動を更新せず、Spriteも非表示にします。左右同時押しはRight優先で右へ移動します。
 
-`PlayerInputReader` がInput SystemのLeft / Rightボタンをboolの `PlayerInputState` に変換します。
-Unity非依存の `PlayerSimulation` はフレーム時間を蓄積して1/60秒ごとに `PlayerModel.Tick` を呼びます。
+`PlayerInputReader` がInput SystemのLeft / Right / Fireボタンをboolの `PlayerInputState` に変換します。
+Unity非依存の `PlayingSimulation` はフレーム時間を蓄積して1/60秒ごとにPlayer・Shot・Formation・Collisionを処理します。
+`GameStateController.Playing` が共通モデルを保持し、`PlayerController.Update` が入力を渡して一度だけ時間を進めます。
 Playing以外では蓄積時間を破棄し、再開時の追いつき移動を防ぎます。
 速度は暫定で1論理ピクセル/tick（60ピクセル/秒）、初期位置は(112, 24)、X範囲は8〜216です。
 原作の厳密な速度・左右端位置の再現は後続工程です。
@@ -43,12 +44,13 @@ import設定はSprite / Point / 圧縮なし / Mip Mapsなしです。最終的�
 InvaderFormationは上1行Top、中2行Middle、下2行Bottomの5×11体を、起動時に生成します。
 `InvaderSlot` は行・列と種類を持ち、`Id = Row * 11 + Column` で個体を識別します。
 `InvaderFormation` が左上セル中心の論理位置、方向、移動ステップ数と共通A/Bフレームを管理します。
-`InvaderFormationSimulation` はPlaying中だけ60Hz tickを進め、20tickごとに2px横移動します。
+Playing中だけ共通の60Hz tickを進め、20tickごとに2px横移動します。
 セル間隔16px、初期位置(32,208)、セル全体を含む左右端到達時に8px下降して反転します。
 移動ステップごとに全55体のA/Bフレームを切り替え、Playing以外では停止・非表示になります。
 これらの配置・速度・左右端は暫定値で、厳密な原作再現は後続の調整対象です。
 `InvaderFormationController` はモデルからSpriteRendererと表示座標を更新し、Transformをゲームルールに使いません。
-FormationはPlayerとは独立した更新・表示です。
+`InvaderFormationController.LateUpdate` は共通モデルから表示だけを更新します。
+`PlayerSimulation.Advance` / `InvaderFormationSimulation.Advance` は単独モデルの回帰検証用で、実際のPlayingでは独立した時計を使用しません。
 
 指定素材 `Assets/Sprites/Invader/InvaderSprites.png` は画像を変更せず、最下部1pxを除く範囲から切り出します。
 全6枚のSprite Rectは480×241px、Center Pivot・Full Rectで統一します。
@@ -73,13 +75,13 @@ Sceneは `Assets/Editor/ArcadeSceneSetup.cs` のUnity Editor APIで生成して�
 
 開発はIssueを起点に、`develop` から `codex/` ブランチを作成し、検証後に `develop` 向けDraft PRでレビューします。作業ルールは [AGENTS.md](AGENTS.md) と [Invader/AGENTS.md](Invader/AGENTS.md) を参照してください。
 
-PlayerShot（Issue #6）は `PlayerSimulation.Shot` の単一スロットです。
+PlayerShot（Issue #6）は `GameStateController.Playing.Shot` の単一スロットです。
 Spaceを `PlayerInputReader` のInput System Actionから `PlayerInputState.Fire` へ渡します。
 通常C#の `PlayerShot` がActive/X/Y/FireReadyと次tickへの発射要求を保持し、
 Active中の押下も消費して、release→再押下がない限り再発射しません。
 入力は各フレームで読み、Player移動後の60Hz tickで現在X・Y+8から発射します。
 発射tickは初期位置を保持し、以後Y+=4、Y>=256で非Activeになります。
-Xは発射時のコピーで、Playerへ追従しません。Collisionは未実装です。
+Xは発射時のコピーで、Playerへ追従しません。命中時もFireのrelease待ちは維持します。
 Playing以外は入力・更新を止め、状態を保持して非表示にします。
 `PlayerController` は1×4の白い矩形を実行時生成し、(X-112,Y-128)へ表示します。
 Transformは表示専用で、Sceneや素材の追加設定は不要です。
@@ -94,3 +96,29 @@ release待ち、固定X、4px/tick、上端消滅、非Playing停止、30/60/120
 GUIではBootstrapからPlayし、Gameビューで左右キーとSpaceを操作してください。
 押しっぱなしで再発射しないこと、離して再押下で発射すること、Player移動中もShotのXが
 固定されること、非Playing時の非表示・停止と、Player/Formationの従来動作を確認してください。
+
+Issue #7のCollisionとScoreはUnity非依存の `PlayingSimulation` で管理します。
+各60Hz tickの順番は **Player移動 → Shot発射/移動/画面外処理 → Formation移動/アニメ更新 → Collision/撃破/Score加算** です。
+30fpsで2tick進むフレームも、各tickの末尾で個別にCollisionを判定します。
+Invaderの暫定HitBoxはslot中心の16×8、Shotは中心X±0.5・下端Y〜Y+4の1×4です。
+正の面積で重なる場合に命中とし、辺だけの接触は命中にしません。
+下段→上段、各行は左列→右列でAliveだけを調べ、最初の1体をDeadにしてShotを非Activeにしたら終了します。
+Transform / SpriteRenderer.bounds / Unity Physicsはゲームルールに使用しません。
+
+`InvaderSlot.Alive` と `InvaderFormation.AliveCount` が生存状態を保持します。
+DeadのId/Row/Column/Typeと55個の表示オブジェクトは残し、`playing && slot.Alive` でRendererを表示します。
+命中時に `PlayingSimulation.Score` へTop=30 / Middle=20 / Bottom=10を加算します。
+Scoreは整数論理値のみで、HUDはありません。移動速度・左右端・A/B同期は撃破後も従来どおりです。
+非Playingでは入力・全モデル更新・Collision・加点を停止し、状態を保持します。
+AliveCountが0でもPlayingのままです。WaveClearと次Wave（Issue #8）は実装していません。
+
+`Unity Invader > Verify Invader Hit Logic` またはbatchの
+`-executeMethod UnityInvader.Editor.InvaderHitVerification.Verify` でAliveCount、Dead除外、種類別/累積Score、
+1 Shot=1体、命中時Shot非Active・release待ち、tick順、2tick中の一時的な命中、HitBox境界、
+複数撃破後の移動、55体撃破、非Playing停止、30/60/120fpsと既存回帰検証を実行します。
+`-executeMethod UnityInvader.Editor.InvaderHitPlayVerification.Verify` はBootstrapから起動し、
+仮想KeyboardのSpace/左右キーを実際のControllerへ渡して命中・表示・release待ち・再発射、
+非Playing停止/非表示・再開、AliveCount=0でPlaying維持を検証します。
+Play検証は自身でEditorを終了するため、専用batchで`-quit`を付けず実行してください。
+GUIでは狙ったInvaderとShotだけが消えること、残った編隊の移動・A/B同期・下降反転、
+左右移動と押しっぱなし禁止・release後再発射を確認してください。Scoreは `GameStateController.Playing.Score` で取得できます。

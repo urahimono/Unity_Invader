@@ -5,18 +5,26 @@ namespace UnityInvader
 {
     public enum InvaderType { Top, Middle, Bottom }
 
-    public readonly struct InvaderSlot
+    public sealed class InvaderSlot
     {
         public int Row { get; }
         public int Column { get; }
         public int Id => Row * InvaderFormation.Columns + Column;
         public InvaderType Type => Row == 0 ? InvaderType.Top :
             Row < 3 ? InvaderType.Middle : InvaderType.Bottom;
+        public bool Alive { get; private set; } = true;
 
         public InvaderSlot(int row, int column)
         {
             Row = row;
             Column = column;
+        }
+
+        internal bool TryKill()
+        {
+            if (!Alive) return false;
+            Alive = false;
+            return true;
         }
     }
 
@@ -41,6 +49,7 @@ namespace UnityInvader
         public int StepCount { get; private set; }
         public int AnimationFrame => StepCount % 2;
         public IReadOnlyList<InvaderSlot> Invaders { get; }
+        public int AliveCount { get; private set; } = Rows * Columns;
 
         public InvaderFormation()
         {
@@ -49,6 +58,13 @@ namespace UnityInvader
                 for (int column = 0; column < Columns; column++)
                     slots[row * Columns + column] = new InvaderSlot(row, column);
             Invaders = Array.AsReadOnly(slots);
+        }
+
+        public bool TryKill(int id)
+        {
+            if (!Invaders[id].TryKill()) return false;
+            AliveCount--;
+            return true;
         }
 
         public void Tick()
