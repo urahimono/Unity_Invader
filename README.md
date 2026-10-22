@@ -4,6 +4,13 @@ Unityを使用してSpace Invadersの挙動を再現する個人開発・学習�
 
 元ゲームから抽出した画像・音声・動画などの素材は含みません。これらの素材をリポジトリへ追加しない方針です。
 
+設計文脈は次のリポジトリ文書で共有します。以下の既存説明は起動・操作・検証の手順として参照してください。
+
+- [Project principles](docs/PROJECT_PRINCIPLES.md): 長期間維持する設計原則
+- [Architecture](docs/ARCHITECTURE.md): Phase 3完了時点の実装構造と未実装の境界
+- [Architecture Decision Records](docs/adr/README.md): 重要な設計判断と理由
+- [作業ルール](AGENTS.md): 開発手順と設計資料の参照ルール
+
 - Unity Project Root: `Invader/`
 - Unity: `6000.6.4f1`
 - 現在の状態: Bootstrap → Arcadeの起動経路とGameStateの土台に、Playing上のPlayer左右移動、55体のInvaderFormation、単一PlayerShot、論理命中・撃破・Score加算、全滅から次Waveへのループを実装しています。

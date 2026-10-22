@@ -9,6 +9,20 @@
 - Unityプロジェクトは `Invader/`。Unity作業では `Invader/AGENTS.md` も守る。
 - 検証した内容と未実施の内容を区別して報告する。
 
+## 設計資料への入口
+
+実装・設計作業の前に、作業に必要な範囲で次を参照する。
+
+- [設計原則](docs/PROJECT_PRINCIPLES.md): 長期間維持する判断基準。
+- [Architecture](docs/ARCHITECTURE.md): 現在の構造、責務境界、実装済みと未実装の区別。
+- [ADR](docs/adr/README.md): 重要なArchitecture判断とその理由。
+
+- 設計原則と依頼が衝突する場合、勝手に原則を破って実装せず、衝突を報告する。
+- Architectureの責務境界を変更する場合、`docs/ARCHITECTURE.md` の更新要否を確認する。
+- 新しい重要なArchitecture判断を導入する場合、ADR追加要否を確認する。
+- AGENTS.mdへ設計資料全文を複製しない。AI製品固有ファイルを追加する場合も、設計思想の正本を重複コピーしない。
+- Unity固有の作業ルールは [Invader/AGENTS.md](Invader/AGENTS.md) を参照する。
+
 ## Git運用
 
 - 基準ブランチは `develop`。Issueに対応する作業ブランチを `codex/` prefixで作成する。
