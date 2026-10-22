@@ -149,8 +149,7 @@ namespace UnityInvader.Editor
                     Require(player.Player.X > pausedX && player.Shot.Y > pausedY && shotRenderer.enabled,
                         "Shared simulation must resume in Playing.");
                     CheckFormationDisplay(true);
-                    // Isolate the zero-alive State rule; scoring itself was verified with 55 actual hits in logic tests.
-                    foreach (var slot in formation.Formation.Invaders) formation.Formation.TryKill(slot.Id);
+                    // Wave-clear behavior is covered by WaveLoopPlayVerification.
                     player.Shot.Deactivate();
                     Keys();
                     stage = 9;
@@ -158,8 +157,8 @@ namespace UnityInvader.Editor
                 }
                 else if (stage == 9)
                 {
-                    Require(state.CurrentState == GameState.Playing && formation.Formation.AliveCount == 0 && state.Playing.Score == 10,
-                        "Zero alive must not trigger WaveClear, reset Score or spawn another wave.");
+                    Require(state.CurrentState == GameState.Playing && formation.Formation.AliveCount == 54 && state.Playing.Score == 10,
+                        "Surviving Formation must stay Playing and preserve Score.");
                     CheckFormationDisplay(true);
                     // Editor stepping uses its own delta; compare every frame with its actual elapsed time.
                     EditorApplication.isPaused = true;
@@ -215,7 +214,7 @@ namespace UnityInvader.Editor
                     Require(player.GetComponent<SpriteRenderer>().enabled && player.transform.position == new Vector3(player.Player.X - 112, player.Player.Y - 128, 0),
                         "Player display must still synchronize while the clock is disabled.");
                     Debug.Log("PLAYING_CONTROLLER_CLOCK_PASS: exactly one driver; each of 20 rendered frames matches one Advance of actual deltaTime with Player view disabled; 20 frames frozen with driver disabled and views enabled.");
-                    Debug.Log("INVADER_HIT_PLAY_PASS: Bootstrap -> Arcade -> Playing; one shared simulation; virtual Space/arrow input through controllers; fixed Shot X; one Bottom hit/Score 10; Dead renderer hidden with all 55 objects retained; Shot hidden; held Fire/release/re-press; movement continues; all five non-Playing states stop/hide/preserve; resume; zero alive stays Playing.");
+                    Debug.Log("INVADER_HIT_PLAY_PASS: Bootstrap -> Arcade -> Playing; shared simulation; virtual keyboard; hit/Score/display; held Fire/release/re-press; all non-Playing states freeze; resume; surviving Formation stays Playing.");
                     Finish(0);
                 }
             }

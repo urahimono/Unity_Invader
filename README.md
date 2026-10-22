@@ -6,7 +6,7 @@ Unityを使用してSpace Invadersの挙動を再現する個人開発・学習�
 
 - Unity Project Root: `Invader/`
 - Unity: `6000.6.4f1`
-- 現在の状態: Bootstrap → Arcadeの起動経路とGameStateの土台に、Playing上のPlayer左右移動、55体のInvaderFormation、単一PlayerShot、論理命中・撃破・Score加算を実装しています。
+- 現在の状態: Bootstrap → Arcadeの起動経路とGameStateの土台に、Playing上のPlayer左右移動、55体のInvaderFormation、単一PlayerShot、論理命中・撃破・Score加算、全滅から次Waveへのループを実装しています。
 
 Unity Hubから `Invader/` を指定して、上記バージョンのEditorで開いてください。
 
@@ -17,7 +17,7 @@ Arcadeの `GameState` オブジェクトにある `GameStateController` が現�
 後続コードは `UnityInvader.GameStateController.CurrentState` で現在Stateを参照し、
 `ChangeState(GameState nextState)` で変更できます。`UnityInvader.GameState` は
 `Attract` / `PlayerReady` / `Playing` / `PlayerDead` / `WaveClear` / `GameOver` の6値です。
-本来の開始遷移や各Stateのルール、WaveClear / 次Wave、Score HUDはまだ実装していません。
+Playing → WaveClear → 次Wave → Playingを実装しています。本来の開始遷移や他Stateのルール、Score HUDはまだ実装していません。
 
 Player移動の確認はBootstrapからPlayし、Gameビューにフォーカスして左右矢印キーを押してください。
 ArcadeのGameStateにある `PlayingController` の `Development Start Playing` が、開発確認用にGameStateをPlayingへ変更します。
@@ -112,7 +112,7 @@ DeadのId/Row/Column/Typeと55個の表示オブジェクトは残し、`playing
 命中時に `PlayingSimulation.Score` へTop=30 / Middle=20 / Bottom=10を加算します。
 Scoreは整数論理値のみで、HUDはありません。移動速度・左右端・A/B同期は撃破後も従来どおりです。
 非Playingでは入力・全モデル更新・Collision・加点を停止し、状態を保持します。
-AliveCountが0でもPlayingのままです。WaveClearと次Wave（Issue #8）は実装していません。
+AliveCountが0になる最後の命中・Shot非Active・加点まで完了すると、WaveClearRequiredを立てて残りのtickを停止します。
 
 `Unity Invader > Verify Invader Hit Logic` またはbatchの
 `-executeMethod UnityInvader.Editor.InvaderHitVerification.Verify` でAliveCount、Dead除外、種類別/累積Score、
@@ -120,10 +120,35 @@ AliveCountが0でもPlayingのままです。WaveClearと次Wave（Issue #8）�
 複数撃破後の移動、55体撃破、非Playing停止、30/60/120fpsと既存回帰検証を実行します。
 `-executeMethod UnityInvader.Editor.InvaderHitPlayVerification.Verify` はBootstrapから起動し、
 仮想KeyboardのSpace/左右キーを実際のControllerへ渡して命中・表示・release待ち・再発射、
-非Playing停止/非表示・再開、AliveCount=0でPlaying維持を検証します。
+非Playing停止/非表示・再開と、生存個体が残る間のPlaying維持を検証します。
 Play検証では単一PlayingControllerを確認し、Player表示を無効にした20描画フレームの各フレームで実測deltaTimeの1回分だけ進むことと、
 PlayingControllerを無効にすると表示側だけでは進まないことも検証します。
 `Unity Invader > Configure Playing Controller` はUnity Editor APIでArcadeのGameStateへ専用Controllerを接続します。
 Play検証は自身でEditorを終了するため、専用batchで`-quit`を付けず実行してください。
 GUIでは狙ったInvaderとShotだけが消えること、残った編隊の移動・A/B同期・下降反転、
 左右移動と押しっぱなし禁止・release後再発射を確認してください。Scoreは `GameStateController.Playing.Score` で取得できます。
+
+Issue #8では `PlayingSimulation.WaveNumber` を1から保持します。
+最後の命中tick完了後、`PlayingController` が `WaveClearRequired` を検出して
+`GameState.WaveClear` へ1回遷移します。通常更新と入力の読み取りを止め、
+後続フレームの `Time.deltaTime` を1.0秒蓄積してから `StartNextWave()` を呼び、Playingへ戻します。
+待機終了フレームでは新Formationを動かさず、初期状態で表示します。
+この1.0秒は暫定値です。本来の他Stateの進行は変更していません。
+
+次WaveではWaveNumberを1増やし、論理Formationだけを `new InvaderFormation()` に置き換えます。
+55体Alive、初期位置(32,208)、方向+1、StepCount/AnimationFrame=0、移動待ち20tickへ戻ります。
+表示は既存のslot ID 0〜54に同期し、同じ55個のGameObject/SpriteRendererを再利用します。
+Score、Player（Xを含む）、単一PlayerShot（FireReady/release待ちを含む）はそのまま保持します。
+Space押しっぱなしでは次Waveで発射せず、Playingでrelease後に再押下すると発射できます。
+WaveClear中の入力は消費しないため、その間に離して再び押した場合も、Playingでのreleaseが必要です。
+
+`Unity Invader > Verify Wave Loop Logic` またはbatchの
+`-executeMethod UnityInvader.Editor.WaveLoopVerification.Verify` は
+30/60/120fps相当で55体を実命中により2Wave撃破し、Wave 1→2→3、累積Score=1980、
+初期化・保持・停止・Fire gateと既存Player/Shot/Formation/Collision回帰を検証します。
+`-executeMethod UnityInvader.Editor.WaveLoopPlayVerification.Verify` は
+Bootstrapから実ControllerでWaveClearへ遷移し、約1秒の停止、Wave 2での撃破とWave 3到達、
+仮想Keyboardの押しっぱなし/release/再押下、同じ55 Rendererの再利用を検証します。
+専用batchで実行し、このPlay検証には `-quit` を付けないでください。
+GUIでは最後の撃破後の停止、55体の再表示、次Waveの操作・射撃・撃破、
+表示重複・位置飛びの有無を確認してください。Score/WaveNumberは論理プロパティで確認できます。

@@ -74,8 +74,8 @@ namespace UnityInvader.Editor
                 for (int column = 0; column < 11; column++) Hit(all, row, column);
             Require(all.Formation.AliveCount == 0 && all.Score == 990, "55 real hits must yield zero alive and 990 Score.");
             all.Advance(1, true, default);
-            Require(all.Formation.StepCount > 2 && all.Formation.Invaders.Count == 55 && all.Score == 990,
-                "Zero alive must preserve slots and continue this simulation without wave/reset logic.");
+            Require(all.WaveClearRequired && all.Formation.StepCount == 2 && all.Formation.Invaders.Count == 55 && all.Score == 990,
+                "Zero alive must preserve slots/Score and stop until the controller starts the next wave.");
         }
 
         private static void VerifyTickAndEdges()
