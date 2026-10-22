@@ -11,12 +11,24 @@ namespace UnityInvader
 
         public PlayerModel Player => player.Player;
         public PlayerShot Shot => player.Shot;
-        public InvaderFormation Formation { get; } = new InvaderFormation();
+        public InvaderFormation Formation { get; private set; } = new InvaderFormation();
         public int Score { get; private set; }
+        public int WaveNumber { get; private set; } = 1;
+        public bool WaveClearRequired { get; private set; }
+
+        public void StartNextWave()
+        {
+            if (!WaveClearRequired) return;
+            Formation = new InvaderFormation();
+            WaveNumber++;
+            WaveClearRequired = false;
+            accumulatedTime = 0;
+            // Keep Player, Score and the single Shot (including its release gate).
+        }
 
         public void Advance(double elapsedSeconds, bool playing, PlayerInputState input)
         {
-            if (!playing)
+            if (!playing || WaveClearRequired)
             {
                 accumulatedTime = 0;
                 return;
@@ -31,6 +43,12 @@ namespace UnityInvader
                 Formation.Tick();
                 ResolvePlayerShotHit();
                 accumulatedTime -= TickDuration;
+                if (Formation.AliveCount == 0)
+                {
+                    WaveClearRequired = true;
+                    accumulatedTime = 0;
+                    break; // Do not run extra ticks after the final hit, even at 30fps.
+                }
             }
         }
 
