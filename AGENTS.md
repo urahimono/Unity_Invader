@@ -11,11 +11,12 @@
 
 ## 設計資料への入口
 
-実装・設計作業の前に、作業に必要な範囲で次を参照する。
+実装・設計変更を伴う作業では、作業開始時に次の2資料を必ず確認する。
 
 - [設計原則](docs/PROJECT_PRINCIPLES.md): 長期間維持する判断基準。
 - [Architecture](docs/ARCHITECTURE.md): 現在の構造、責務境界、実装済みと未実装の区別。
-- [ADR](docs/adr/README.md): 重要なArchitecture判断とその理由。
+
+変更領域に関係する [ADR](docs/adr/README.md) は必要に応じて参照する。ADRは重要なArchitecture判断とその理由を記録しており、全件必読とはしない。
 
 - 設計原則と依頼が衝突する場合、勝手に原則を破って実装せず、衝突を報告する。
 - Architectureの責務境界を変更する場合、`docs/ARCHITECTURE.md` の更新要否を確認する。

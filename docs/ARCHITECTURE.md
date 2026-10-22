@@ -1,6 +1,8 @@
-# Architecture — Phase 3完了時点
+# Architecture
 
-本書はPhase 3完了のdevelop（`c36be6c53df104e9ebf0da0600cd6551c0d42f65`、PR #14マージ後）の実コードとSceneを基準にした現在構造です。設計の基準は [PROJECT_PRINCIPLES.md](PROJECT_PRINCIPLES.md)、選択理由は [ADR](adr/README.md) に分けます。
+本書は現在の実装構造の正本です。Architectureを変更するときは、実コード・Sceneと一致するよう同じPRで本書も更新します。設計の基準は [PROJECT_PRINCIPLES.md](PROJECT_PRINCIPLES.md)、選択理由は [ADR](adr/README.md) に分けます。
+
+初回作成時のbaselineはPhase 3完了のdevelop（`c36be6c53df104e9ebf0da0600cd6551c0d42f65`、PR #14マージ後）です。Phase 3の固定資料として保存する文書ではありません。
 
 「実装済み」はコード上の構造を示し、原作の厳密な挙動を検証済みという意味ではありません。以下では将来の設計方針と区別します。
 
@@ -19,7 +21,7 @@ Attract〜GameOverを一台の筐体としてArcade内で扱う設計です。[S
 
 [GameState](../Invader/Assets/Scripts/GameState.cs) は次の6値です。
 
-| State | Phase 3の実装範囲 |
+| State | 現在の実装範囲 |
 | --- | --- |
 | Attract | 初期値の仮置き。待機デモ・Credit・Start受付は未実装 |
 | PlayerReady | 値のみ。開始表示・通常の開始遷移は未実装 |
@@ -91,7 +93,7 @@ CollisionはPlayingSimulationの論理矩形判定です。Transform、SpriteRen
 
 以下の層は所有範囲を考える方針で、同名のクラス群が実装されているわけではありません。
 
-| 層 | 設計方針 | Phase 3の実装状況 |
+| 層 | 設計方針 | 現在の実装状況 |
 | --- | --- | --- |
 | Application | HighScore・設定・共通サービスをSceneを跨いで保持し、必要なら永続保存 | 未実装。BootstrapはArcadeロードのみ |
 | Arcade Session | Credit・1P/2Pモード・Current Player・セッション進行 | 未実装。現在はArcadeのGameStateControllerが1つのPlayingSimulationを保持 |
