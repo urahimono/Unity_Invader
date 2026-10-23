@@ -11,16 +11,16 @@ namespace UnityInvader.Editor
     // Dedicated batch process; omit -quit. This verifier exits the Editor itself.
     public static class PlayerShotPlayVerification
     {
-        private const string SessionKey = "PlayerShotPlayVerification";
-        private static int _stage;
-        private static int _stateIndex;
-        private static int _pausedY;
-        private static double _deadline;
-        private static double _nextCheck;
-        private static PlayerController _player;
-        private static GameStateController _state;
-        private static SpriteRenderer _renderer;
-        private static readonly GameState[] _pausedStates = {
+        private const           string              SessionKey    = "PlayerShotPlayVerification";
+        private static          int                 _stage;
+        private static          int                 _stateIndex;
+        private static          int                 _pausedY;
+        private static          double              _deadline;
+        private static          double              _nextCheck;
+        private static          PlayerController    _player;
+        private static          GameStateController _state;
+        private static          SpriteRenderer      _renderer;
+        private static readonly GameState[]         _pausedStates = {
             GameState.Attract, GameState.PlayerReady, GameState.PlayerDead, GameState.WaveClear, GameState.GameOver
         };
 

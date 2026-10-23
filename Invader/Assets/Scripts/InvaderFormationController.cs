@@ -11,15 +11,15 @@ namespace UnityInvader
         // Top A/B, Middle A/B, Bottom A/B.
         [FormerlySerializedAs("frames")]
         [SerializeField]
-        private Sprite[] _frames = new Sprite[6];
+        private Sprite[]            _frames           = new Sprite[6];
         [FormerlySerializedAs("spriteMaterial")]
         [SerializeField]
-        private Material _spriteMaterial;
+        private Material            _spriteMaterial;
         // Preserve the source aspect ratio with the same unit scale for every frame.
         [FormerlySerializedAs("cellDisplayScale")]
         [SerializeField]
-        private Vector2 _cellDisplayScale = Vector2.one;
-        private SpriteRenderer[] _renderers;
+        private Vector2             _cellDisplayScale = Vector2.one;
+        private SpriteRenderer[]    _renderers;
 
         public InvaderFormation Formation => _gameState.Playing.Formation;
 

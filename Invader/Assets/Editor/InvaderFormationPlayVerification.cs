@@ -10,16 +10,16 @@ namespace UnityInvader.Editor
     // Batch entry point: run without -quit; this verifier exits after Play Mode checks.
     public static class InvaderFormationPlayVerification
     {
-        private static int _stage;
-        private static double _nextCheck;
-        private static double _deadline;
+        private static int                        _stage;
+        private static double                     _nextCheck;
+        private static double                     _deadline;
         private static InvaderFormationController _controller;
-        private static GameStateController _state;
-        private static PlayerController _player;
-        private static int _pausedStep;
-        private static int _pausedX;
-        private static int _pausedY;
-        private static int _stateIndex;
+        private static GameStateController        _state;
+        private static PlayerController           _player;
+        private static int                        _pausedStep;
+        private static int                        _pausedX;
+        private static int                        _pausedY;
+        private static int                        _stateIndex;
 
         public static void Verify()
         {

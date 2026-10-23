@@ -9,10 +9,10 @@ namespace UnityInvader.Editor
 {
     public static class InvaderFormationSceneSetup
     {
-        public const string TexturePath = "Assets/Sprites/Invader/InvaderSprites.png";
-        public const int CellWidth = 480;
-        public const int CellHeight = 241;
-        public static readonly string[] FrameNames =
+        public const           string   TexturePath = "Assets/Sprites/Invader/InvaderSprites.png";
+        public const           int      CellWidth   = 480;
+        public const           int      CellHeight  = 241;
+        public static readonly string[] FrameNames  =
             { "TopFrameA", "TopFrameB", "MiddleFrameA", "MiddleFrameB", "BottomFrameA", "BottomFrameB" };
 
         [MenuItem("Unity Invader/Configure Invader Formation")]

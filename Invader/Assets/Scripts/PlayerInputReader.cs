@@ -6,9 +6,9 @@ namespace UnityInvader
     // Unity input is converted here; the simulation receives only booleans.
     public sealed class PlayerInputReader : IDisposable
     {
-        private readonly InputAction _left = new InputAction("Left", InputActionType.Button, "<Keyboard>/leftArrow");
+        private readonly InputAction _left  = new InputAction("Left", InputActionType.Button, "<Keyboard>/leftArrow");
         private readonly InputAction _right = new InputAction("Right", InputActionType.Button, "<Keyboard>/rightArrow");
-        private readonly InputAction _fire = new InputAction("Fire", InputActionType.Button, "<Keyboard>/space");
+        private readonly InputAction _fire  = new InputAction("Fire", InputActionType.Button, "<Keyboard>/space");
 
         public PlayerInputReader()
         {

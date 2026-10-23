@@ -4,8 +4,8 @@ namespace UnityInvader
     public sealed class PlayerShot
     {
         public const int SpeedPerTick = 4;
-        public const int Width = 1;
-        public const int Height = 4;
+        public const int Width        = 1;
+        public const int Height       = 4;
         public bool Active { get; private set; }
         public int X { get; private set; }
         public int Y { get; private set; }

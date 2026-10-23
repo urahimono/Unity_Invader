@@ -34,16 +34,16 @@ namespace UnityInvader
     // Logical pixels with a bottom-left origin. Placement and timing are provisional.
     public sealed class InvaderFormation
     {
-        public const int Rows = 5;
-        public const int Columns = 11;
-        public const int Spacing = 16;
-        public const int CellSize = 16;
-        public const int HorizontalStep = 2;
-        public const int Descent = 8;
-        public const int TicksPerStep = 20;
-        public const int MinimumX = CellSize / 2;
-        public const int MaximumX = PlayerModel.ScreenWidth - CellSize / 2 - (Columns - 1) * Spacing;
-        private int _ticksUntilStep = TicksPerStep;
+        public  const int Rows            = 5;
+        public  const int Columns         = 11;
+        public  const int Spacing         = 16;
+        public  const int CellSize        = 16;
+        public  const int HorizontalStep  = 2;
+        public  const int Descent         = 8;
+        public  const int TicksPerStep    = 20;
+        public  const int MinimumX        = CellSize / 2;
+        public  const int MaximumX        = PlayerModel.ScreenWidth - CellSize / 2 - (Columns - 1) * Spacing;
+        private       int _ticksUntilStep = TicksPerStep;
 
         // X/Y are the center of the top-left slot, not a Unity Transform.
         public int X { get; private set; } = 32;

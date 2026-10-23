@@ -6,7 +6,7 @@ namespace UnityInvader.Editor
 {
     public static class InvaderHitVerification
     {
-        private const double Tick = PlayingSimulation.TickDuration;
+        private const           double           Tick  = PlayingSimulation.TickDuration;
         private static readonly PlayerInputState _fire = new PlayerInputState(false, false, true);
 
         [MenuItem("Unity Invader/Verify Invader Hit Logic")]

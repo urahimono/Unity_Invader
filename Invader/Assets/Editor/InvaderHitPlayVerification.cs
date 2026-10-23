@@ -11,22 +11,22 @@ namespace UnityInvader.Editor
     // Dedicated batch process, without -quit. Uses real controller updates and virtual keyboard input.
     public static class InvaderHitPlayVerification
     {
-        private const string SessionKey = "InvaderHitPlayVerification";
-        private static int _stage, _stateIndex, _shotX, _initialPlayerX, _pausedX, _pausedY, _pausedStep, _heldStep;
-        private static double _deadline, _nextCheck;
-        private static PlayerController _player;
-        private static PlayingController _playing;
-        private static InvaderFormationController _formation;
-        private static GameStateController _state;
-        private static SpriteRenderer _shotRenderer;
-        private static Keyboard _keyboard;
-        private static InputSettings _settings;
-        private static int _steppedFrames, _lastFrame, _clockStartX, _clockStartY, _clockStartStep;
-        private static double _steppedTime;
-        private static PlayingClockProbe _clockProbe;
-        private static InputSettings.BackgroundBehavior _backgroundBehavior;
-        private static InputSettings.EditorInputBehaviorInPlayMode _editorBehavior;
-        private static readonly GameState[] _pausedStates = {
+        private const           string                                      SessionKey    = "InvaderHitPlayVerification";
+        private static          int                                         _stage, _stateIndex, _shotX, _initialPlayerX, _pausedX, _pausedY, _pausedStep, _heldStep;
+        private static          double                                      _deadline, _nextCheck;
+        private static          PlayerController                            _player;
+        private static          PlayingController                           _playing;
+        private static          InvaderFormationController                  _formation;
+        private static          GameStateController                         _state;
+        private static          SpriteRenderer                              _shotRenderer;
+        private static          Keyboard                                    _keyboard;
+        private static          InputSettings                               _settings;
+        private static          int                                         _steppedFrames, _lastFrame, _clockStartX, _clockStartY, _clockStartStep;
+        private static          double                                      _steppedTime;
+        private static          PlayingClockProbe                           _clockProbe;
+        private static          InputSettings.BackgroundBehavior            _backgroundBehavior;
+        private static          InputSettings.EditorInputBehaviorInPlayMode _editorBehavior;
+        private static readonly GameState[]                                 _pausedStates = {
             GameState.Attract, GameState.PlayerReady, GameState.PlayerDead, GameState.WaveClear, GameState.GameOver
         };
 

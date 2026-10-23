@@ -2,8 +2,8 @@ namespace UnityInvader
 {
     public sealed class PlayerSimulation
     {
-        public const double TickDuration = 1.0 / 60.0;
-        private double _accumulatedTime;
+        public  const double TickDuration = 1.0 / 60.0;
+        private       double _accumulatedTime;
 
         public PlayerModel Player { get; } = new PlayerModel();
         public PlayerShot Shot { get; } = new PlayerShot();

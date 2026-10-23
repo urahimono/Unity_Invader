@@ -10,7 +10,7 @@ namespace UnityInvader.Editor
     public static class ArcadeSceneSetup
     {
         private const string BootstrapPath = "Assets/Scenes/Bootstrap.unity";
-        private const string ArcadePath = "Assets/Scenes/Arcade.unity";
+        private const string ArcadePath    = "Assets/Scenes/Arcade.unity";
 
         [MenuItem("Unity Invader/Create Initial Scenes")]
         public static void CreateScenes()

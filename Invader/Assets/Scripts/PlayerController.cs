@@ -10,11 +10,11 @@ namespace UnityInvader
         private GameStateController _gameState;
         [FormerlySerializedAs("playerRenderer")]
         [SerializeField]
-        private SpriteRenderer _playerRenderer;
+        private SpriteRenderer      _playerRenderer;
         private PlayingSimulation Simulation => _gameState.Playing;
         private SpriteRenderer _shotRenderer;
-        private Texture2D _shotTexture;
-        private Sprite _shotSprite;
+        private Texture2D      _shotTexture;
+        private Sprite         _shotSprite;
 
         public PlayerModel Player => Simulation.Player;
         public PlayerShot Shot => Simulation.Shot;
