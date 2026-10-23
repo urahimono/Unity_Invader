@@ -15,7 +15,10 @@ namespace UnityInvader
 
         private void Update()
         {
-            if (Screen.width <= 0 || Screen.height <= 0) return;
+            if (Screen.width <= 0 || Screen.height <= 0)
+            {
+                return;
+            }
             float targetAspect = (float)PlayerModel.ScreenWidth / PlayerModel.ScreenHeight;
             float screenAspect = (float)Screen.width / Screen.height;
             if (screenAspect > targetAspect)

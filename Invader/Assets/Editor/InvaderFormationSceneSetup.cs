@@ -18,11 +18,20 @@ namespace UnityInvader.Editor
         [MenuItem("Unity Invader/Configure Invader Formation")]
         public static void Configure()
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                return;
+            }
             var importer = AssetImporter.GetAtPath(TexturePath) as TextureImporter;
-            if (importer == null) throw new InvalidOperationException("InvaderSprites.png is missing.");
+            if (importer == null)
+            {
+                throw new InvalidOperationException("InvaderSprites.png is missing.");
+            }
             importer.GetSourceTextureWidthAndHeight(out int width, out int height);
-            if (width != 2172 || height != 724) throw new InvalidOperationException("Unexpected source dimensions.");
+            if (width != 2172 || height != 724)
+            {
+                throw new InvalidOperationException("Unexpected source dimensions.");
+            }
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Multiple;
             importer.filterMode = FilterMode.Point;
@@ -65,11 +74,20 @@ namespace UnityInvader.Editor
 
             var scene = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
             var state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
-            if (state == null) throw new InvalidOperationException("Arcade GameState is missing.");
+            if (state == null)
+            {
+                throw new InvalidOperationException("Arcade GameState is missing.");
+            }
             var formation = GameObject.Find("InvaderFormation");
-            if (formation == null) formation = new GameObject("InvaderFormation");
+            if (formation == null)
+            {
+                formation = new GameObject("InvaderFormation");
+            }
             var controller = formation.GetComponent<InvaderFormationController>();
-            if (controller == null) controller = formation.AddComponent<InvaderFormationController>();
+            if (controller == null)
+            {
+                controller = formation.AddComponent<InvaderFormationController>();
+            }
             var serialized = new SerializedObject(controller);
             serialized.FindProperty("_gameState").objectReferenceValue = state;
             serialized.FindProperty("_spriteMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(
@@ -79,7 +97,9 @@ namespace UnityInvader.Editor
             var frames = serialized.FindProperty("_frames");
             frames.arraySize = 6;
             for (int index = 0; index < 6; index++)
+            {
                 frames.GetArrayElementAtIndex(index).objectReferenceValue = sprites.Single(sprite => sprite.name == FrameNames[index]);
+            }
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();

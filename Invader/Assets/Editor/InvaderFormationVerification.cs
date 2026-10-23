@@ -17,24 +17,36 @@ namespace UnityInvader.Editor
                 Require(slot.Id == id && slot.Row == id / 11 && slot.Column == id % 11, "Slot identity failed.");
                 Require(slot.Type == (id < 11 ? InvaderType.Top : id < 33 ? InvaderType.Middle : InvaderType.Bottom), "Row type failed.");
             }
-            for (int tick = 0; tick < InvaderFormation.TicksPerStep - 1; tick++) formation.Tick();
+            for (int tick = 0; tick < InvaderFormation.TicksPerStep - 1; tick++)
+            {
+                formation.Tick();
+            }
             Require(formation.X == 32 && formation.AnimationFrame == 0, "Movement must wait for the step.");
             formation.Tick();
             Require(formation.X == 34 && formation.AnimationFrame == 1, "First step/frame failed.");
-            for (int step = 1; step < 12; step++) Step(formation);
+            for (int step = 1; step < 12; step++)
+            {
+                Step(formation);
+            }
             Require(formation.X == InvaderFormation.MaximumX && formation.Y == 200 && formation.Direction == -1,
                 "Right edge must descend exactly 8px and reverse on arrival.");
             Require(formation.AnimationFrame == 0, "Frame must alternate with steps.");
             Step(formation);
             Require(formation.X == 54 && formation.Y == 200, "Must move away from edge without another descent.");
-            for (int step = 0; step < 23; step++) Step(formation);
+            for (int step = 0; step < 23; step++)
+            {
+                Step(formation);
+            }
             Require(formation.X == InvaderFormation.MinimumX && formation.Y == 192 && formation.Direction == 1,
                 "Left edge must descend and reverse.");
 
             foreach (int fps in new[] { 30, 60, 120 })
             {
                 var simulation = new InvaderFormationSimulation();
-                for (int frame = 0; frame < fps * 20; frame++) simulation.Advance(1.0 / fps, true);
+                for (int frame = 0; frame < fps * 20; frame++)
+                {
+                    simulation.Advance(1.0 / fps, true);
+                }
                 Require(simulation.Formation.StepCount == 60 && simulation.Formation.X == 56 &&
                     simulation.Formation.Y == 184 && simulation.Formation.Direction == -1 &&
                     simulation.Formation.AnimationFrame == 0, "30/60/120fps results must match after both edges.");
@@ -53,12 +65,18 @@ namespace UnityInvader.Editor
 
         private static void Step(InvaderFormation formation)
         {
-            for (int tick = 0; tick < InvaderFormation.TicksPerStep; tick++) formation.Tick();
+            for (int tick = 0; tick < InvaderFormation.TicksPerStep; tick++)
+            {
+                formation.Tick();
+            }
         }
 
         private static void Require(bool condition, string message)
         {
-            if (!condition) throw new InvalidOperationException(message);
+            if (!condition)
+            {
+                throw new InvalidOperationException(message);
+            }
         }
     }
 }

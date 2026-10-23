@@ -23,7 +23,9 @@ namespace UnityInvader.Editor
             {
                 var simulation = new PlayerSimulation();
                 for (int frame = 0; frame < framesPerSecond; frame++)
+                {
                     simulation.Advance(1.0 / framesPerSecond, true, new PlayerInputState(false, true));
+                }
                 Require(simulation.Player.X == 172, "Expected 60 logical ticks per second.");
             }
 
@@ -47,7 +49,10 @@ namespace UnityInvader.Editor
 
         private static void Require(bool condition, string message)
         {
-            if (!condition) throw new InvalidOperationException(message);
+            if (!condition)
+            {
+                throw new InvalidOperationException(message);
+            }
         }
     }
 }

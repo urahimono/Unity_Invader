@@ -23,7 +23,10 @@ namespace UnityInvader
 
         private void Start()
         {
-            if (_developmentStartPlaying) _gameState.ChangeState(GameState.Playing);
+            if (_developmentStartPlaying)
+            {
+                _gameState.ChangeState(GameState.Playing);
+            }
         }
 
         private void Update()

@@ -45,7 +45,10 @@ namespace UnityInvader.Editor
         [InitializeOnLoadMethod]
         private static void Resume()
         {
-            if (!SessionState.GetBool("InvaderFormationPlayVerification", false)) return;
+            if (!SessionState.GetBool("InvaderFormationPlayVerification", false))
+            {
+                return;
+            }
             _stage = 0;
             _deadline = EditorApplication.timeSinceStartup + 60;
             EditorApplication.update -= Check;
@@ -58,15 +61,24 @@ namespace UnityInvader.Editor
             {
                 Require(EditorApplication.timeSinceStartup < _deadline, "Play verification timed out.");
                 if (!EditorApplication.isPlaying || EditorApplication.isCompiling ||
-                    EditorApplication.timeSinceStartup < _nextCheck) return;
+                    EditorApplication.timeSinceStartup < _nextCheck)
+                {
+                    return;
+                }
                 if (_stage == 0)
                 {
-                    if (SceneManager.GetActiveScene().name != "Arcade") return;
+                    if (SceneManager.GetActiveScene().name != "Arcade")
+                    {
+                        return;
+                    }
                     _controller = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
                     _state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
                     _player = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
                     Require(_controller != null && _player != null && _state != null, "Arcade components missing.");
-                    if (_state.CurrentState != GameState.Playing) return;
+                    if (_state.CurrentState != GameState.Playing)
+                    {
+                        return;
+                    }
                     _stage = 10;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.2;
                 }
@@ -76,7 +88,10 @@ namespace UnityInvader.Editor
                     VerifyFrameSwitch();
                     Require(_player.GetComponent<SpriteRenderer>().enabled, "Player must remain visible in Playing.");
                     // Step the model to the opposite frame, then let the normal Update display it.
-                    for (int tick = 0; tick < InvaderFormation.TicksPerStep; tick++) _controller.Formation.Tick();
+                    for (int tick = 0; tick < InvaderFormation.TicksPerStep; tick++)
+                    {
+                        _controller.Formation.Tick();
+                    }
                     _stage = 3;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.02;
                 }
@@ -93,7 +108,10 @@ namespace UnityInvader.Editor
                     Require(_controller.Formation.StepCount == _pausedStep && _controller.Formation.X == _pausedX &&
                         _controller.Formation.Y == _pausedY, "Non-Playing formation must stop.");
                     _stateIndex++;
-                    if (_stateIndex < 5) BeginPausedState();
+                    if (_stateIndex < 5)
+                    {
+                        BeginPausedState();
+                    }
                     else
                     {
                         _state.ChangeState(GameState.Playing);
@@ -179,7 +197,10 @@ namespace UnityInvader.Editor
 
         private static void Require(bool condition, string message)
         {
-            if (!condition) throw new InvalidOperationException(message);
+            if (!condition)
+            {
+                throw new InvalidOperationException(message);
+            }
         }
     }
 }

@@ -22,7 +22,10 @@ namespace UnityInvader
 
         internal bool TryKill()
         {
-            if (!Alive) return false;
+            if (!Alive)
+            {
+                return false;
+            }
             Alive = false;
             return true;
         }
@@ -55,21 +58,31 @@ namespace UnityInvader
         {
             var slots = new InvaderSlot[Rows * Columns];
             for (int row = 0; row < Rows; row++)
+            {
                 for (int column = 0; column < Columns; column++)
+                {
                     slots[row * Columns + column] = new InvaderSlot(row, column);
+                }
+            }
             Invaders = Array.AsReadOnly(slots);
         }
 
         public bool TryKill(int id)
         {
-            if (!Invaders[id].TryKill()) return false;
+            if (!Invaders[id].TryKill())
+            {
+                return false;
+            }
             AliveCount--;
             return true;
         }
 
         public void Tick()
         {
-            if (--_ticksUntilStep > 0) return;
+            if (--_ticksUntilStep > 0)
+            {
+                return;
+            }
             _ticksUntilStep = TicksPerStep;
             X = Math.Max(MinimumX, Math.Min(MaximumX, X + Direction * HorizontalStep));
             if ((Direction > 0 && X == MaximumX) || (Direction < 0 && X == MinimumX))

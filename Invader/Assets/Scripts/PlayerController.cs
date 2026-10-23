@@ -52,13 +52,22 @@ namespace UnityInvader
         private void OnDisable()
         {
             _playerRenderer.enabled = false;
-            if (_shotRenderer != null) _shotRenderer.enabled = false;
+            if (_shotRenderer != null)
+            {
+                _shotRenderer.enabled = false;
+            }
         }
 
         private void OnDestroy()
         {
-            if (_shotSprite != null) Destroy(_shotSprite);
-            if (_shotTexture != null) Destroy(_shotTexture);
+            if (_shotSprite != null)
+            {
+                Destroy(_shotSprite);
+            }
+            if (_shotTexture != null)
+            {
+                Destroy(_shotTexture);
+            }
         }
     }
 }

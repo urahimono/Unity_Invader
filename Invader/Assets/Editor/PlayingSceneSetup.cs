@@ -10,10 +10,16 @@ namespace UnityInvader.Editor
         [MenuItem("Unity Invader/Configure Playing Controller")]
         public static void Configure()
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                return;
+            }
             var scene = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
             var state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
-            if (state == null) throw new InvalidOperationException("Arcade GameState is missing.");
+            if (state == null)
+            {
+                throw new InvalidOperationException("Arcade GameState is missing.");
+            }
             // Preserve Arcade's existing enabled development start path.
             ConfigureInScene(state);
             EditorSceneManager.SaveScene(scene);
@@ -23,7 +29,10 @@ namespace UnityInvader.Editor
         internal static void ConfigureInScene(GameStateController state)
         {
             var controllers = UnityEngine.Object.FindObjectsByType<PlayingController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            if (controllers.Length > 1) throw new InvalidOperationException("Arcade must have only one PlayingController.");
+            if (controllers.Length > 1)
+            {
+                throw new InvalidOperationException("Arcade must have only one PlayingController.");
+            }
             var controller = controllers.Length == 1 ? controllers[0] : state.gameObject.AddComponent<PlayingController>();
             var serialized = new SerializedObject(controller);
             serialized.FindProperty("_gameState").objectReferenceValue = state;

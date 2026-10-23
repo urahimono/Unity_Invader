@@ -10,11 +10,17 @@ namespace UnityInvader.Editor
         [MenuItem("Unity Invader/Configure Player Movement")]
         public static void Configure()
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                return;
+            }
 
             const string texturePath = "Assets/Sprites/Player/Player.png";
             var importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
-            if (importer == null) throw new InvalidOperationException("Player.png is missing.");
+            if (importer == null)
+            {
+                throw new InvalidOperationException("Player.png is missing.");
+            }
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
             importer.filterMode = FilterMode.Point;
@@ -35,22 +41,36 @@ namespace UnityInvader.Editor
             var scene = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
             var state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
             var camera = Camera.main;
-            if (state == null || camera == null) throw new InvalidOperationException("Arcade foundation missing.");
+            if (state == null || camera == null)
+            {
+                throw new InvalidOperationException("Arcade foundation missing.");
+            }
             camera.orthographicSize = PlayerModel.ScreenHeight / 2f;
             if (camera.GetComponent<ArcadeViewport>() == null)
+            {
                 camera.gameObject.AddComponent<ArcadeViewport>();
+            }
 
             var player = GameObject.Find("Player");
-            if (player == null) player = new GameObject("Player");
+            if (player == null)
+            {
+                player = new GameObject("Player");
+            }
             var renderer = player.GetComponent<SpriteRenderer>();
-            if (renderer == null) renderer = player.AddComponent<SpriteRenderer>();
+            if (renderer == null)
+            {
+                renderer = player.AddComponent<SpriteRenderer>();
+            }
             renderer.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(texturePath);
             renderer.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(
                 "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
             renderer.enabled = false;
             player.transform.position = new Vector3(0f, 24f - PlayerModel.ScreenHeight / 2f, 0f);
             var controller = player.GetComponent<PlayerController>();
-            if (controller == null) controller = player.AddComponent<PlayerController>();
+            if (controller == null)
+            {
+                controller = player.AddComponent<PlayerController>();
+            }
             var serialized = new SerializedObject(controller);
             serialized.FindProperty("_gameState").objectReferenceValue = state;
             serialized.FindProperty("_playerRenderer").objectReferenceValue = renderer;

@@ -24,9 +24,15 @@ namespace UnityInvader
                 FireReady = true;
                 return;
             }
-            if (!FireReady) return;
+            if (!FireReady)
+            {
+                return;
+            }
             FireReady = false; // Consume presses even while the slot is occupied.
-            if (!Active) _pendingFire = true;
+            if (!Active)
+            {
+                _pendingFire = true;
+            }
         }
 
         public void Tick(PlayerModel player)
@@ -34,7 +40,10 @@ namespace UnityInvader
             if (Active)
             {
                 Y += SpeedPerTick;
-                if (Y >= PlayerModel.ScreenHeight) Active = false;
+                if (Y >= PlayerModel.ScreenHeight)
+                {
+                    Active = false;
+                }
             }
             if (_pendingFire)
             {

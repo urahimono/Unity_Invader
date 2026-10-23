@@ -45,7 +45,10 @@ namespace UnityInvader.Editor
                 cumulative.Formation.Invaders[44].Row == 4 && cumulative.Formation.Invaders[44].Column == 0 &&
                 cumulative.Formation.Invaders[44].Type == InvaderType.Bottom, "Dead slot identity must remain intact.");
             var reference = new InvaderFormation();
-            for (int tick = 0; tick < 1203; tick++) reference.Tick();
+            for (int tick = 0; tick < 1203; tick++)
+            {
+                reference.Tick();
+            }
             cumulative.Advance(20, true, default);
             Require(SameFormation(cumulative.Formation, reference) && cumulative.Formation.AliveCount == 52 &&
                 cumulative.Score == 60, "Multiple kills must preserve movement, animation, both edges and fixed bounds.");
@@ -71,7 +74,12 @@ namespace UnityInvader.Editor
 
             var all = new PlayingSimulation();
             for (int row = 4; row >= 0; row--)
-                for (int column = 0; column < 11; column++) Hit(all, row, column);
+            {
+                for (int column = 0; column < 11; column++)
+                {
+                    Hit(all, row, column);
+                }
+            }
             Require(all.Formation.AliveCount == 0 && all.Score == 990, "55 real hits must yield zero alive and 990 Score.");
             all.Advance(1, true, default);
             Require(all.WaveClearRequired && all.Formation.StepCount == 2 && all.Formation.Invaders.Count == 55 && all.Score == 990,
@@ -122,7 +130,10 @@ namespace UnityInvader.Editor
         {
             foreach (GameState state in Enum.GetValues(typeof(GameState)))
             {
-                if (state == GameState.Playing) continue;
+                if (state == GameState.Playing)
+                {
+                    continue;
+                }
                 var simulation = new PlayingSimulation();
                 PrepareShot(simulation, 32, 136);
                 simulation.Advance(Tick / 2, true, _fire);
@@ -158,8 +169,10 @@ namespace UnityInvader.Editor
                         simulation.Formation.AliveCount == reference.Formation.AliveCount && SameFormation(simulation.Formation, reference.Formation),
                         "30/60/120fps must match all logical state after 1200 ticks.");
                     for (int id = 0; id < 55; id++)
+                    {
                         Require(simulation.Formation.Invaders[id].Alive == reference.Formation.Invaders[id].Alive,
                             "Every killed ID must match across frame rates.");
+                    }
                 }
                 reference = simulation;
                 Debug.Log($"INVADER_HIT_FPS_PASS: fps={fps}; Score={simulation.Score}; Alive={simulation.Formation.AliveCount}; PlayerX={simulation.Player.X}; Shot=({simulation.Shot.X},{simulation.Shot.Y},{simulation.Shot.Active}); Formation=({simulation.Formation.X},{simulation.Formation.Y}); Steps={simulation.Formation.StepCount}");
@@ -171,11 +184,16 @@ namespace UnityInvader.Editor
         {
             Require(!simulation.Shot.Active, "Fixture requires an empty Shot slot.");
             while (simulation.Player.X != x)
+            {
                 simulation.Player.Tick(new PlayerInputState(simulation.Player.X > x, simulation.Player.X < x));
+            }
             simulation.Shot.ReadFire(false);
             simulation.Shot.ReadFire(true);
             simulation.Shot.Tick(simulation.Player);
-            while (simulation.Shot.Y < y) simulation.Shot.Tick(simulation.Player);
+            while (simulation.Shot.Y < y)
+            {
+                simulation.Shot.Tick(simulation.Player);
+            }
             Require(simulation.Shot.Y == y && simulation.Shot.Active, "Fixture Y must be a reachable active Shot position.");
         }
 
@@ -195,7 +213,10 @@ namespace UnityInvader.Editor
 
         private static void Require(bool condition, string message)
         {
-            if (!condition) throw new InvalidOperationException(message);
+            if (!condition)
+            {
+                throw new InvalidOperationException(message);
+            }
         }
     }
 }
