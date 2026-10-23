@@ -7,7 +7,8 @@ namespace UnityInvader
     {
         // Initial placeholder only; state rules will be implemented in later issues.
         [FormerlySerializedAs("currentState")]
-        [SerializeField] private GameState _currentState = GameState.Attract;
+        [SerializeField]
+        private GameState _currentState = GameState.Attract;
 
         public GameState CurrentState => _currentState;
         public PlayingSimulation Playing { get; } = new PlayingSimulation();

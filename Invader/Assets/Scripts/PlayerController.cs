@@ -6,9 +6,11 @@ namespace UnityInvader
     public sealed class PlayerController : MonoBehaviour
     {
         [FormerlySerializedAs("gameState")]
-        [SerializeField] private GameStateController _gameState;
+        [SerializeField]
+        private GameStateController _gameState;
         [FormerlySerializedAs("playerRenderer")]
-        [SerializeField] private SpriteRenderer _playerRenderer;
+        [SerializeField]
+        private SpriteRenderer _playerRenderer;
         private PlayingSimulation Simulation => _gameState.Playing;
         private SpriteRenderer _shotRenderer;
         private Texture2D _shotTexture;

@@ -8,10 +8,12 @@ namespace UnityInvader
     public sealed class PlayingController : MonoBehaviour
     {
         [FormerlySerializedAs("gameState")]
-        [SerializeField] private GameStateController _gameState;
+        [SerializeField]
+        private GameStateController _gameState;
         [Tooltip("Temporary development start path; real game-start transitions are not implemented.")]
         [FormerlySerializedAs("developmentStartPlaying")]
-        [SerializeField] private bool _developmentStartPlaying;
+        [SerializeField]
+        private bool _developmentStartPlaying;
         private PlayerInputReader _input;
         private double _waveClearElapsed;
         private bool _waitingForNextWave;
