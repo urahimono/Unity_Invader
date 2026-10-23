@@ -50,6 +50,55 @@ private bool _developmentStartPlaying;
 
 今回の規約追加では既存C#コードを修正しません。既存コードへの適用は、この規約を `develop` へマージした後、別のCodexセッション・後続PRで行います。
 
+## field / const 宣言のグループ内の列揃え
+
+空行で区切られず連続している field / const 宣言をひとまとまりのグループとして扱い、宣言の各要素を縦に揃えます。揃える対象は、access modifier、`const` / `static` / `readonly` などの modifier、型、field 名、initializer がある場合の `=` です。要素がない宣言では、その欄を空けて後続の要素を揃えます。
+
+```csharp
+public  const int Rows            = 5;
+public  const int Columns         = 11;
+public  const int Spacing         = 16;
+public  const int CellSize        = 16;
+public  const int HorizontalStep  = 2;
+public  const int Descent         = 8;
+public  const int TicksPerStep    = 20;
+public  const int MinimumX        = CellSize / 2;
+public  const int MaximumX        = PlayerModel.ScreenWidth - CellSize / 2 - (Columns - 1) * Spacing;
+private       int _ticksUntilStep = TicksPerStep;
+```
+
+### グループの境界
+
+空行を境に別のグループとして扱います。列揃えはグループ内で行い、空行を越えて揃える必要はありません。file / class 全体で同じ列位置へ揃えることや、固定の列位置は要求しません。
+
+```csharp
+public const int Rows           = 5;
+public const int Columns        = 11;
+public const int HorizontalStep = 2;
+
+private int _ticksUntilStep = TicksPerStep;
+private int _direction      = 1;
+```
+
+この例では空行の前後は別グループなので、互いの列位置を合わせる必要はありません。
+
+### 属性付き field
+
+属性は既存の「field に付与する属性の配置」に従います。属性行そのものは列揃えの対象にせず、field 宣言行を同じグループ内の他の field 宣言と揃えます。属性行が間にあっても、空行で区切られていなければ同じグループです。
+
+```csharp
+[SerializeField]
+private int _playerSpeed = 2;
+[SerializeField]
+private int _shotSpeed   = 4;
+```
+
+この規約を理由に、属性の順序・内容・配置規約を変更しません。
+
+標準の EditorConfig 設定だけではこの列揃えを正確に表現するのは難しいため、本書を正本とし、今回 `.editorconfig` は変更しません。
+
+今回の規約追加では既存C#コードを修正しません。既存コードへの適用は、この規約を `develop` へマージした後、別のCodexセッション・後続PRで行います。
+
 ## 文の波括弧と本文の改行
 
 `if`、`else`、`for`、`foreach`、`while`、`do`、`using` 文、`lock` は、本文が1文だけの場合でも波括弧を省略しません。本文は波括弧内へ改行して記述し、`if (condition) { DoA(); }` のような1行形式は使用しません。
