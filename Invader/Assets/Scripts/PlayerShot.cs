@@ -10,7 +10,7 @@ namespace UnityInvader
         public int X { get; private set; }
         public int Y { get; private set; }
         public bool FireReady { get; private set; } = true;
-        private bool pendingFire;
+        private bool _pendingFire;
 
         public void Deactivate()
         {
@@ -26,7 +26,7 @@ namespace UnityInvader
             }
             if (!FireReady) return;
             FireReady = false; // Consume presses even while the slot is occupied.
-            if (!Active) pendingFire = true;
+            if (!Active) _pendingFire = true;
         }
 
         public void Tick(PlayerModel player)
@@ -36,7 +36,7 @@ namespace UnityInvader
                 Y += SpeedPerTick;
                 if (Y >= PlayerModel.ScreenHeight) Active = false;
             }
-            if (pendingFire)
+            if (_pendingFire)
             {
                 if (!Active)
                 {
@@ -44,7 +44,7 @@ namespace UnityInvader
                     X = player.X;
                     Y = player.Y + 8;
                 }
-                pendingFire = false;
+                _pendingFire = false;
             }
         }
     }

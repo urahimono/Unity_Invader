@@ -13,15 +13,15 @@ namespace UnityInvader.Editor
     public static class WaveLoopPlayVerification
     {
         private const string SessionKey = "WaveLoopPlayVerification";
-        private static int stage, clearedWave, pausedX, pausedSteps;
-        private static double deadline, clearStarted, nextCheck;
-        private static GameStateController state;
-        private static InvaderFormationController view;
-        private static SpriteRenderer[] renderers;
-        private static Keyboard keyboard;
-        private static InputSettings settings;
-        private static InputSettings.BackgroundBehavior background;
-        private static InputSettings.EditorInputBehaviorInPlayMode editorInput;
+        private static int _stage, _clearedWave, _pausedX, _pausedSteps;
+        private static double _deadline, _clearStarted, _nextCheck;
+        private static GameStateController _state;
+        private static InvaderFormationController _view;
+        private static SpriteRenderer[] _renderers;
+        private static Keyboard _keyboard;
+        private static InputSettings _settings;
+        private static InputSettings.BackgroundBehavior _background;
+        private static InputSettings.EditorInputBehaviorInPlayMode _editorInput;
 
         public static void Verify()
         {
@@ -36,8 +36,8 @@ namespace UnityInvader.Editor
         private static void Resume()
         {
             if (!SessionState.GetBool(SessionKey, false)) return;
-            stage = clearedWave = 0;
-            deadline = EditorApplication.timeSinceStartup + 60;
+            _stage = _clearedWave = 0;
+            _deadline = EditorApplication.timeSinceStartup + 60;
             EditorApplication.update -= Check;
             EditorApplication.update += Check;
         }
@@ -46,76 +46,76 @@ namespace UnityInvader.Editor
         {
             try
             {
-                WaveLoopVerification.Require(EditorApplication.timeSinceStartup < deadline, "Wave Play verification timeout.");
+                WaveLoopVerification.Require(EditorApplication.timeSinceStartup < _deadline, "Wave Play verification timeout.");
                 if (!EditorApplication.isPlaying || EditorApplication.isCompiling ||
-                    EditorApplication.timeSinceStartup < nextCheck) return;
-                if (stage == 0)
+                    EditorApplication.timeSinceStartup < _nextCheck) return;
+                if (_stage == 0)
                 {
                     if (SceneManager.GetActiveScene().name != "Arcade") return;
-                    state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
-                    if (state == null || state.CurrentState != GameState.Playing) return;
-                    view = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
-                    renderers = view.GetComponentsInChildren<SpriteRenderer>();
-                    settings = InputSystem.settings;
-                    background = settings.backgroundBehavior;
-                    editorInput = settings.editorInputBehaviorInPlayMode;
-                    settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
-                    settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
-                    keyboard = InputSystem.AddDevice<Keyboard>();
+                    _state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
+                    if (_state == null || _state.CurrentState != GameState.Playing) return;
+                    _view = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
+                    _renderers = _view.GetComponentsInChildren<SpriteRenderer>();
+                    _settings = InputSystem.settings;
+                    _background = _settings.backgroundBehavior;
+                    _editorInput = _settings.editorInputBehaviorInPlayMode;
+                    _settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+                    _settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+                    _keyboard = InputSystem.AddDevice<Keyboard>();
                     Keys(Key.Space);
-                    stage = 1;
+                    _stage = 1;
                 }
-                else if (stage == 1)
+                else if (_stage == 1)
                 {
                     // Keep the real InputReader holding Space during clear and into the next wave.
-                    state.Playing.Shot.Deactivate();
-                    WaveLoopVerification.Clear(state.Playing, PlayingSimulation.TickDuration);
-                    pausedX = state.Playing.Player.X;
-                    pausedSteps = state.Playing.Formation.StepCount;
-                    clearedWave++;
-                    stage = 2;
+                    _state.Playing.Shot.Deactivate();
+                    WaveLoopVerification.Clear(_state.Playing, PlayingSimulation.TickDuration);
+                    _pausedX = _state.Playing.Player.X;
+                    _pausedSteps = _state.Playing.Formation.StepCount;
+                    _clearedWave++;
+                    _stage = 2;
                 }
-                else if (stage == 2)
+                else if (_stage == 2)
                 {
-                    if (state.CurrentState != GameState.WaveClear) return;
-                    clearStarted = Time.timeAsDouble;
+                    if (_state.CurrentState != GameState.WaveClear) return;
+                    _clearStarted = Time.timeAsDouble;
                     Keys(Key.Space, Key.RightArrow);
-                    stage = 3;
-                    nextCheck = EditorApplication.timeSinceStartup + 0.4;
+                    _stage = 3;
+                    _nextCheck = EditorApplication.timeSinceStartup + 0.4;
                 }
-                else if (stage == 3)
+                else if (_stage == 3)
                 {
-                    Require(state.CurrentState == GameState.WaveClear && state.Playing.Player.X == pausedX &&
-                        state.Playing.Formation.StepCount == pausedSteps && state.Playing.Score == clearedWave * 990 &&
-                        !state.Playing.Shot.Active && !state.Playing.Shot.FireReady, "WaveClear must freeze progress/input/Score.");
+                    Require(_state.CurrentState == GameState.WaveClear && _state.Playing.Player.X == _pausedX &&
+                        _state.Playing.Formation.StepCount == _pausedSteps && _state.Playing.Score == _clearedWave * 990 &&
+                        !_state.Playing.Shot.Active && !_state.Playing.Shot.FireReady, "WaveClear must freeze progress/input/Score.");
                     Keys(Key.Space);
-                    stage = 4;
+                    _stage = 4;
                 }
-                else if (stage == 4)
+                else if (_stage == 4)
                 {
-                    if (state.CurrentState != GameState.Playing) return;
-                    Require(Time.timeAsDouble - clearStarted >= 0.9 && Time.timeAsDouble - clearStarted < 1.3,
+                    if (_state.CurrentState != GameState.Playing) return;
+                    Require(Time.timeAsDouble - _clearStarted >= 0.9 && Time.timeAsDouble - _clearStarted < 1.3,
                         "WaveClear must last approximately one second.");
-                    Require(state.Playing.WaveNumber == clearedWave + 1 && state.Playing.Formation.AliveCount == 55 &&
-                        state.Playing.Score == clearedWave * 990 && state.Playing.Player.X == pausedX &&
-                        !state.Playing.Shot.Active && !state.Playing.Shot.FireReady, "Next wave must retain state and block held Fire.");
-                    Require(view.GetComponentsInChildren<SpriteRenderer>().SequenceEqual(renderers) && renderers.Length == 55 &&
-                        renderers.All(r => r.enabled), "Reuse exactly the same 55 visible renderers.");
-                    Debug.Log($"WAVE_LOOP_PLAY_WAVE_PASS: Wave={state.Playing.WaveNumber}; Score={state.Playing.Score}; renderers=55; elapsed={Time.timeAsDouble - clearStarted}");
+                    Require(_state.Playing.WaveNumber == _clearedWave + 1 && _state.Playing.Formation.AliveCount == 55 &&
+                        _state.Playing.Score == _clearedWave * 990 && _state.Playing.Player.X == _pausedX &&
+                        !_state.Playing.Shot.Active && !_state.Playing.Shot.FireReady, "Next wave must retain state and block held Fire.");
+                    Require(_view.GetComponentsInChildren<SpriteRenderer>().SequenceEqual(_renderers) && _renderers.Length == 55 &&
+                        _renderers.All(r => r.enabled), "Reuse exactly the same 55 visible renderers.");
+                    Debug.Log($"WAVE_LOOP_PLAY_WAVE_PASS: Wave={_state.Playing.WaveNumber}; Score={_state.Playing.Score}; renderers=55; elapsed={Time.timeAsDouble - _clearStarted}");
                     Keys();
-                    stage = 5;
-                    nextCheck = EditorApplication.timeSinceStartup + 0.05;
+                    _stage = 5;
+                    _nextCheck = EditorApplication.timeSinceStartup + 0.05;
                 }
-                else if (stage == 5)
+                else if (_stage == 5)
                 {
-                    Require(state.Playing.Shot.FireReady, "Release must re-arm.");
+                    Require(_state.Playing.Shot.FireReady, "Release must re-arm.");
                     Keys(Key.Space);
-                    stage = 6;
+                    _stage = 6;
                 }
-                else if (stage == 6)
+                else if (_stage == 6)
                 {
-                    if (!state.Playing.Shot.Active) return;
-                    if (clearedWave == 1) stage = 1;
+                    if (!_state.Playing.Shot.Active) return;
+                    if (_clearedWave == 1) _stage = 1;
                     else
                     {
                         Debug.Log("WAVE_LOOP_PLAY_PASS: Bootstrap -> Arcade -> Playing -> WaveClear -> Wave2 -> WaveClear -> Wave3; real collisions/Score; one-second wait; held/release/re-press; same 55 display objects.");
@@ -131,16 +131,16 @@ namespace UnityInvader.Editor
         }
 
         private static void Require(bool condition, string message) => WaveLoopVerification.Require(condition, message);
-        private static void Keys(params Key[] keys) => InputSystem.QueueStateEvent(keyboard, new KeyboardState(keys));
+        private static void Keys(params Key[] keys) => InputSystem.QueueStateEvent(_keyboard, new KeyboardState(keys));
         private static void Finish(int code)
         {
             SessionState.SetBool(SessionKey, false);
             EditorApplication.update -= Check;
-            if (keyboard != null && keyboard.added) InputSystem.RemoveDevice(keyboard);
-            if (settings != null)
+            if (_keyboard != null && _keyboard.added) InputSystem.RemoveDevice(_keyboard);
+            if (_settings != null)
             {
-                settings.backgroundBehavior = background;
-                settings.editorInputBehaviorInPlayMode = editorInput;
+                _settings.backgroundBehavior = _background;
+                _settings.editorInputBehaviorInPlayMode = _editorInput;
             }
             EditorApplication.Exit(code);
         }
