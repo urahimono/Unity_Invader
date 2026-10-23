@@ -10,12 +10,45 @@ private / protected の field は、先頭に `_` を付けた lowerCamelCase �
 private int _score;
 protected float _speed;
 private readonly InputAction _left;
-[SerializeField] private GameStateController _gameState;
+[SerializeField]
+private GameStateController _gameState;
 ```
 
 private / protected の field は、`readonly`、`static`、`[SerializeField]` の有無にかかわらず対象です。
 
 `const`、property、method、parameter、local variable は対象外です。`const` には今回新しい命名規約を追加せず、既存の扱いを変更しません。
+
+## field に付与する属性の配置
+
+field に付与する属性は、field 宣言と同じ行に記述しません。属性は1属性につき1行で記述し、すべての属性を書いた後の次の行に field 宣言を書きます。
+
+NG:
+
+```csharp
+[SerializeField] private bool _developmentStartPlaying;
+
+[SerializeField] [Tooltip("Temporary development start path; real game-start transitions are not implemented.")]
+private bool _developmentStartPlaying;
+```
+
+OK:
+
+```csharp
+[SerializeField]
+private bool _developmentStartPlaying;
+
+[SerializeField]
+[Tooltip("Temporary development start path; real game-start transitions are not implemented.")]
+private bool _developmentStartPlaying;
+```
+
+属性が複数ある場合も1属性につき1行とし、field 宣言は属性と同じ行に置きません。属性の並び順について新しい規約は追加せず、既存の属性順序を維持します。
+
+この規約は field に付与する属性の配置だけを対象とします。method / class / property など、field 以外の属性配置については今回新しい規約を追加しません。
+
+標準の EditorConfig 設定だけではこの配置規約を正確に表現できないため、本書を正本とし、今回 `.editorconfig` は変更しません。
+
+今回の規約追加では既存C#コードを修正しません。既存コードへの適用は、この規約を `develop` へマージした後、別のCodexセッション・後続PRで行います。
 
 ## 文の波括弧と本文の改行
 
