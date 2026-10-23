@@ -2,8 +2,8 @@ namespace UnityInvader
 {
     public sealed class InvaderFormationSimulation
     {
-        public const double TickDuration = 1.0 / 60.0;
-        private double _accumulatedTime;
+        public  const double TickDuration = 1.0 / 60.0;
+        private       double _accumulatedTime;
         public InvaderFormation Formation { get; } = new InvaderFormation();
 
         public void Advance(double elapsedSeconds, bool playing)

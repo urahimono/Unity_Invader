@@ -12,15 +12,15 @@ namespace UnityInvader.Editor
     // Dedicated batch Editor, without -quit. Fixtures position shots; runtime controller handles transitions.
     public static class WaveLoopPlayVerification
     {
-        private const string SessionKey = "WaveLoopPlayVerification";
-        private static int _stage, _clearedWave, _pausedX, _pausedSteps;
-        private static double _deadline, _clearStarted, _nextCheck;
-        private static GameStateController _state;
-        private static InvaderFormationController _view;
-        private static SpriteRenderer[] _renderers;
-        private static Keyboard _keyboard;
-        private static InputSettings _settings;
-        private static InputSettings.BackgroundBehavior _background;
+        private const  string                                      SessionKey = "WaveLoopPlayVerification";
+        private static int                                         _stage, _clearedWave, _pausedX, _pausedSteps;
+        private static double                                      _deadline, _clearStarted, _nextCheck;
+        private static GameStateController                         _state;
+        private static InvaderFormationController                  _view;
+        private static SpriteRenderer[]                            _renderers;
+        private static Keyboard                                    _keyboard;
+        private static InputSettings                               _settings;
+        private static InputSettings.BackgroundBehavior            _background;
         private static InputSettings.EditorInputBehaviorInPlayMode _editorInput;
 
         public static void Verify()
