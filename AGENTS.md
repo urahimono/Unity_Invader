@@ -24,6 +24,10 @@
 - AGENTS.mdへ設計資料全文を複製しない。AI製品固有ファイルを追加する場合も、設計思想の正本を重複コピーしない。
 - Unity固有の作業ルールは [Invader/AGENTS.md](Invader/AGENTS.md) を参照する。
 
+## コード規約への入口
+
+コード変更を伴う作業では、作業開始時に [コード規約](docs/CODE_STYLE.md) と [.editorconfig](.editorconfig) を確認する。
+
 ## Git運用
 
 - 基準ブランチは `develop`。Issueに対応する作業ブランチを `codex/` prefixで作成する。

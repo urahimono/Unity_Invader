@@ -1,0 +1,22 @@
+root = true
+
+[*.cs]
+dotnet_naming_symbols.private_protected_fields.applicable_kinds = field
+dotnet_naming_symbols.private_protected_fields.applicable_accessibilities = private, protected
+
+dotnet_naming_style.underscore_lower_camel_case.required_prefix = _
+dotnet_naming_style.underscore_lower_camel_case.capitalization = camel_case
+
+dotnet_naming_rule.private_protected_fields.symbols = private_protected_fields
+dotnet_naming_rule.private_protected_fields.style = underscore_lower_camel_case
+dotnet_naming_rule.private_protected_fields.severity = warning
+
+# const は field としても認識されるため、より具体的なルールで診断対象から除外する。
+# style はルール定義に必要な参照であり、const の命名規約を追加するものではない。
+dotnet_naming_symbols.private_protected_constants.applicable_kinds = field
+dotnet_naming_symbols.private_protected_constants.applicable_accessibilities = private, protected
+dotnet_naming_symbols.private_protected_constants.required_modifiers = const
+
+dotnet_naming_rule.exclude_private_protected_constants.symbols = private_protected_constants
+dotnet_naming_rule.exclude_private_protected_constants.style = underscore_lower_camel_case
+dotnet_naming_rule.exclude_private_protected_constants.severity = none
