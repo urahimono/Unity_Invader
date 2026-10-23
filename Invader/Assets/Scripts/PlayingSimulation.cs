@@ -18,7 +18,7 @@ namespace UnityInvader
 
         public void StartNextWave()
         {
-            if (!WaveClearRequired)
+            if (WaveClearRequired == false)
             {
                 return;
             }
@@ -31,7 +31,7 @@ namespace UnityInvader
 
         public void Advance(double elapsedSeconds, bool playing, PlayerInputState input)
         {
-            if (!playing || WaveClearRequired)
+            if (playing == false || WaveClearRequired)
             {
                 _accumulatedTime = 0;
                 return;
@@ -57,7 +57,7 @@ namespace UnityInvader
 
         private void ResolvePlayerShotHit()
         {
-            if (!Shot.Active)
+            if (Shot.Active == false)
             {
                 return;
             }
@@ -67,7 +67,7 @@ namespace UnityInvader
                 for (int column = 0; column < InvaderFormation.Columns; column++)
                 {
                     var slot = Formation.Invaders[row * InvaderFormation.Columns + column];
-                    if (!slot.Alive)
+                    if (slot.Alive == false)
                     {
                         continue;
                     }

@@ -213,7 +213,7 @@ namespace UnityInvader.Editor
 
         private static void Require(bool condition, string message)
         {
-            if (!condition)
+            if (condition == false)
             {
                 throw new InvalidOperationException(message);
             }

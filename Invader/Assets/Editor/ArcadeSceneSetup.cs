@@ -22,7 +22,7 @@ namespace UnityInvader.Editor
                 throw new InvalidOperationException("Bootstrap or Arcade already exists.");
             }
 
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo() == false)
             {
                 return;
             }
