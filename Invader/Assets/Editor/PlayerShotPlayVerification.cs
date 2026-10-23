@@ -12,15 +12,15 @@ namespace UnityInvader.Editor
     public static class PlayerShotPlayVerification
     {
         private const string SessionKey = "PlayerShotPlayVerification";
-        private static int stage;
-        private static int stateIndex;
-        private static int pausedY;
-        private static double deadline;
-        private static double nextCheck;
-        private static PlayerController player;
-        private static GameStateController state;
-        private static SpriteRenderer renderer;
-        private static readonly GameState[] PausedStates = {
+        private static int _stage;
+        private static int _stateIndex;
+        private static int _pausedY;
+        private static double _deadline;
+        private static double _nextCheck;
+        private static PlayerController _player;
+        private static GameStateController _state;
+        private static SpriteRenderer _renderer;
+        private static readonly GameState[] _pausedStates = {
             GameState.Attract, GameState.PlayerReady, GameState.PlayerDead, GameState.WaveClear, GameState.GameOver
         };
 
@@ -37,9 +37,9 @@ namespace UnityInvader.Editor
         private static void Resume()
         {
             if (!SessionState.GetBool(SessionKey, false)) return;
-            stage = 0;
-            stateIndex = 0;
-            deadline = EditorApplication.timeSinceStartup + 60;
+            _stage = 0;
+            _stateIndex = 0;
+            _deadline = EditorApplication.timeSinceStartup + 60;
             EditorApplication.update -= Check;
             EditorApplication.update += Check;
         }
@@ -48,52 +48,52 @@ namespace UnityInvader.Editor
         {
             try
             {
-                Require(EditorApplication.timeSinceStartup < deadline, "Play verification timed out.");
-                if (!EditorApplication.isPlaying || EditorApplication.isCompiling || EditorApplication.timeSinceStartup < nextCheck) return;
-                if (stage == 0)
+                Require(EditorApplication.timeSinceStartup < _deadline, "Play verification timed out.");
+                if (!EditorApplication.isPlaying || EditorApplication.isCompiling || EditorApplication.timeSinceStartup < _nextCheck) return;
+                if (_stage == 0)
                 {
                     if (SceneManager.GetActiveScene().name != "Arcade") return;
-                    player = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
-                    state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
-                    Require(player != null && state != null, "Player/State missing.");
-                    if (state.CurrentState != GameState.Playing) return;
+                    _player = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
+                    _state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
+                    Require(_player != null && _state != null, "Player/State missing.");
+                    if (_state.CurrentState != GameState.Playing) return;
                     VerifyInput();
                     var formation = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
                     Require(formation != null && formation.GetComponentsInChildren<SpriteRenderer>().Length == 55,
                         "Formation must retain 55 renderers.");
-                    Require(player.GetComponent<SpriteRenderer>().enabled, "Player must be visible.");
-                    Require(player.GetComponentsInChildren<SpriteRenderer>().Length == 2, "Exactly one Shot renderer required.");
-                    renderer = player.transform.Find("PlayerShot").GetComponent<SpriteRenderer>();
-                    Require(!renderer.enabled, "Inactive shot must be hidden.");
-                    player.Shot.ReadFire(true);
-                    player.Shot.Tick(player.Player);
-                    stage = 1;
-                    nextCheck = EditorApplication.timeSinceStartup + 0.04;
+                    Require(_player.GetComponent<SpriteRenderer>().enabled, "Player must be visible.");
+                    Require(_player.GetComponentsInChildren<SpriteRenderer>().Length == 2, "Exactly one Shot renderer required.");
+                    _renderer = _player.transform.Find("PlayerShot").GetComponent<SpriteRenderer>();
+                    Require(!_renderer.enabled, "Inactive shot must be hidden.");
+                    _player.Shot.ReadFire(true);
+                    _player.Shot.Tick(_player.Player);
+                    _stage = 1;
+                    _nextCheck = EditorApplication.timeSinceStartup + 0.04;
                 }
-                else if (stage == 1)
+                else if (_stage == 1)
                 {
                     CheckDisplay(true);
-                    Require(renderer.sprite.rect == new Rect(0, 0, 1, 4), "Shot must use a simple 1x4 rectangle.");
+                    Require(_renderer.sprite.rect == new Rect(0, 0, 1, 4), "Shot must use a simple 1x4 rectangle.");
                     Pause();
-                    stage = 2;
+                    _stage = 2;
                 }
-                else if (stage == 2)
+                else if (_stage == 2)
                 {
                     CheckDisplay(false);
-                    Require(player.Shot.Active && player.Shot.Y == pausedY, "Non-Playing must preserve and stop Shot.");
-                    stateIndex++;
-                    if (stateIndex < PausedStates.Length) Pause();
+                    Require(_player.Shot.Active && _player.Shot.Y == _pausedY, "Non-Playing must preserve and stop Shot.");
+                    _stateIndex++;
+                    if (_stateIndex < _pausedStates.Length) Pause();
                     else
                     {
-                        state.ChangeState(GameState.Playing);
-                        stage = 3;
-                        nextCheck = EditorApplication.timeSinceStartup + 0.04;
+                        _state.ChangeState(GameState.Playing);
+                        _stage = 3;
+                        _nextCheck = EditorApplication.timeSinceStartup + 0.04;
                     }
                 }
                 else
                 {
                     CheckDisplay(true);
-                    Require(player.Shot.Y > pausedY, "Shot must resume.");
+                    Require(_player.Shot.Y > _pausedY, "Shot must resume.");
                     Debug.Log("PLAYER_SHOT_PLAY_PASS: Input System arrows/Space press/release; Bootstrap -> Arcade -> Playing; one 1x4 Shot renderer; logical/display conversion; all non-Playing states hidden/stopped/preserved; resume; Player and 55 Formation renderers present.");
                     Finish(0);
                 }
@@ -141,15 +141,15 @@ namespace UnityInvader.Editor
 
         private static void Pause()
         {
-            state.ChangeState(PausedStates[stateIndex]);
-            pausedY = player.Shot.Y;
-            nextCheck = EditorApplication.timeSinceStartup + 0.1;
+            _state.ChangeState(_pausedStates[_stateIndex]);
+            _pausedY = _player.Shot.Y;
+            _nextCheck = EditorApplication.timeSinceStartup + 0.1;
         }
 
         private static void CheckDisplay(bool visible)
         {
-            Require(renderer.enabled == visible, "Shot visibility mismatch.");
-            Require(renderer.transform.position == new Vector3(player.Shot.X - 112, player.Shot.Y - 128, 0),
+            Require(_renderer.enabled == visible, "Shot visibility mismatch.");
+            Require(_renderer.transform.position == new Vector3(_player.Shot.X - 112, _player.Shot.Y - 128, 0),
                 "Shot logical/display coordinate mismatch.");
         }
 

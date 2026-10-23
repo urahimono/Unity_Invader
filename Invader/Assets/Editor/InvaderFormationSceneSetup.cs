@@ -71,12 +71,12 @@ namespace UnityInvader.Editor
             var controller = formation.GetComponent<InvaderFormationController>();
             if (controller == null) controller = formation.AddComponent<InvaderFormationController>();
             var serialized = new SerializedObject(controller);
-            serialized.FindProperty("gameState").objectReferenceValue = state;
-            serialized.FindProperty("spriteMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(
+            serialized.FindProperty("_gameState").objectReferenceValue = state;
+            serialized.FindProperty("_spriteMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(
                 "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
-            serialized.FindProperty("cellDisplayScale").vector2Value = Vector2.one;
+            serialized.FindProperty("_cellDisplayScale").vector2Value = Vector2.one;
             var sprites = AssetDatabase.LoadAllAssetsAtPath(TexturePath).OfType<Sprite>().ToArray();
-            var frames = serialized.FindProperty("frames");
+            var frames = serialized.FindProperty("_frames");
             frames.arraySize = 6;
             for (int index = 0; index < 6; index++)
                 frames.GetArrayElementAtIndex(index).objectReferenceValue = sprites.Single(sprite => sprite.name == FrameNames[index]);

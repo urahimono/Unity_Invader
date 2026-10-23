@@ -40,7 +40,7 @@ namespace UnityInvader
         public const int TicksPerStep = 20;
         public const int MinimumX = CellSize / 2;
         public const int MaximumX = PlayerModel.ScreenWidth - CellSize / 2 - (Columns - 1) * Spacing;
-        private int ticksUntilStep = TicksPerStep;
+        private int _ticksUntilStep = TicksPerStep;
 
         // X/Y are the center of the top-left slot, not a Unity Transform.
         public int X { get; private set; } = 32;
@@ -69,8 +69,8 @@ namespace UnityInvader
 
         public void Tick()
         {
-            if (--ticksUntilStep > 0) return;
-            ticksUntilStep = TicksPerStep;
+            if (--_ticksUntilStep > 0) return;
+            _ticksUntilStep = TicksPerStep;
             X = Math.Max(MinimumX, Math.Min(MaximumX, X + Direction * HorizontalStep));
             if ((Direction > 0 && X == MaximumX) || (Direction < 0 && X == MinimumX))
             {

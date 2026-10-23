@@ -6,11 +6,11 @@ namespace UnityInvader
         public const double TickDuration = PlayerSimulation.TickDuration;
         public const int InvaderHitBoxWidth = 16;
         public const int InvaderHitBoxHeight = 8;
-        private double accumulatedTime;
-        private readonly PlayerSimulation player = new PlayerSimulation();
+        private double _accumulatedTime;
+        private readonly PlayerSimulation _player = new PlayerSimulation();
 
-        public PlayerModel Player => player.Player;
-        public PlayerShot Shot => player.Shot;
+        public PlayerModel Player => _player.Player;
+        public PlayerShot Shot => _player.Shot;
         public InvaderFormation Formation { get; private set; } = new InvaderFormation();
         public int Score { get; private set; }
         public int WaveNumber { get; private set; } = 1;
@@ -22,7 +22,7 @@ namespace UnityInvader
             Formation = new InvaderFormation();
             WaveNumber++;
             WaveClearRequired = false;
-            accumulatedTime = 0;
+            _accumulatedTime = 0;
             // Keep Player, Score and the single Shot (including its release gate).
         }
 
@@ -30,23 +30,23 @@ namespace UnityInvader
         {
             if (!playing || WaveClearRequired)
             {
-                accumulatedTime = 0;
+                _accumulatedTime = 0;
                 return;
             }
             // Retain release/press sampled between ticks, as before.
             Shot.ReadFire(input.Fire);
-            accumulatedTime += elapsedSeconds;
-            while (accumulatedTime + 1e-12 >= TickDuration)
+            _accumulatedTime += elapsedSeconds;
+            while (_accumulatedTime + 1e-12 >= TickDuration)
             {
                 // Deterministic order: Player -> Shot -> Formation -> hit/score.
-                player.Tick(input);
+                _player.Tick(input);
                 Formation.Tick();
                 ResolvePlayerShotHit();
-                accumulatedTime -= TickDuration;
+                _accumulatedTime -= TickDuration;
                 if (Formation.AliveCount == 0)
                 {
                     WaveClearRequired = true;
-                    accumulatedTime = 0;
+                    _accumulatedTime = 0;
                     break; // Do not run extra ticks after the final hit, even at 30fps.
                 }
             }

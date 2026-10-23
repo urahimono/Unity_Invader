@@ -1,30 +1,35 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace UnityInvader
 {
     public sealed class InvaderFormationController : MonoBehaviour
     {
-        [SerializeField] private GameStateController gameState;
+        [FormerlySerializedAs("gameState")]
+        [SerializeField] private GameStateController _gameState;
         // Top A/B, Middle A/B, Bottom A/B.
-        [SerializeField] private Sprite[] frames = new Sprite[6];
-        [SerializeField] private Material spriteMaterial;
+        [FormerlySerializedAs("frames")]
+        [SerializeField] private Sprite[] _frames = new Sprite[6];
+        [FormerlySerializedAs("spriteMaterial")]
+        [SerializeField] private Material _spriteMaterial;
         // Preserve the source aspect ratio with the same unit scale for every frame.
-        [SerializeField] private Vector2 cellDisplayScale = Vector2.one;
-        private SpriteRenderer[] renderers;
+        [FormerlySerializedAs("cellDisplayScale")]
+        [SerializeField] private Vector2 _cellDisplayScale = Vector2.one;
+        private SpriteRenderer[] _renderers;
 
-        public InvaderFormation Formation => gameState.Playing.Formation;
+        public InvaderFormation Formation => _gameState.Playing.Formation;
 
         private void Awake()
         {
-            renderers = new SpriteRenderer[Formation.Invaders.Count];
+            _renderers = new SpriteRenderer[Formation.Invaders.Count];
             foreach (var slot in Formation.Invaders)
             {
                 var instance = new GameObject($"Invader {slot.Id} ({slot.Row},{slot.Column})");
                 instance.transform.SetParent(transform, false);
-                instance.transform.localScale = new Vector3(cellDisplayScale.x, cellDisplayScale.y, 1f);
+                instance.transform.localScale = new Vector3(_cellDisplayScale.x, _cellDisplayScale.y, 1f);
                 var renderer = instance.AddComponent<SpriteRenderer>();
-                renderer.sharedMaterial = spriteMaterial;
-                renderers[slot.Id] = renderer;
+                renderer.sharedMaterial = _spriteMaterial;
+                _renderers[slot.Id] = renderer;
             }
             ApplyDisplay();
         }
@@ -37,12 +42,12 @@ namespace UnityInvader
 
         private void ApplyDisplay()
         {
-            bool playing = gameState.CurrentState == GameState.Playing;
+            bool playing = _gameState.CurrentState == GameState.Playing;
             foreach (var slot in Formation.Invaders)
             {
-                var renderer = renderers[slot.Id];
+                var renderer = _renderers[slot.Id];
                 renderer.enabled = playing && slot.Alive;
-                renderer.sprite = frames[(int)slot.Type * 2 + Formation.AnimationFrame];
+                renderer.sprite = _frames[(int)slot.Type * 2 + Formation.AnimationFrame];
                 // Transform is output only. No game rule reads display positions.
                 renderer.transform.position = new Vector3(
                     Formation.X + slot.Column * InvaderFormation.Spacing - PlayerModel.ScreenWidth / 2f,
@@ -52,8 +57,8 @@ namespace UnityInvader
 
         private void OnDisable()
         {
-            if (renderers == null) return;
-            foreach (var renderer in renderers) renderer.enabled = false;
+            if (_renderers == null) return;
+            foreach (var renderer in _renderers) renderer.enabled = false;
         }
     }
 }

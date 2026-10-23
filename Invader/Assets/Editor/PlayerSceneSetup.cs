@@ -52,8 +52,8 @@ namespace UnityInvader.Editor
             var controller = player.GetComponent<PlayerController>();
             if (controller == null) controller = player.AddComponent<PlayerController>();
             var serialized = new SerializedObject(controller);
-            serialized.FindProperty("gameState").objectReferenceValue = state;
-            serialized.FindProperty("playerRenderer").objectReferenceValue = renderer;
+            serialized.FindProperty("_gameState").objectReferenceValue = state;
+            serialized.FindProperty("_playerRenderer").objectReferenceValue = renderer;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             PlayingSceneSetup.ConfigureInScene(state);
             EditorSceneManager.SaveScene(scene);

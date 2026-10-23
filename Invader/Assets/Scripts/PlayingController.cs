@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace UnityInvader
 {
@@ -6,53 +7,55 @@ namespace UnityInvader
     [DisallowMultipleComponent]
     public sealed class PlayingController : MonoBehaviour
     {
-        [SerializeField] private GameStateController gameState;
+        [FormerlySerializedAs("gameState")]
+        [SerializeField] private GameStateController _gameState;
         [Tooltip("Temporary development start path; real game-start transitions are not implemented.")]
-        [SerializeField] private bool developmentStartPlaying;
-        private PlayerInputReader input;
-        private double waveClearElapsed;
-        private bool waitingForNextWave;
+        [FormerlySerializedAs("developmentStartPlaying")]
+        [SerializeField] private bool _developmentStartPlaying;
+        private PlayerInputReader _input;
+        private double _waveClearElapsed;
+        private bool _waitingForNextWave;
 
         private void OnEnable()
         {
-            input = new PlayerInputReader();
+            _input = new PlayerInputReader();
         }
 
         private void Start()
         {
-            if (developmentStartPlaying) gameState.ChangeState(GameState.Playing);
+            if (_developmentStartPlaying) _gameState.ChangeState(GameState.Playing);
         }
 
         private void Update()
         {
-            if (waitingForNextWave && gameState.CurrentState == GameState.WaveClear)
+            if (_waitingForNextWave && _gameState.CurrentState == GameState.WaveClear)
             {
-                waveClearElapsed += Time.deltaTime;
-                if (waveClearElapsed + 1e-7 >= 1.0)
+                _waveClearElapsed += Time.deltaTime;
+                if (_waveClearElapsed + 1e-7 >= 1.0)
                 {
-                    gameState.Playing.StartNextWave();
-                    waitingForNextWave = false;
-                    gameState.ChangeState(GameState.Playing);
+                    _gameState.Playing.StartNextWave();
+                    _waitingForNextWave = false;
+                    _gameState.ChangeState(GameState.Playing);
                 }
                 return; // New Formation remains at its initial state for this frame.
             }
-            waitingForNextWave = false;
-            bool playing = gameState.CurrentState == GameState.Playing;
+            _waitingForNextWave = false;
+            bool playing = _gameState.CurrentState == GameState.Playing;
             // The only runtime driver; both views synchronize afterward in LateUpdate.
-            gameState.Playing.Advance(Time.deltaTime, playing, playing ? input.Read() : default);
-            if (playing && gameState.Playing.WaveClearRequired)
+            _gameState.Playing.Advance(Time.deltaTime, playing, playing ? _input.Read() : default);
+            if (playing && _gameState.Playing.WaveClearRequired)
             {
-                waveClearElapsed = 0;
-                waitingForNextWave = true;
-                gameState.ChangeState(GameState.WaveClear);
+                _waveClearElapsed = 0;
+                _waitingForNextWave = true;
+                _gameState.ChangeState(GameState.WaveClear);
             }
         }
 
         private void OnDisable()
         {
-            gameState.Playing.Advance(0, false, default);
-            input?.Dispose();
-            input = null;
+            _gameState.Playing.Advance(0, false, default);
+            _input?.Dispose();
+            _input = null;
         }
     }
 }

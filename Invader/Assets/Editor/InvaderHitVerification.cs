@@ -7,7 +7,7 @@ namespace UnityInvader.Editor
     public static class InvaderHitVerification
     {
         private const double Tick = PlayingSimulation.TickDuration;
-        private static readonly PlayerInputState Fire = new PlayerInputState(false, false, true);
+        private static readonly PlayerInputState _fire = new PlayerInputState(false, false, true);
 
         [MenuItem("Unity Invader/Verify Invader Hit Logic")]
         public static void Verify()
@@ -29,10 +29,10 @@ namespace UnityInvader.Editor
                 "Bottom kill must deactivate Shot, decrement count and add 10.");
             Require(!simulation.Formation.TryKill(44) && simulation.Formation.AliveCount == 54,
                 "Repeated kill must not decrement AliveCount.");
-            simulation.Advance(2, true, Fire);
+            simulation.Advance(2, true, _fire);
             Require(!simulation.Shot.Active && simulation.Score == 10, "A hit must not re-arm held Fire.");
             simulation.Advance(Tick / 2, true, default);
-            simulation.Advance(Tick / 2, true, Fire);
+            simulation.Advance(Tick / 2, true, _fire);
             Require(simulation.Shot.Active && simulation.Shot.Y == 32, "Release then press must launch again.");
 
             var cumulative = new PlayingSimulation();
@@ -53,20 +53,20 @@ namespace UnityInvader.Editor
             var dead = new PlayingSimulation();
             Hit(dead, 4, 0);
             PrepareShot(dead, 32, 140);
-            dead.Advance(Tick, true, Fire);
+            dead.Advance(Tick, true, _fire);
             Require(dead.Shot.Active && dead.Formation.AliveCount == 54 && dead.Score == 10,
                 "Dead bottom slot must not consume Shot or score again.");
-            dead.Advance(3 * Tick, true, Fire);
+            dead.Advance(3 * Tick, true, _fire);
             Require(!dead.Shot.Active && !dead.Formation.Invaders[33].Alive && dead.Score == 20 &&
                 dead.Formation.AliveCount == 53, "Shot must pass through Dead slot and hit the next Alive slot.");
 
             var sharedEdge = new PlayingSimulation();
             PrepareShot(sharedEdge, 40, 140);
-            sharedEdge.Advance(Tick, true, Fire);
+            sharedEdge.Advance(Tick, true, _fire);
             Require(!sharedEdge.Formation.Invaders[44].Alive && sharedEdge.Formation.Invaders[45].Alive &&
                 sharedEdge.Formation.AliveCount == 54 && sharedEdge.Score == 10 && !sharedEdge.Shot.Active,
                 "A 1px Shot crossing two adjacent boxes must kill only the first column.");
-            sharedEdge.Advance(0, true, Fire);
+            sharedEdge.Advance(0, true, _fire);
             Require(sharedEdge.Score == 10, "A frame without a tick must not evaluate collision/score.");
 
             var all = new PlayingSimulation();
@@ -91,28 +91,28 @@ namespace UnityInvader.Editor
             var ordering = new PlayingSimulation();
             ordering.Advance(19 * Tick, true, default);
             PrepareShot(ordering, 24, 140);
-            ordering.Advance(Tick, true, Fire);
+            ordering.Advance(Tick, true, _fire);
             Require(ordering.Formation.X == 34 && ordering.Formation.AliveCount == 55 && ordering.Shot.Active,
                 "Formation must move before collision, leaving the old left edge behind.");
 
             var twoTicks = new PlayingSimulation();
             PrepareShot(twoTicks, 32, 140);
-            twoTicks.Advance(1.0 / 30, true, Fire);
+            twoTicks.Advance(1.0 / 30, true, _fire);
             Require(twoTicks.Formation.AliveCount == 54 && twoTicks.Score == 10 && !twoTicks.Shot.Active,
                 "First-tick-only overlap must hit even if the second tick would be above the box.");
 
             var verticalEdge = new PlayingSimulation();
             PrepareShot(verticalEdge, 32, 132);
-            verticalEdge.Advance(Tick, true, Fire);
+            verticalEdge.Advance(Tick, true, _fire);
             Require(verticalEdge.Shot.Y == 136 && verticalEdge.Formation.AliveCount == 55,
                 "Shot top touching box bottom has no positive overlap.");
-            verticalEdge.Advance(Tick, true, Fire);
+            verticalEdge.Advance(Tick, true, _fire);
             Require(verticalEdge.Formation.AliveCount == 54, "The next 4px tick must overlap, without a vertical gap.");
             foreach (int x in new[] { 23, 201 })
             {
                 var miss = new PlayingSimulation();
                 PrepareShot(miss, x, 140);
-                miss.Advance(Tick, true, Fire);
+                miss.Advance(Tick, true, _fire);
                 Require(miss.Formation.AliveCount == 55 && miss.Score == 0 && miss.Shot.Active,
                     "Shot outside the left/right box edges must miss.");
             }
@@ -125,14 +125,14 @@ namespace UnityInvader.Editor
                 if (state == GameState.Playing) continue;
                 var simulation = new PlayingSimulation();
                 PrepareShot(simulation, 32, 136);
-                simulation.Advance(Tick / 2, true, Fire);
+                simulation.Advance(Tick / 2, true, _fire);
                 simulation.Advance(100, state == GameState.Playing, new PlayerInputState(false, true));
                 Require(simulation.Player.X == 32 && simulation.Shot.Y == 136 && simulation.Shot.Active &&
                     !simulation.Shot.FireReady && simulation.Formation.StepCount == 0 && simulation.Score == 0 &&
                     simulation.Formation.AliveCount == 55, "Non-Playing must stop Player/Shot/Formation/input/collision/Score.");
-                simulation.Advance(Tick / 2, true, Fire);
+                simulation.Advance(Tick / 2, true, _fire);
                 Require(simulation.Score == 0 && simulation.Shot.Y == 136, "Paused fractional time must be discarded.");
-                simulation.Advance(Tick / 2, true, Fire);
+                simulation.Advance(Tick / 2, true, _fire);
                 Require(simulation.Score == 10 && simulation.Formation.AliveCount == 54, "Resume must hit on the next full tick.");
             }
         }
@@ -183,7 +183,7 @@ namespace UnityInvader.Editor
         {
             int id = row * 11 + column;
             PrepareShot(simulation, simulation.Formation.X + column * 16, simulation.Formation.Y - row * 16 - 8);
-            simulation.Advance(Tick, true, Fire);
+            simulation.Advance(Tick, true, _fire);
             Require(!simulation.Formation.Invaders[id].Alive && !simulation.Shot.Active, "Expected target must die and consume Shot.");
         }
 
