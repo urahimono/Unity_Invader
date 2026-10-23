@@ -42,7 +42,10 @@ namespace UnityInvader.Editor
         [InitializeOnLoadMethod]
         private static void Resume()
         {
-            if (!SessionState.GetBool(SessionKey, false)) return;
+            if (!SessionState.GetBool(SessionKey, false))
+            {
+                return;
+            }
             _stage = _stateIndex = 0;
             _deadline = EditorApplication.timeSinceStartup + 60;
             EditorApplication.update -= Check;
@@ -54,10 +57,16 @@ namespace UnityInvader.Editor
             try
             {
                 Require(EditorApplication.timeSinceStartup < _deadline, "Invader hit Play verification timed out.");
-                if (!EditorApplication.isPlaying || EditorApplication.isCompiling || EditorApplication.timeSinceStartup < _nextCheck) return;
+                if (!EditorApplication.isPlaying || EditorApplication.isCompiling || EditorApplication.timeSinceStartup < _nextCheck)
+                {
+                    return;
+                }
                 if (_stage == 0)
                 {
-                    if (SceneManager.GetActiveScene().name != "Arcade") return;
+                    if (SceneManager.GetActiveScene().name != "Arcade")
+                    {
+                        return;
+                    }
                     _player = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
                     _formation = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
                     _state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
@@ -65,7 +74,10 @@ namespace UnityInvader.Editor
                     Require(drivers.Length == 1 && drivers[0].isActiveAndEnabled, "Arcade must have exactly one enabled PlayingController.");
                     _playing = drivers[0];
                     Require(_player != null && _formation != null && _state != null, "Arcade components missing.");
-                    if (_state.CurrentState != GameState.Playing) return;
+                    if (_state.CurrentState != GameState.Playing)
+                    {
+                        return;
+                    }
                     Require(ReferenceEquals(_player.Player, _state.Playing.Player) && ReferenceEquals(_player.Shot, _state.Playing.Shot) &&
                         ReferenceEquals(_formation.Formation, _state.Playing.Formation), "Controllers must share one Playing simulation.");
                     Require(_formation.Formation.AliveCount == 55 && _state.Playing.Score == 0, "Initial logical state mismatch.");
@@ -83,7 +95,10 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 1)
                 {
-                    if (!_player.Shot.Active) return;
+                    if (!_player.Shot.Active)
+                    {
+                        return;
+                    }
                     _shotX = _player.Shot.X;
                     Require(_shotX == _initialPlayerX && _shotRenderer.enabled, "Space must launch at current Player X.");
                     Keys(Key.Space, Key.RightArrow);
@@ -98,7 +113,10 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 3)
                 {
-                    if (_state.Playing.Score == 0) return;
+                    if (_state.Playing.Score == 0)
+                    {
+                        return;
+                    }
                     Require(_state.Playing.Score == 10 && _formation.Formation.AliveCount == 54 && !_player.Shot.Active,
                         "First Bottom hit must add 10, kill exactly one and consume Shot.");
                     _heldStep = _formation.Formation.StepCount;
@@ -123,7 +141,10 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 6)
                 {
-                    if (!_player.Shot.Active) return;
+                    if (!_player.Shot.Active)
+                    {
+                        return;
+                    }
                     Require(_player.Shot.X == _player.Player.X, "Re-press must launch from the new Player position.");
                     Pause();
                     Keys(Key.Space, Key.RightArrow);
@@ -136,7 +157,10 @@ namespace UnityInvader.Editor
                         "Non-Playing must stop Player/Shot/Formation/collision/score.");
                     Require(!_shotRenderer.enabled && !_player.GetComponent<SpriteRenderer>().enabled, "Non-Playing must hide Player and Shot.");
                     CheckFormationDisplay(false);
-                    if (++_stateIndex < _pausedStates.Length) Pause();
+                    if (++_stateIndex < _pausedStates.Length)
+                    {
+                        Pause();
+                    }
                     else
                     {
                         _state.ChangeState(GameState.Playing);
@@ -178,7 +202,10 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 10 || _stage == 11)
                 {
-                    if (_clockProbe.Frames == _lastFrame) return;
+                    if (_clockProbe.Frames == _lastFrame)
+                    {
+                        return;
+                    }
                     Require(_clockProbe.Frames == _lastFrame + 1, "Each Editor step must complete exactly one rendered frame.");
                     _steppedFrames++;
                     if (_stage == 10)
@@ -265,7 +292,10 @@ namespace UnityInvader.Editor
             SessionState.SetBool(SessionKey, false);
             EditorApplication.update -= Check;
             _clockProbe?.Dispose();
-            if (_keyboard != null && _keyboard.added) InputSystem.RemoveDevice(_keyboard);
+            if (_keyboard != null && _keyboard.added)
+            {
+                InputSystem.RemoveDevice(_keyboard);
+            }
             if (_settings != null)
             {
                 _settings.backgroundBehavior = _backgroundBehavior;
@@ -277,7 +307,10 @@ namespace UnityInvader.Editor
 
         private static void Require(bool condition, string message)
         {
-            if (!condition) throw new InvalidOperationException(message);
+            if (!condition)
+            {
+                throw new InvalidOperationException(message);
+            }
         }
     }
 }

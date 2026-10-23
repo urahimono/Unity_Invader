@@ -19,7 +19,10 @@ namespace UnityInvader.Editor
             var stages = (PlayerLoopSystem[])loop.subSystemList.Clone();
             for (int index = 0; index < stages.Length; index++)
             {
-                if (stages[index].type != typeof(PostLateUpdate)) continue;
+                if (stages[index].type != typeof(PostLateUpdate))
+                {
+                    continue;
+                }
                 var observers = stages[index].subSystemList;
                 Array.Resize(ref observers, observers.Length + 1);
                 observers[observers.Length - 1] = new PlayerLoopSystem { type = typeof(PlayingClockProbe), updateDelegate = Observe };

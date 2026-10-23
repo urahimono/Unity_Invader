@@ -35,7 +35,10 @@ namespace UnityInvader.Editor
         [InitializeOnLoadMethod]
         private static void Resume()
         {
-            if (!SessionState.GetBool(SessionKey, false)) return;
+            if (!SessionState.GetBool(SessionKey, false))
+            {
+                return;
+            }
             _stage = _clearedWave = 0;
             _deadline = EditorApplication.timeSinceStartup + 60;
             EditorApplication.update -= Check;
@@ -48,12 +51,21 @@ namespace UnityInvader.Editor
             {
                 WaveLoopVerification.Require(EditorApplication.timeSinceStartup < _deadline, "Wave Play verification timeout.");
                 if (!EditorApplication.isPlaying || EditorApplication.isCompiling ||
-                    EditorApplication.timeSinceStartup < _nextCheck) return;
+                    EditorApplication.timeSinceStartup < _nextCheck)
+                {
+                    return;
+                }
                 if (_stage == 0)
                 {
-                    if (SceneManager.GetActiveScene().name != "Arcade") return;
+                    if (SceneManager.GetActiveScene().name != "Arcade")
+                    {
+                        return;
+                    }
                     _state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
-                    if (_state == null || _state.CurrentState != GameState.Playing) return;
+                    if (_state == null || _state.CurrentState != GameState.Playing)
+                    {
+                        return;
+                    }
                     _view = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
                     _renderers = _view.GetComponentsInChildren<SpriteRenderer>();
                     _settings = InputSystem.settings;
@@ -77,7 +89,10 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 2)
                 {
-                    if (_state.CurrentState != GameState.WaveClear) return;
+                    if (_state.CurrentState != GameState.WaveClear)
+                    {
+                        return;
+                    }
                     _clearStarted = Time.timeAsDouble;
                     Keys(Key.Space, Key.RightArrow);
                     _stage = 3;
@@ -93,7 +108,10 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 4)
                 {
-                    if (_state.CurrentState != GameState.Playing) return;
+                    if (_state.CurrentState != GameState.Playing)
+                    {
+                        return;
+                    }
                     Require(Time.timeAsDouble - _clearStarted >= 0.9 && Time.timeAsDouble - _clearStarted < 1.3,
                         "WaveClear must last approximately one second.");
                     Require(_state.Playing.WaveNumber == _clearedWave + 1 && _state.Playing.Formation.AliveCount == 55 &&
@@ -114,8 +132,14 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 6)
                 {
-                    if (!_state.Playing.Shot.Active) return;
-                    if (_clearedWave == 1) _stage = 1;
+                    if (!_state.Playing.Shot.Active)
+                    {
+                        return;
+                    }
+                    if (_clearedWave == 1)
+                    {
+                        _stage = 1;
+                    }
                     else
                     {
                         Debug.Log("WAVE_LOOP_PLAY_PASS: Bootstrap -> Arcade -> Playing -> WaveClear -> Wave2 -> WaveClear -> Wave3; real collisions/Score; one-second wait; held/release/re-press; same 55 display objects.");
@@ -136,7 +160,10 @@ namespace UnityInvader.Editor
         {
             SessionState.SetBool(SessionKey, false);
             EditorApplication.update -= Check;
-            if (_keyboard != null && _keyboard.added) InputSystem.RemoveDevice(_keyboard);
+            if (_keyboard != null && _keyboard.added)
+            {
+                InputSystem.RemoveDevice(_keyboard);
+            }
             if (_settings != null)
             {
                 _settings.backgroundBehavior = _background;

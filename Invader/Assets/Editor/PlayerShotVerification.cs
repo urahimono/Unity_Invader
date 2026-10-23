@@ -37,7 +37,10 @@ namespace UnityInvader.Editor
             Require(shot.Active && shot.X == 114 && shot.Y == 32, "Release between ticks must allow a fresh shot.");
             foreach (GameState state in Enum.GetValues(typeof(GameState)))
             {
-                if (state == GameState.Playing) continue;
+                if (state == GameState.Playing)
+                {
+                    continue;
+                }
                 simulation.Advance(tick / 2, true, fire);
                 int y = shot.Y;
                 simulation.Advance(10, state == GameState.Playing, release);
@@ -51,10 +54,15 @@ namespace UnityInvader.Editor
             {
                 var timed = new PlayerSimulation();
                 for (int frame = 0; frame < fps / 2; frame++)
+                {
                     timed.Advance(1.0 / fps, true, new PlayerInputState(false, true, true));
+                }
                 Require(timed.Shot.Active && timed.Shot.X == 113 && timed.Shot.Y == 148 && timed.Player.X == 142,
                     "30/60/120fps must produce the same 30-tick result.");
-                for (int frame = 0; frame < fps * 2; frame++) timed.Advance(1.0 / fps, true, fire);
+                for (int frame = 0; frame < fps * 2; frame++)
+                {
+                    timed.Advance(1.0 / fps, true, fire);
+                }
                 Require(!timed.Shot.Active, "All FPS cases must disappear without held-fire respawn.");
             }
             InvaderFormationVerification.Verify();
@@ -63,7 +71,10 @@ namespace UnityInvader.Editor
 
         private static void Require(bool condition, string message)
         {
-            if (!condition) throw new InvalidOperationException(message);
+            if (!condition)
+            {
+                throw new InvalidOperationException(message);
+            }
         }
     }
 }

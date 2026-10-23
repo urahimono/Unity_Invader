@@ -57,8 +57,14 @@ namespace UnityInvader
 
         private void OnDisable()
         {
-            if (_renderers == null) return;
-            foreach (var renderer in _renderers) renderer.enabled = false;
+            if (_renderers == null)
+            {
+                return;
+            }
+            foreach (var renderer in _renderers)
+            {
+                renderer.enabled = false;
+            }
         }
     }
 }

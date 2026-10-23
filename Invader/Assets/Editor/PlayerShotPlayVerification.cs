@@ -36,7 +36,10 @@ namespace UnityInvader.Editor
         [InitializeOnLoadMethod]
         private static void Resume()
         {
-            if (!SessionState.GetBool(SessionKey, false)) return;
+            if (!SessionState.GetBool(SessionKey, false))
+            {
+                return;
+            }
             _stage = 0;
             _stateIndex = 0;
             _deadline = EditorApplication.timeSinceStartup + 60;
@@ -49,14 +52,23 @@ namespace UnityInvader.Editor
             try
             {
                 Require(EditorApplication.timeSinceStartup < _deadline, "Play verification timed out.");
-                if (!EditorApplication.isPlaying || EditorApplication.isCompiling || EditorApplication.timeSinceStartup < _nextCheck) return;
+                if (!EditorApplication.isPlaying || EditorApplication.isCompiling || EditorApplication.timeSinceStartup < _nextCheck)
+                {
+                    return;
+                }
                 if (_stage == 0)
                 {
-                    if (SceneManager.GetActiveScene().name != "Arcade") return;
+                    if (SceneManager.GetActiveScene().name != "Arcade")
+                    {
+                        return;
+                    }
                     _player = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
                     _state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
                     Require(_player != null && _state != null, "Player/State missing.");
-                    if (_state.CurrentState != GameState.Playing) return;
+                    if (_state.CurrentState != GameState.Playing)
+                    {
+                        return;
+                    }
                     VerifyInput();
                     var formation = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
                     Require(formation != null && formation.GetComponentsInChildren<SpriteRenderer>().Length == 55,
@@ -82,7 +94,10 @@ namespace UnityInvader.Editor
                     CheckDisplay(false);
                     Require(_player.Shot.Active && _player.Shot.Y == _pausedY, "Non-Playing must preserve and stop Shot.");
                     _stateIndex++;
-                    if (_stateIndex < _pausedStates.Length) Pause();
+                    if (_stateIndex < _pausedStates.Length)
+                    {
+                        Pause();
+                    }
                     else
                     {
                         _state.ChangeState(GameState.Playing);
@@ -162,7 +177,10 @@ namespace UnityInvader.Editor
 
         private static void Require(bool condition, string message)
         {
-            if (!condition) throw new InvalidOperationException(message);
+            if (!condition)
+            {
+                throw new InvalidOperationException(message);
+            }
         }
     }
 }
