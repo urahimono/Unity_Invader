@@ -57,7 +57,7 @@ private bool _developmentStartPlaying;
 NG:
 
 ```csharp
-if (!FireReady) return;
+if (FireReady == false) return;
 
 if (condition)
 {
@@ -76,7 +76,7 @@ lock (_sync) UpdateState();
 OK:
 
 ```csharp
-if (!FireReady)
+if (FireReady == false)
 {
     return;
 }
@@ -148,6 +148,87 @@ else
 この設定だけでは本文の改行や1行形式の禁止を含む今回の規約全体を正確に表現できないため、本書を正本とします。今回決めていないスタイルまで変更する設定は追加しません。診断の表示は利用環境の Roslyn 対応に依存します。
 
 今回の波括弧規約追加では既存C#コードを修正しません。既存コードへの適用は、この規約を `develop` へマージした後、別のCodexセッション・後続PRで行います。
+
+## if 条件式での bool 値の否定
+
+`if` の条件式では、bool 値を単項論理否定演算子 `!` で反転する書き方を使用せず、`== false` で明示します。先頭の `!` を視覚的に見落としやすいためです。`else if` の条件式も対象です。
+
+bool 変数の `!value`、bool を返す property の `!Object.Property`、method の `!Method()`、その他の bool 式に対する単項論理否定が対象です。複合条件式内の否定も同様に扱います。
+
+NG:
+
+```csharp
+if (!playing)
+{
+    return;
+}
+
+if (!Object.Property)
+{
+    return;
+}
+
+if (!IsReady())
+{
+    return;
+}
+
+if (!_input.IsPressed())
+{
+    return;
+}
+```
+
+OK:
+
+```csharp
+if (playing == false)
+{
+    return;
+}
+
+if (Object.Property == false)
+{
+    return;
+}
+
+if (IsReady() == false)
+{
+    return;
+}
+
+if (_input.IsPressed() == false)
+{
+    return;
+}
+```
+
+対象は `if` の条件式だけです。`while` / `for` / `foreach` など他の構文や、if 条件式以外で使われる `!` へこの規約を拡張しません。null-forgiving operator の `!` も対象外です。
+
+`!=` は禁止しません。`== null` と `!= null` も通常どおり使用できます。この規約を理由に null 判定の書き方を変更しません。
+
+以下もOKです。
+
+```csharp
+if (_controller != null)
+{
+    _controller.Apply();
+}
+
+if (score != 0)
+{
+    UpdateScore();
+}
+
+if (_controller == null)
+{
+    return;
+}
+```
+
+標準の EditorConfig 設定だけではこの規約を正確に表現するのは難しいため、本書を正本とし、今回 `.editorconfig` は変更しません。
+
+今回の規約追加では既存C#コードを修正しません。既存コードへの適用は、この規約を `develop` へマージした後、別のCodexセッション・後続PRで行います。
 
 ## EditorConfig と既存コードへの適用
 
