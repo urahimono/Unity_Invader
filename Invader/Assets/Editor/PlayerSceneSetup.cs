@@ -10,7 +10,7 @@ namespace UnityInvader.Editor
         [MenuItem("Unity Invader/Configure Player Movement")]
         public static void Configure()
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo() == false)
             {
                 return;
             }

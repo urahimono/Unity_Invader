@@ -8,7 +8,7 @@ namespace UnityInvader
 
         public void Advance(double elapsedSeconds, bool playing)
         {
-            if (!playing)
+            if (playing == false)
             {
                 _accumulatedTime = 0;
                 return;

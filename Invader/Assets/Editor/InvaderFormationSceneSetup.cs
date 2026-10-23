@@ -18,7 +18,7 @@ namespace UnityInvader.Editor
         [MenuItem("Unity Invader/Configure Invader Formation")]
         public static void Configure()
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo() == false)
             {
                 return;
             }

@@ -35,7 +35,7 @@ namespace UnityInvader.Editor
         [InitializeOnLoadMethod]
         private static void Resume()
         {
-            if (!SessionState.GetBool(SessionKey, false))
+            if (SessionState.GetBool(SessionKey, false) == false)
             {
                 return;
             }
@@ -50,7 +50,7 @@ namespace UnityInvader.Editor
             try
             {
                 WaveLoopVerification.Require(EditorApplication.timeSinceStartup < _deadline, "Wave Play verification timeout.");
-                if (!EditorApplication.isPlaying || EditorApplication.isCompiling ||
+                if (EditorApplication.isPlaying == false || EditorApplication.isCompiling ||
                     EditorApplication.timeSinceStartup < _nextCheck)
                 {
                     return;
@@ -132,7 +132,7 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 6)
                 {
-                    if (!_state.Playing.Shot.Active)
+                    if (_state.Playing.Shot.Active == false)
                     {
                         return;
                     }

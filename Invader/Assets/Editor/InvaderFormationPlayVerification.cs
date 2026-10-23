@@ -45,7 +45,7 @@ namespace UnityInvader.Editor
         [InitializeOnLoadMethod]
         private static void Resume()
         {
-            if (!SessionState.GetBool("InvaderFormationPlayVerification", false))
+            if (SessionState.GetBool("InvaderFormationPlayVerification", false) == false)
             {
                 return;
             }
@@ -60,7 +60,7 @@ namespace UnityInvader.Editor
             try
             {
                 Require(EditorApplication.timeSinceStartup < _deadline, "Play verification timed out.");
-                if (!EditorApplication.isPlaying || EditorApplication.isCompiling ||
+                if (EditorApplication.isPlaying == false || EditorApplication.isCompiling ||
                     EditorApplication.timeSinceStartup < _nextCheck)
                 {
                     return;
@@ -197,7 +197,7 @@ namespace UnityInvader.Editor
 
         private static void Require(bool condition, string message)
         {
-            if (!condition)
+            if (condition == false)
             {
                 throw new InvalidOperationException(message);
             }

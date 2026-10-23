@@ -19,17 +19,17 @@ namespace UnityInvader
 
         public void ReadFire(bool pressed)
         {
-            if (!pressed)
+            if (pressed == false)
             {
                 FireReady = true;
                 return;
             }
-            if (!FireReady)
+            if (FireReady == false)
             {
                 return;
             }
             FireReady = false; // Consume presses even while the slot is occupied.
-            if (!Active)
+            if (Active == false)
             {
                 _pendingFire = true;
             }
@@ -47,7 +47,7 @@ namespace UnityInvader
             }
             if (_pendingFire)
             {
-                if (!Active)
+                if (Active == false)
                 {
                     Active = true;
                     X = player.X;

@@ -22,7 +22,7 @@ namespace UnityInvader
 
         internal bool TryKill()
         {
-            if (!Alive)
+            if (Alive == false)
             {
                 return false;
             }
@@ -69,7 +69,7 @@ namespace UnityInvader
 
         public bool TryKill(int id)
         {
-            if (!Invaders[id].TryKill())
+            if (Invaders[id].TryKill() == false)
             {
                 return false;
             }
