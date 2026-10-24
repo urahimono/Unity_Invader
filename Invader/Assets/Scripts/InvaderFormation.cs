@@ -7,7 +7,7 @@ namespace UnityInvader
 
     public sealed class InvaderSlot
     {
-        public int Row { get; }
+        public int Row    { get; }
         public int Column { get; }
         public int Id => Row * InvaderFormation.Columns + Column;
         public InvaderType Type => Row == 0 ? InvaderType.Top :
@@ -46,13 +46,13 @@ namespace UnityInvader
         private       int _ticksUntilStep = TicksPerStep;
 
         // X/Y are the center of the top-left slot, not a Unity Transform.
-        public int X { get; private set; } = 32;
-        public int Y { get; private set; } = 208;
-        public int Direction { get; private set; } = 1;
-        public int StepCount { get; private set; }
+        public int X          { get; private set; } = 32;
+        public int Y          { get; private set; } = 208;
+        public int Direction  { get; private set; } = 1;
+        public int StepCount  { get; private set; }
+        public int AliveCount { get; private set; } = Rows * Columns;
         public int AnimationFrame => StepCount % 2;
         public IReadOnlyList<InvaderSlot> Invaders { get; }
-        public int AliveCount { get; private set; } = Rows * Columns;
 
         public InvaderFormation()
         {
