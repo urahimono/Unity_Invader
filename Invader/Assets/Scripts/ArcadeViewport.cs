@@ -23,12 +23,12 @@ namespace UnityInvader
             float screenAspect = (float)Screen.width / Screen.height;
             if (screenAspect > targetAspect)
             {
-                float width = targetAspect / screenAspect;
+                float width        = targetAspect / screenAspect;
                 _arcadeCamera.rect = new Rect((1f - width) / 2f, 0f, width, 1f);
             }
             else
             {
-                float height = screenAspect / targetAspect;
+                float height       = screenAspect / targetAspect;
                 _arcadeCamera.rect = new Rect(0f, (1f - height) / 2f, 1f, height);
             }
         }

@@ -31,14 +31,14 @@ namespace UnityInvader.Editor
             new GameObject("Bootstrap").AddComponent<Bootstrap>();
             EditorSceneManager.SaveScene(bootstrap, BootstrapPath);
 
-            var arcade = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var cameraObject = new GameObject("Main Camera");
-            cameraObject.tag = "MainCamera";
+            var arcade                      = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var cameraObject                = new GameObject("Main Camera");
+            cameraObject.tag                = "MainCamera";
             cameraObject.transform.position = new Vector3(0f, 0f, -10f);
-            var camera = cameraObject.AddComponent<Camera>();
-            camera.orthographic = true;
-            camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = Color.black;
+            var camera                      = cameraObject.AddComponent<Camera>();
+            camera.orthographic             = true;
+            camera.clearFlags               = CameraClearFlags.SolidColor;
+            camera.backgroundColor          = Color.black;
             cameraObject.AddComponent<UniversalAdditionalCameraData>();
             cameraObject.AddComponent<AudioListener>();
             new GameObject("GameState").AddComponent<GameStateController>();

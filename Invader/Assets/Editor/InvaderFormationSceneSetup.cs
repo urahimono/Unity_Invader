@@ -32,15 +32,15 @@ namespace UnityInvader.Editor
             {
                 throw new InvalidOperationException("Unexpected source dimensions.");
             }
-            importer.textureType = TextureImporterType.Sprite;
-            importer.spriteImportMode = SpriteImportMode.Multiple;
-            importer.filterMode = FilterMode.Point;
-            importer.textureCompression = TextureImporterCompression.Uncompressed;
-            importer.mipmapEnabled = false;
-            importer.npotScale = TextureImporterNPOTScale.None;
-            importer.maxTextureSize = 4096;
+            importer.textureType         = TextureImporterType.Sprite;
+            importer.spriteImportMode    = SpriteImportMode.Multiple;
+            importer.filterMode          = FilterMode.Point;
+            importer.textureCompression  = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled       = false;
+            importer.npotScale           = TextureImporterNPOTScale.None;
+            importer.maxTextureSize      = 4096;
             importer.spritePixelsPerUnit = CellWidth / (float)InvaderFormation.CellSize;
-            var settings = new TextureImporterSettings();
+            var settings                 = new TextureImporterSettings();
             importer.ReadTextureSettings(settings);
             settings.spriteMeshType = SpriteMeshType.FullRect;
             importer.SetTextureSettings(settings);
@@ -51,10 +51,10 @@ namespace UnityInvader.Editor
             var provider = factories.GetSpriteEditorDataProviderFromObject(importer);
             provider.InitSpriteEditorDataProvider();
             var existing = provider.GetSpriteRects();
-            var rects = new SpriteRect[6];
+            var rects    = new SpriteRect[6];
             for (int index = 0; index < rects.Length; index++)
             {
-                string name = FrameNames[index];
+                string name  = FrameNames[index];
                 rects[index] = new SpriteRect
                 {
                     name = name,
@@ -88,14 +88,14 @@ namespace UnityInvader.Editor
             {
                 controller = formation.AddComponent<InvaderFormationController>();
             }
-            var serialized = new SerializedObject(controller);
-            serialized.FindProperty("_gameState").objectReferenceValue = state;
+            var serialized                                                  = new SerializedObject(controller);
+            serialized.FindProperty("_gameState").objectReferenceValue      = state;
             serialized.FindProperty("_spriteMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(
                 "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
-            serialized.FindProperty("_cellDisplayScale").vector2Value = Vector2.one;
-            var sprites = AssetDatabase.LoadAllAssetsAtPath(TexturePath).OfType<Sprite>().ToArray();
-            var frames = serialized.FindProperty("_frames");
-            frames.arraySize = 6;
+            serialized.FindProperty("_cellDisplayScale").vector2Value       = Vector2.one;
+            var sprites                                                     = AssetDatabase.LoadAllAssetsAtPath(TexturePath).OfType<Sprite>().ToArray();
+            var frames                                                      = serialized.FindProperty("_frames");
+            frames.arraySize                                                = 6;
             for (int index = 0; index < 6; index++)
             {
                 frames.GetArrayElementAtIndex(index).objectReferenceValue = sprites.Single(sprite => sprite.name == FrameNames[index]);

@@ -31,9 +31,9 @@ namespace UnityInvader
                 var instance = new GameObject($"Invader {slot.Id} ({slot.Row},{slot.Column})");
                 instance.transform.SetParent(transform, false);
                 instance.transform.localScale = new Vector3(_cellDisplayScale.x, _cellDisplayScale.y, 1f);
-                var renderer = instance.AddComponent<SpriteRenderer>();
-                renderer.sharedMaterial = _spriteMaterial;
-                _renderers[slot.Id] = renderer;
+                var renderer                  = instance.AddComponent<SpriteRenderer>();
+                renderer.sharedMaterial       = _spriteMaterial;
+                _renderers[slot.Id]           = renderer;
             }
             ApplyDisplay();
         }
@@ -49,9 +49,9 @@ namespace UnityInvader
             bool playing = _gameState.CurrentState == GameState.Playing;
             foreach (var slot in Formation.Invaders)
             {
-                var renderer = _renderers[slot.Id];
-                renderer.enabled = playing && slot.Alive;
-                renderer.sprite = _frames[(int)slot.Type * 2 + Formation.AnimationFrame];
+                var renderer                = _renderers[slot.Id];
+                renderer.enabled            = playing && slot.Alive;
+                renderer.sprite             = _frames[(int)slot.Type * 2 + Formation.AnimationFrame];
                 // Transform is output only. No game rule reads display positions.
                 renderer.transform.position = new Vector3(
                     Formation.X + slot.Column * InvaderFormation.Spacing - PlayerModel.ScreenWidth / 2f,

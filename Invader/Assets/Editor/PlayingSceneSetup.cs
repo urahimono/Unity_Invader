@@ -33,9 +33,9 @@ namespace UnityInvader.Editor
             {
                 throw new InvalidOperationException("Arcade must have only one PlayingController.");
             }
-            var controller = controllers.Length == 1 ? controllers[0] : state.gameObject.AddComponent<PlayingController>();
-            var serialized = new SerializedObject(controller);
-            serialized.FindProperty("_gameState").objectReferenceValue = state;
+            var controller                                                = controllers.Length == 1 ? controllers[0] : state.gameObject.AddComponent<PlayingController>();
+            var serialized                                                = new SerializedObject(controller);
+            serialized.FindProperty("_gameState").objectReferenceValue    = state;
             serialized.FindProperty("_developmentStartPlaying").boolValue = true;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }

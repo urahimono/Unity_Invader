@@ -39,7 +39,7 @@ namespace UnityInvader.Editor
             {
                 return;
             }
-            _stage = _clearedWave = 0;
+            _stage    = _clearedWave = 0;
             _deadline = EditorApplication.timeSinceStartup + 60;
             EditorApplication.update -= Check;
             EditorApplication.update += Check;
@@ -66,14 +66,14 @@ namespace UnityInvader.Editor
                     {
                         return;
                     }
-                    _view = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
-                    _renderers = _view.GetComponentsInChildren<SpriteRenderer>();
-                    _settings = InputSystem.settings;
-                    _background = _settings.backgroundBehavior;
-                    _editorInput = _settings.editorInputBehaviorInPlayMode;
-                    _settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+                    _view                                   = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
+                    _renderers                              = _view.GetComponentsInChildren<SpriteRenderer>();
+                    _settings                               = InputSystem.settings;
+                    _background                             = _settings.backgroundBehavior;
+                    _editorInput                            = _settings.editorInputBehaviorInPlayMode;
+                    _settings.backgroundBehavior            = InputSettings.BackgroundBehavior.IgnoreFocus;
                     _settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
-                    _keyboard = InputSystem.AddDevice<Keyboard>();
+                    _keyboard                               = InputSystem.AddDevice<Keyboard>();
                     Keys(Key.Space);
                     _stage = 1;
                 }
@@ -82,7 +82,7 @@ namespace UnityInvader.Editor
                     // Keep the real InputReader holding Space during clear and into the next wave.
                     _state.Playing.Shot.Deactivate();
                     WaveLoopVerification.Clear(_state.Playing, PlayingSimulation.TickDuration);
-                    _pausedX = _state.Playing.Player.X;
+                    _pausedX     = _state.Playing.Player.X;
                     _pausedSteps = _state.Playing.Formation.StepCount;
                     _clearedWave++;
                     _stage = 2;
@@ -95,7 +95,7 @@ namespace UnityInvader.Editor
                     }
                     _clearStarted = Time.timeAsDouble;
                     Keys(Key.Space, Key.RightArrow);
-                    _stage = 3;
+                    _stage     = 3;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.4;
                 }
                 else if (_stage == 3)
@@ -121,7 +121,7 @@ namespace UnityInvader.Editor
                         _renderers.All(r => r.enabled), "Reuse exactly the same 55 visible renderers.");
                     Debug.Log($"WAVE_LOOP_PLAY_WAVE_PASS: Wave={_state.Playing.WaveNumber}; Score={_state.Playing.Score}; renderers=55; elapsed={Time.timeAsDouble - _clearStarted}");
                     Keys();
-                    _stage = 5;
+                    _stage     = 5;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.05;
                 }
                 else if (_stage == 5)
@@ -166,7 +166,7 @@ namespace UnityInvader.Editor
             }
             if (_settings != null)
             {
-                _settings.backgroundBehavior = _background;
+                _settings.backgroundBehavior            = _background;
                 _settings.editorInputBehaviorInPlayMode = _editorInput;
             }
             EditorApplication.Exit(code);

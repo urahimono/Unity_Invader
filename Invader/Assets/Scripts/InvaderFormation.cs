@@ -16,7 +16,7 @@ namespace UnityInvader
 
         public InvaderSlot(int row, int column)
         {
-            Row = row;
+            Row    = row;
             Column = column;
         }
 
@@ -84,7 +84,7 @@ namespace UnityInvader
                 return;
             }
             _ticksUntilStep = TicksPerStep;
-            X = Math.Max(MinimumX, Math.Min(MaximumX, X + Direction * HorizontalStep));
+            X               = Math.Max(MinimumX, Math.Min(MaximumX, X + Direction * HorizontalStep));
             if ((Direction > 0 && X == MaximumX) || (Direction < 0 && X == MinimumX))
             {
                 Y -= Descent;

@@ -25,7 +25,7 @@ namespace UnityInvader
             Formation = new InvaderFormation();
             WaveNumber++;
             WaveClearRequired = false;
-            _accumulatedTime = 0;
+            _accumulatedTime  = 0;
             // Keep Player, Score and the single Shot (including its release gate).
         }
 
@@ -49,7 +49,7 @@ namespace UnityInvader
                 if (Formation.AliveCount == 0)
                 {
                     WaveClearRequired = true;
-                    _accumulatedTime = 0;
+                    _accumulatedTime  = 0;
                     break; // Do not run extra ticks after the final hit, even at 30fps.
                 }
             }
