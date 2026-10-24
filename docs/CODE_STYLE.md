@@ -147,6 +147,10 @@ property は、同じ property section 内で「同じ型 × 同じ宣言形式�
 
 グループは property の型と宣言形式を組み合わせて分けます。たとえば、`int` + accessor block、`int` + expression-bodied、`IReadOnlyList<InvaderSlot>` + accessor block は、それぞれ別グループです。
 
+同じ property section 内で、異なる property グループ同士は空行1行で区切ります。グループ判定は既存規約どおり「同じ型 × 同じ宣言形式」とし、同じグループ内には空行を入れません。
+
+この空行規約は section 内のグループ間の区切りを定めるものであり、section 全体の前後に余計な空行を追加する規約ではありません。
+
 accessor block を持つ property は、property 名の後ろへ空白を入れて、同じグループ内の `{` の開始位置を縦に揃えます。型の異なる property を無理に同じ列へ揃える必要はありません。
 
 ```csharp
