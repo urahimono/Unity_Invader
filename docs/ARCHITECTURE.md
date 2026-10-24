@@ -121,6 +121,10 @@ CollisionはGameplaySimulationの論理矩形判定です。Transform、SpriteRe
 
 これは現在の単一モデルによるWaveループで、残機や開始・終了を含む1Pセッションの寿命管理全体を実装したものではありません。
 
+## 独立したPhysics2D比較試作
+
+[Physics2DProbe](../Invader/Assets/Prototypes/Physics2DProbe/README.md) は、本編と接続しないGameObject・Prefab・Trigger接触の小規模試作です。専用namespaceとEditor生成メニューを用意しています。作業環境のライセンス制約によりScene・Prefabは未生成、Play Modeは未検証です。本編の構造・起動Scene・独自判定方式や既存ADRを変更・置換するものではありません。生成・操作・検証手順は試作のREADMEを参照してください。
+
 ## 検証と更新
 
 既存のロジック・Play Mode検証は [Assets/Editor](../Invader/Assets/Editor) にあり、実行方法と操作確認は [README](../README.md) を参照してください。文書のコード照合とUnityでの実行確認は分けて報告します。
