@@ -19,7 +19,7 @@ namespace UnityInvader
             {
                 return;
             }
-            float targetAspect = (float)PlayerModel.ScreenWidth / PlayerModel.ScreenHeight;
+            float targetAspect = (float)PlayerBody.ScreenWidth / PlayerBody.ScreenHeight;
             float screenAspect = (float)Screen.width / Screen.height;
             if (screenAspect > targetAspect)
             {

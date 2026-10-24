@@ -36,12 +36,12 @@ namespace UnityInvader
             }
         }
 
-        public void Tick(PlayerModel inPlayer)
+        public void Tick(PlayerBody inPlayer)
         {
             if (Active)
             {
                 Y += SpeedPerTick;
-                if (Y >= PlayerModel.ScreenHeight)
+                if (Y >= PlayerBody.ScreenHeight)
                 {
                     Active = false;
                 }

@@ -38,7 +38,7 @@ namespace UnityInvader
             ApplyDisplay();
         }
 
-        // PlayingController advances the shared PlayingSimulation in Update.
+        // PlayingController advances the shared ArcadeGameplaySimulation in Update.
         private void LateUpdate()
         {
             ApplyDisplay();
@@ -54,8 +54,8 @@ namespace UnityInvader
                 renderer.sprite             = _frames[(int)slot.Type * 2 + Formation.AnimationFrame];
                 // Transform is output only. No game rule reads display positions.
                 renderer.transform.position = new Vector3(
-                    Formation.X + slot.Column * InvaderFormation.Spacing - PlayerModel.ScreenWidth / 2f,
-                    Formation.Y - slot.Row * InvaderFormation.Spacing - PlayerModel.ScreenHeight / 2f, 0f);
+                    Formation.X + slot.Column * InvaderFormation.Spacing - PlayerBody.ScreenWidth / 2f,
+                    Formation.Y - slot.Row * InvaderFormation.Spacing - PlayerBody.ScreenHeight / 2f, 0f);
             }
         }
 

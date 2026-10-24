@@ -1,11 +1,11 @@
 namespace UnityInvader
 {
-    public sealed class PlayerSimulation
+    public sealed class PlayerUnit
     {
         public  const double TickDuration = 1.0 / 60.0;
         private       double _accumulatedTime;
 
-        public PlayerModel Player { get; } = new PlayerModel();
+        public PlayerBody Player { get; } = new PlayerBody();
 
         public PlayerShot Shot { get; } = new PlayerShot();
 
@@ -27,7 +27,7 @@ namespace UnityInvader
             }
         }
 
-        // PlayingSimulation owns the live clock; Advance remains available for isolated verification.
+        // ArcadeGameplaySimulation owns the live clock; Advance remains available for isolated verification.
         internal void Tick(PlayerInputState inInput)
         {
             Player.Tick(inInput);

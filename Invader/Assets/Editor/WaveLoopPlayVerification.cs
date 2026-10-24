@@ -81,7 +81,7 @@ namespace UnityInvader.Editor
                 {
                     // Keep the real InputReader holding Space during clear and into the next wave.
                     _state.Playing.Shot.Deactivate();
-                    WaveLoopVerification.Clear(_state.Playing, PlayingSimulation.TickDuration);
+                    WaveLoopVerification.Clear(_state.Playing, ArcadeGameplaySimulation.TickDuration);
                     _pausedX     = _state.Playing.Player.X;
                     _pausedSteps = _state.Playing.Formation.StepCount;
                     _clearedWave++;
