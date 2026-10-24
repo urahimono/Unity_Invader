@@ -16,21 +16,21 @@ namespace UnityInvader.Editor
             }
 
             const string texturePath = "Assets/Sprites/Player/Player.png";
-            var importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
+            var importer             = AssetImporter.GetAtPath(texturePath) as TextureImporter;
             if (importer == null)
             {
                 throw new InvalidOperationException("Player.png is missing.");
             }
-            importer.textureType = TextureImporterType.Sprite;
-            importer.spriteImportMode = SpriteImportMode.Single;
-            importer.filterMode = FilterMode.Point;
-            importer.textureCompression = TextureImporterCompression.Uncompressed;
-            importer.mipmapEnabled = false;
+            importer.textureType         = TextureImporterType.Sprite;
+            importer.spriteImportMode    = SpriteImportMode.Single;
+            importer.filterMode          = FilterMode.Point;
+            importer.textureCompression  = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled       = false;
             importer.alphaIsTransparency = true;
-            importer.spritePivot = new Vector2(0.5f, 0.5f);
-            var textureSettings = new TextureImporterSettings();
+            importer.spritePivot         = new Vector2(0.5f, 0.5f);
+            var textureSettings          = new TextureImporterSettings();
             importer.ReadTextureSettings(textureSettings);
-            textureSettings.spriteMeshType = SpriteMeshType.FullRect;
+            textureSettings.spriteMeshType  = SpriteMeshType.FullRect;
             textureSettings.spriteAlignment = (int)SpriteAlignment.Center;
             importer.SetTextureSettings(textureSettings);
             importer.maxTextureSize = 2048;
@@ -38,8 +38,8 @@ namespace UnityInvader.Editor
             importer.spritePixelsPerUnit = width / (float)PlayerModel.SpriteSize;
             importer.SaveAndReimport();
 
-            var scene = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
-            var state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
+            var scene  = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
+            var state  = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
             var camera = Camera.main;
             if (state == null || camera == null)
             {
@@ -61,18 +61,18 @@ namespace UnityInvader.Editor
             {
                 renderer = player.AddComponent<SpriteRenderer>();
             }
-            renderer.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(texturePath);
-            renderer.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(
+            renderer.sprite           = AssetDatabase.LoadAssetAtPath<Sprite>(texturePath);
+            renderer.sharedMaterial   = AssetDatabase.LoadAssetAtPath<Material>(
                 "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
-            renderer.enabled = false;
+            renderer.enabled          = false;
             player.transform.position = new Vector3(0f, 24f - PlayerModel.ScreenHeight / 2f, 0f);
-            var controller = player.GetComponent<PlayerController>();
+            var controller            = player.GetComponent<PlayerController>();
             if (controller == null)
             {
                 controller = player.AddComponent<PlayerController>();
             }
-            var serialized = new SerializedObject(controller);
-            serialized.FindProperty("_gameState").objectReferenceValue = state;
+            var serialized                                                  = new SerializedObject(controller);
+            serialized.FindProperty("_gameState").objectReferenceValue      = state;
             serialized.FindProperty("_playerRenderer").objectReferenceValue = renderer;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             PlayingSceneSetup.ConfigureInScene(state);

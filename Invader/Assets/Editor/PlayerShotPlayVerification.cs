@@ -40,9 +40,9 @@ namespace UnityInvader.Editor
             {
                 return;
             }
-            _stage = 0;
+            _stage      = 0;
             _stateIndex = 0;
-            _deadline = EditorApplication.timeSinceStartup + 60;
+            _deadline   = EditorApplication.timeSinceStartup + 60;
             EditorApplication.update -= Check;
             EditorApplication.update += Check;
         }
@@ -63,7 +63,7 @@ namespace UnityInvader.Editor
                         return;
                     }
                     _player = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
-                    _state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
+                    _state  = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
                     Require(_player != null && _state != null, "Player/State missing.");
                     if (_state.CurrentState != GameState.Playing)
                     {
@@ -79,7 +79,7 @@ namespace UnityInvader.Editor
                     Require(!_renderer.enabled, "Inactive shot must be hidden.");
                     _player.Shot.ReadFire(true);
                     _player.Shot.Tick(_player.Player);
-                    _stage = 1;
+                    _stage     = 1;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.04;
                 }
                 else if (_stage == 1)
@@ -101,7 +101,7 @@ namespace UnityInvader.Editor
                     else
                     {
                         _state.ChangeState(GameState.Playing);
-                        _stage = 3;
+                        _stage     = 3;
                         _nextCheck = EditorApplication.timeSinceStartup + 0.04;
                     }
                 }
@@ -123,14 +123,14 @@ namespace UnityInvader.Editor
         private static void VerifyInput()
         {
             // Verify the real InputAction bindings, independently of physical keyboard focus.
-            var testSettings = InputSystem.settings;
-            var updateMode = testSettings.updateMode;
-            var backgroundBehavior = testSettings.backgroundBehavior;
-            var editorBehavior = testSettings.editorInputBehaviorInPlayMode;
-            testSettings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
-            testSettings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            var testSettings                           = InputSystem.settings;
+            var updateMode                             = testSettings.updateMode;
+            var backgroundBehavior                     = testSettings.backgroundBehavior;
+            var editorBehavior                         = testSettings.editorInputBehaviorInPlayMode;
+            testSettings.updateMode                    = InputSettings.UpdateMode.ProcessEventsManually;
+            testSettings.backgroundBehavior            = InputSettings.BackgroundBehavior.IgnoreFocus;
             testSettings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
-            var keyboard = InputSystem.AddDevice<Keyboard>();
+            var keyboard                               = InputSystem.AddDevice<Keyboard>();
             try
             {
                 using (var reader = new PlayerInputReader())
@@ -148,8 +148,8 @@ namespace UnityInvader.Editor
             finally
             {
                 InputSystem.RemoveDevice(keyboard);
-                testSettings.updateMode = updateMode;
-                testSettings.backgroundBehavior = backgroundBehavior;
+                testSettings.updateMode                    = updateMode;
+                testSettings.backgroundBehavior            = backgroundBehavior;
                 testSettings.editorInputBehaviorInPlayMode = editorBehavior;
             }
         }
@@ -157,7 +157,7 @@ namespace UnityInvader.Editor
         private static void Pause()
         {
             _state.ChangeState(_pausedStates[_stateIndex]);
-            _pausedY = _player.Shot.Y;
+            _pausedY   = _player.Shot.Y;
             _nextCheck = EditorApplication.timeSinceStartup + 0.1;
         }
 

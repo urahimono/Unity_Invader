@@ -26,10 +26,10 @@ namespace UnityInvader
                 var shotObject = new GameObject("PlayerShot");
                 shotObject.transform.SetParent(transform, false);
                 _shotRenderer = shotObject.AddComponent<SpriteRenderer>();
-                _shotTexture = new Texture2D(PlayerShot.Width, PlayerShot.Height) { filterMode = FilterMode.Point };
+                _shotTexture  = new Texture2D(PlayerShot.Width, PlayerShot.Height) { filterMode = FilterMode.Point };
                 _shotTexture.SetPixels(new[] { Color.white, Color.white, Color.white, Color.white });
                 _shotTexture.Apply();
-                _shotSprite = Sprite.Create(_shotTexture, new Rect(0, 0, PlayerShot.Width, PlayerShot.Height), new Vector2(0.5f, 0f), 1);
+                _shotSprite          = Sprite.Create(_shotTexture, new Rect(0, 0, PlayerShot.Width, PlayerShot.Height), new Vector2(0.5f, 0f), 1);
                 _shotRenderer.sprite = _shotSprite;
             }
             ApplyDisplay();
@@ -43,12 +43,12 @@ namespace UnityInvader
         private void ApplyDisplay()
         {
             // Logical origin is bottom-left; Unity origin is the screen center.
-            transform.position = new Vector3(Player.X - PlayerModel.ScreenWidth / 2f,
+            transform.position               = new Vector3(Player.X - PlayerModel.ScreenWidth / 2f,
                 Player.Y - PlayerModel.ScreenHeight / 2f, 0f);
-            _playerRenderer.enabled = _gameState.CurrentState == GameState.Playing;
+            _playerRenderer.enabled          = _gameState.CurrentState == GameState.Playing;
             _shotRenderer.transform.position = new Vector3(Shot.X - PlayerModel.ScreenWidth / 2f,
                 Shot.Y - PlayerModel.ScreenHeight / 2f, 0f);
-            _shotRenderer.enabled = _gameState.CurrentState == GameState.Playing && Shot.Active;
+            _shotRenderer.enabled            = _gameState.CurrentState == GameState.Playing && Shot.Active;
         }
 
         private void OnDisable()

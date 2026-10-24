@@ -14,8 +14,8 @@ namespace UnityInvader.Editor
 
         public PlayingClockProbe()
         {
-            _original = PlayerLoop.GetCurrentPlayerLoop();
-            var loop = _original;
+            _original  = PlayerLoop.GetCurrentPlayerLoop();
+            var loop   = _original;
             var stages = (PlayerLoopSystem[])loop.subSystemList.Clone();
             for (int index = 0; index < stages.Length; index++)
             {
@@ -26,8 +26,8 @@ namespace UnityInvader.Editor
                 var observers = stages[index].subSystemList;
                 Array.Resize(ref observers, observers.Length + 1);
                 observers[observers.Length - 1] = new PlayerLoopSystem { type = typeof(PlayingClockProbe), updateDelegate = Observe };
-                stages[index].subSystemList = observers;
-                loop.subSystemList = stages;
+                stages[index].subSystemList     = observers;
+                loop.subSystemList              = stages;
                 PlayerLoop.SetPlayerLoop(loop);
                 return;
             }

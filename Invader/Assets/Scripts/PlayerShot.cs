@@ -50,8 +50,8 @@ namespace UnityInvader
                 if (Active == false)
                 {
                     Active = true;
-                    X = player.X;
-                    Y = player.Y + 8;
+                    X      = player.X;
+                    Y      = player.Y + 8;
                 }
                 _pendingFire = false;
             }

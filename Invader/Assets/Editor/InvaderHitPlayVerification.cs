@@ -46,7 +46,7 @@ namespace UnityInvader.Editor
             {
                 return;
             }
-            _stage = _stateIndex = 0;
+            _stage    = _stateIndex = 0;
             _deadline = EditorApplication.timeSinceStartup + 60;
             EditorApplication.update -= Check;
             EditorApplication.update += Check;
@@ -67,9 +67,9 @@ namespace UnityInvader.Editor
                     {
                         return;
                     }
-                    _player = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
-                    _formation = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
-                    _state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
+                    _player     = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
+                    _formation  = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
+                    _state      = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
                     var drivers = UnityEngine.Object.FindObjectsByType<PlayingController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                     Require(drivers.Length == 1 && drivers[0].isActiveAndEnabled, "Arcade must have exactly one enabled PlayingController.");
                     _playing = drivers[0];
@@ -82,14 +82,14 @@ namespace UnityInvader.Editor
                         ReferenceEquals(_formation.Formation, _state.Playing.Formation), "Controllers must share one Playing simulation.");
                     Require(_formation.Formation.AliveCount == 55 && _state.Playing.Score == 0, "Initial logical state mismatch.");
                     Require(_player.GetComponent<SpriteRenderer>().enabled, "Player must be visible.");
-                    _shotRenderer = _player.transform.Find("PlayerShot").GetComponent<SpriteRenderer>();
-                    _settings = InputSystem.settings;
-                    _backgroundBehavior = _settings.backgroundBehavior;
-                    _editorBehavior = _settings.editorInputBehaviorInPlayMode;
-                    _settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+                    _shotRenderer                           = _player.transform.Find("PlayerShot").GetComponent<SpriteRenderer>();
+                    _settings                               = InputSystem.settings;
+                    _backgroundBehavior                     = _settings.backgroundBehavior;
+                    _editorBehavior                         = _settings.editorInputBehaviorInPlayMode;
+                    _settings.backgroundBehavior            = InputSettings.BackgroundBehavior.IgnoreFocus;
                     _settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
-                    _keyboard = InputSystem.AddDevice<Keyboard>();
-                    _initialPlayerX = _player.Player.X;
+                    _keyboard                               = InputSystem.AddDevice<Keyboard>();
+                    _initialPlayerX                         = _player.Player.X;
                     Keys(Key.Space);
                     _stage = 1;
                 }
@@ -102,7 +102,7 @@ namespace UnityInvader.Editor
                     _shotX = _player.Shot.X;
                     Require(_shotX == _initialPlayerX && _shotRenderer.enabled, "Space must launch at current Player X.");
                     Keys(Key.Space, Key.RightArrow);
-                    _stage = 2;
+                    _stage     = 2;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.07;
                 }
                 else if (_stage == 2)
@@ -119,8 +119,8 @@ namespace UnityInvader.Editor
                     }
                     Require(_state.Playing.Score == 10 && _formation.Formation.AliveCount == 54 && !_player.Shot.Active,
                         "First Bottom hit must add 10, kill exactly one and consume Shot.");
-                    _heldStep = _formation.Formation.StepCount;
-                    _stage = 4;
+                    _heldStep  = _formation.Formation.StepCount;
+                    _stage     = 4;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.25;
                 }
                 else if (_stage == 4)
@@ -130,7 +130,7 @@ namespace UnityInvader.Editor
                     Require(_formation.Formation.StepCount > _heldStep, "Formation must keep moving after a kill.");
                     CheckFormationDisplay(true);
                     Keys();
-                    _stage = 5;
+                    _stage     = 5;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.05;
                 }
                 else if (_stage == 5)
@@ -164,7 +164,7 @@ namespace UnityInvader.Editor
                     else
                     {
                         _state.ChangeState(GameState.Playing);
-                        _stage = 8;
+                        _stage     = 8;
                         _nextCheck = EditorApplication.timeSinceStartup + 0.05;
                     }
                 }
@@ -176,7 +176,7 @@ namespace UnityInvader.Editor
                     // Wave-clear behavior is covered by WaveLoopPlayVerification.
                     _player.Shot.Deactivate();
                     Keys();
-                    _stage = 9;
+                    _stage     = 9;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.05;
                 }
                 else if (_stage == 9)
@@ -186,18 +186,18 @@ namespace UnityInvader.Editor
                     CheckFormationDisplay(true);
                     // Editor stepping uses its own delta; compare every frame with its actual elapsed time.
                     EditorApplication.isPaused = true;
-                    _playing.enabled = false; // Discard partial accumulated time for an exact reference.
-                    _playing.enabled = true;
+                    _playing.enabled           = false; // Discard partial accumulated time for an exact reference.
+                    _playing.enabled           = true;
                     InvaderHitVerification.PrepareShot(_state.Playing, _player.Player.X, 32);
                     _player.enabled = false;
                     Require(!_player.GetComponent<SpriteRenderer>().enabled && !_shotRenderer.enabled, "Disabling the view must hide its renderers.");
-                    _clockStartX = _player.Player.X;
-                    _clockStartY = _player.Shot.Y;
+                    _clockStartX    = _player.Player.X;
+                    _clockStartY    = _player.Shot.Y;
                     _clockStartStep = _formation.Formation.StepCount;
-                    _steppedFrames = 0;
-                    _steppedTime = 0;
-                    _clockProbe = new PlayingClockProbe();
-                    _stage = 10;
+                    _steppedFrames  = 0;
+                    _steppedTime    = 0;
+                    _clockProbe     = new PlayingClockProbe();
+                    _stage          = 10;
                     StepFrame();
                 }
                 else if (_stage == 10 || _stage == 11)
@@ -210,7 +210,7 @@ namespace UnityInvader.Editor
                     _steppedFrames++;
                     if (_stage == 10)
                     {
-                        _steppedTime = _clockProbe.Elapsed;
+                        _steppedTime      = _clockProbe.Elapsed;
                         int expectedTicks = (int)System.Math.Floor((_steppedTime + 1e-12) / PlayingSimulation.TickDuration);
                         Require(_clockStartY + expectedTicks * PlayerShot.SpeedPerTick < PlayerModel.ScreenHeight,
                             "Clock test requires Shot to remain within the screen.");
@@ -227,12 +227,12 @@ namespace UnityInvader.Editor
                         Require(_formation.Formation.StepCount > _clockStartStep,
                             "Formation must advance even with PlayerController disabled.");
                         _playing.enabled = false;
-                        _player.enabled = true;
-                        _clockStartX = _player.Player.X;
-                        _clockStartY = _player.Shot.Y;
-                        _clockStartStep = _formation.Formation.StepCount;
-                        _steppedFrames = 0;
-                        _stage = 11;
+                        _player.enabled  = true;
+                        _clockStartX     = _player.Player.X;
+                        _clockStartY     = _player.Shot.Y;
+                        _clockStartStep  = _formation.Formation.StepCount;
+                        _steppedFrames   = 0;
+                        _stage           = 11;
                         StepFrame();
                         return;
                     }
@@ -261,10 +261,10 @@ namespace UnityInvader.Editor
         private static void Pause()
         {
             _state.ChangeState(_pausedStates[_stateIndex]);
-            _pausedX = _player.Player.X;
-            _pausedY = _player.Shot.Y;
+            _pausedX    = _player.Player.X;
+            _pausedY    = _player.Shot.Y;
             _pausedStep = _formation.Formation.StepCount;
-            _nextCheck = EditorApplication.timeSinceStartup + 0.1;
+            _nextCheck  = EditorApplication.timeSinceStartup + 0.1;
         }
 
         private static void CheckFormationDisplay(bool playing)
@@ -298,7 +298,7 @@ namespace UnityInvader.Editor
             }
             if (_settings != null)
             {
-                _settings.backgroundBehavior = _backgroundBehavior;
+                _settings.backgroundBehavior            = _backgroundBehavior;
                 _settings.editorInputBehaviorInPlayMode = _editorBehavior;
             }
             EditorApplication.isPaused = false;

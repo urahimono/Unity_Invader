@@ -45,12 +45,12 @@ namespace UnityInvader
                 return; // New Formation remains at its initial state for this frame.
             }
             _waitingForNextWave = false;
-            bool playing = _gameState.CurrentState == GameState.Playing;
+            bool playing        = _gameState.CurrentState == GameState.Playing;
             // The only runtime driver; both views synchronize afterward in LateUpdate.
             _gameState.Playing.Advance(Time.deltaTime, playing, playing ? _input.Read() : default);
             if (playing && _gameState.Playing.WaveClearRequired)
             {
-                _waveClearElapsed = 0;
+                _waveClearElapsed   = 0;
                 _waitingForNextWave = true;
                 _gameState.ChangeState(GameState.WaveClear);
             }

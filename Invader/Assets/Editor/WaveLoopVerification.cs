@@ -13,8 +13,8 @@ namespace UnityInvader.Editor
             foreach (int fps in new[] { 30, 60, 120 })
             {
                 var simulation = new PlayingSimulation();
-                var player = simulation.Player;
-                var shot = simulation.Shot;
+                var player     = simulation.Player;
+                var shot       = simulation.Shot;
                 Require(simulation.WaveNumber == 1 && !simulation.WaveClearRequired, "Initial Wave must be 1.");
                 simulation.StartNextWave();
                 Require(simulation.WaveNumber == 1, "Cannot skip an uncleared wave.");
@@ -25,7 +25,7 @@ namespace UnityInvader.Editor
                         simulation.Score == wave * 990 && !shot.Active && !shot.FireReady,
                         "Final real hit must finish death, count, Shot and Score before clear.");
                     var oldFormation = simulation.Formation;
-                    int x = player.X, steps = oldFormation.StepCount;
+                    int x            = player.X, steps = oldFormation.StepCount;
                     for (int frame = 0; frame < fps; frame++)
                     {
                         simulation.Advance(1.0 / fps, false, new PlayerInputState(true, true, true));

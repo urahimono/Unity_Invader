@@ -10,13 +10,13 @@ namespace UnityInvader.Editor
         public static void Verify()
         {
             const double tick = PlayerSimulation.TickDuration;
-            var fire = new PlayerInputState(false, false, true);
-            var release = new PlayerInputState(false, false);
-            var inactive = new PlayerSimulation();
+            var fire          = new PlayerInputState(false, false, true);
+            var release       = new PlayerInputState(false, false);
+            var inactive      = new PlayerSimulation();
             inactive.Advance(10, false, fire);
             Require(!inactive.Shot.Active && inactive.Shot.FireReady, "Non-Playing input must not fire or change the gate.");
             var simulation = new PlayerSimulation();
-            var shot = simulation.Shot;
+            var shot       = simulation.Shot;
             simulation.Advance(tick, true, new PlayerInputState(false, true, true));
             Require(shot.Active && shot.X == 113 && shot.Y == 32, "Spawn must use current tick Player X and Y+8.");
             simulation.Advance(tick, true, new PlayerInputState(false, true, true));

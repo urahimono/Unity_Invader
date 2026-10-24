@@ -49,7 +49,7 @@ namespace UnityInvader.Editor
             {
                 return;
             }
-            _stage = 0;
+            _stage    = 0;
             _deadline = EditorApplication.timeSinceStartup + 60;
             EditorApplication.update -= Check;
             EditorApplication.update += Check;
@@ -72,14 +72,14 @@ namespace UnityInvader.Editor
                         return;
                     }
                     _controller = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
-                    _state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
-                    _player = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
+                    _state      = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
+                    _player     = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
                     Require(_controller != null && _player != null && _state != null, "Arcade components missing.");
                     if (_state.CurrentState != GameState.Playing)
                     {
                         return;
                     }
-                    _stage = 10;
+                    _stage     = 10;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.2;
                 }
                 else if (_stage == 10)
@@ -92,7 +92,7 @@ namespace UnityInvader.Editor
                     {
                         _controller.Formation.Tick();
                     }
-                    _stage = 3;
+                    _stage     = 3;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.02;
                 }
                 else if (_stage == 3)
@@ -115,7 +115,7 @@ namespace UnityInvader.Editor
                     else
                     {
                         _state.ChangeState(GameState.Playing);
-                        _stage = 5;
+                        _stage     = 5;
                         _nextCheck = EditorApplication.timeSinceStartup + 0.5;
                     }
                 }
@@ -139,9 +139,9 @@ namespace UnityInvader.Editor
             var states = new[] { GameState.Attract, GameState.PlayerReady, GameState.PlayerDead, GameState.WaveClear, GameState.GameOver };
             _state.ChangeState(states[_stateIndex]);
             _pausedStep = _controller.Formation.StepCount;
-            _pausedX = _controller.Formation.X;
-            _pausedY = _controller.Formation.Y;
-            _nextCheck = EditorApplication.timeSinceStartup + 0.4;
+            _pausedX    = _controller.Formation.X;
+            _pausedY    = _controller.Formation.Y;
+            _nextCheck  = EditorApplication.timeSinceStartup + 0.4;
         }
 
         private static void CheckDisplay(bool visible)
@@ -165,19 +165,19 @@ namespace UnityInvader.Editor
 
         private static void VerifyFrameSwitch()
         {
-            var sprites = AssetDatabase.LoadAllAssetsAtPath(InvaderFormationSceneSetup.TexturePath).OfType<Sprite>().ToArray();
+            var sprites   = AssetDatabase.LoadAllAssetsAtPath(InvaderFormationSceneSetup.TexturePath).OfType<Sprite>().ToArray();
             var formation = _controller.Formation;
-            int x = formation.X, y = formation.Y, step = formation.StepCount, direction = formation.Direction;
+            int x         = formation.X, y = formation.Y, step = formation.StepCount, direction = formation.Direction;
             var renderers = _controller.GetComponentsInChildren<SpriteRenderer>();
             foreach (var slot in formation.Invaders)
             {
-                var renderer = renderers[slot.Id];
-                var original = renderer.sprite;
-                var position = renderer.transform.position;
+                var renderer     = renderers[slot.Id];
+                var original     = renderer.sprite;
+                var position     = renderer.transform.position;
                 var boundsCenter = renderer.bounds.center;
                 foreach (int frame in new[] { 0, 1 })
                 {
-                    string name = InvaderFormationSceneSetup.FrameNames[(int)slot.Type * 2 + frame];
+                    string name     = InvaderFormationSceneSetup.FrameNames[(int)slot.Type * 2 + frame];
                     renderer.sprite = sprites.Single(sprite => sprite.name == name);
                     Require(renderer.transform.position == position && renderer.bounds.center == boundsCenter,
                         "A/B-only switching must preserve display position and bounds center.");

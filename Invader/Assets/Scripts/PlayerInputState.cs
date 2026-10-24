@@ -8,9 +8,9 @@ namespace UnityInvader
 
         public PlayerInputState(bool left, bool right, bool fire = false)
         {
-            Left = left;
+            Left  = left;
             Right = right;
-            Fire = fire;
+            Fire  = fire;
         }
     }
 }
