@@ -21,6 +21,14 @@ Unity Hubから `Invader/` を指定して、上記バージョンのEditorで�
 
 `Assets/Scenes/Bootstrap.unity` を開いてPlayすると、`Arcade.unity` に切り替わります。
 
+## Windowsでdevelopを更新してUnityを起動する
+
+ルートの `LaunchDevelopUnity.bat` をダブルクリックすると、作業ツリーを確認し、`develop` へ切り替えて `git pull --ff-only origin develop` を実行した後、`Invader/` をUnity Editorで開きます。GitがPATH上で使用でき、originへアクセスできる必要があります。
+
+未コミット変更・未追跡ファイル（Gitignore対象を除く）がある場合、またはGit操作が失敗した場合は起動せず停止します。自動stashや変更の削除は行いません。分岐した履歴は自動解消しません。エラー時はコンソールに原因を表示して待機します。正常時は現在のブランチが `develop` になります。
+
+Unityのバージョンは更新後の `Invader/ProjectSettings/ProjectVersion.txt` から読み、標準の `C:\Program Files\Unity\Hub\Editor\<version>\Editor\Unity.exe` を使用します。カスタム配置では、環境変数 `UNITY_EDITOR_PATH` に対応バージョンのUnity.exeのフルパスを設定してください（値自体に引用符は含めません）。例: `D:\Unity Editors\6000.6.4f1\Editor\Unity.exe`。バッチ冒頭の設定例でも指定できますが、追跡ファイルの編集は未コミット変更として検出されるため、環境変数の使用を推奨します。
+
 ## 操作方法
 
 Player移動の確認はBootstrapからPlayし、Gameビューにフォーカスして左右矢印キーを押してください。
