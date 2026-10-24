@@ -128,7 +128,7 @@ public  const int HorizontalStep  = 2;
 public  const int Descent         = 8;
 public  const int TicksPerStep    = 20;
 public  const int MinimumX        = CellSize / 2;
-public  const int MaximumX        = PlayerModel.ScreenWidth - CellSize / 2 - (Columns - 1) * Spacing;
+public  const int MaximumX        = PlayerBody.ScreenWidth - CellSize / 2 - (Columns - 1) * Spacing;
 private       int _ticksUntilStep = TicksPerStep;
 ```
 

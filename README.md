@@ -27,6 +27,7 @@ Player移動の確認はBootstrapからPlayし、Gameビューにフォーカス
 射撃はSpaceです。押しっぱなしで再発射しないため、離してから再押下してください。
 ArcadeのGameStateにある `PlayingController` の `Development Start Playing` が、開発確認用にGameStateをPlayingへ変更します。
 本来のAttract / Credit / PlayerReady遷移ではありません。このフラグを無効にすればAttractのまま開始します。
+ゲーム全体の進行は `ArcadeGameplaySimulation`、プレイヤー側のまとまりは `PlayerUnit`、自機本体の状態は `PlayerBody`、自機弾は `PlayerShot` が扱います。
 現在の責務境界、State、論理座標、時間・入力の流れは [Architecture](docs/ARCHITECTURE.md) を参照してください。
 
 ## 素材・Sceneの設定

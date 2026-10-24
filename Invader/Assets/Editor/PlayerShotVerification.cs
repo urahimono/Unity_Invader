@@ -9,13 +9,13 @@ namespace UnityInvader.Editor
         [MenuItem("Unity Invader/Verify Player Shot Logic")]
         public static void Verify()
         {
-            const double tick = PlayerSimulation.TickDuration;
+            const double tick = PlayerUnit.TickDuration;
             var fire          = new PlayerInputState(false, false, true);
             var release       = new PlayerInputState(false, false);
-            var inactive      = new PlayerSimulation();
+            var inactive      = new PlayerUnit();
             inactive.Advance(10, false, fire);
             Require(!inactive.Shot.Active && inactive.Shot.FireReady, "Non-Playing input must not fire or change the gate.");
-            var simulation = new PlayerSimulation();
+            var simulation = new PlayerUnit();
             var shot       = simulation.Shot;
             simulation.Advance(tick, true, new PlayerInputState(false, true, true));
             Require(shot.Active && shot.X == 113 && shot.Y == 32, "Spawn must use current tick Player X and Y+8.");
@@ -52,7 +52,7 @@ namespace UnityInvader.Editor
             }
             foreach (int fps in new[] { 30, 60, 120 })
             {
-                var timed = new PlayerSimulation();
+                var timed = new PlayerUnit();
                 for (int frame = 0; frame < fps / 2; frame++)
                 {
                     timed.Advance(1.0 / fps, true, new PlayerInputState(false, true, true));

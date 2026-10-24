@@ -35,7 +35,7 @@ namespace UnityInvader.Editor
             importer.SetTextureSettings(textureSettings);
             importer.maxTextureSize = 2048;
             importer.GetSourceTextureWidthAndHeight(out int width, out _);
-            importer.spritePixelsPerUnit = width / (float)PlayerModel.SpriteSize;
+            importer.spritePixelsPerUnit = width / (float)PlayerBody.SpriteSize;
             importer.SaveAndReimport();
 
             var scene  = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
@@ -45,7 +45,7 @@ namespace UnityInvader.Editor
             {
                 throw new InvalidOperationException("Arcade foundation missing.");
             }
-            camera.orthographicSize = PlayerModel.ScreenHeight / 2f;
+            camera.orthographicSize = PlayerBody.ScreenHeight / 2f;
             if (camera.GetComponent<ArcadeViewport>() == null)
             {
                 camera.gameObject.AddComponent<ArcadeViewport>();
@@ -65,7 +65,7 @@ namespace UnityInvader.Editor
             renderer.sharedMaterial   = AssetDatabase.LoadAssetAtPath<Material>(
                 "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
             renderer.enabled          = false;
-            player.transform.position = new Vector3(0f, 24f - PlayerModel.ScreenHeight / 2f, 0f);
+            player.transform.position = new Vector3(0f, 24f - PlayerBody.ScreenHeight / 2f, 0f);
             var controller            = player.GetComponent<PlayerController>();
             if (controller == null)
             {

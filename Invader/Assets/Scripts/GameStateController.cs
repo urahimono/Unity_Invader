@@ -12,7 +12,7 @@ namespace UnityInvader
 
         public GameState CurrentState => _currentState;
 
-        public PlayingSimulation Playing { get; } = new PlayingSimulation();
+        public ArcadeGameplaySimulation Playing { get; } = new ArcadeGameplaySimulation();
 
         public void ChangeState(GameState nextState)
         {

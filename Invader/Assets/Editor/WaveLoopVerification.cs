@@ -12,7 +12,7 @@ namespace UnityInvader.Editor
             InvaderHitVerification.Verify();
             foreach (int fps in new[] { 30, 60, 120 })
             {
-                var simulation = new PlayingSimulation();
+                var simulation = new ArcadeGameplaySimulation();
                 var player     = simulation.Player;
                 var shot       = simulation.Shot;
                 Require(simulation.WaveNumber == 1 && !simulation.WaveClearRequired, "Initial Wave must be 1.");
@@ -47,10 +47,10 @@ namespace UnityInvader.Editor
                     {
                         Require(slot.Alive, "Every slot must be Alive.");
                     }
-                    simulation.Advance(PlayingSimulation.TickDuration, true, new PlayerInputState(false, false, true));
+                    simulation.Advance(ArcadeGameplaySimulation.TickDuration, true, new PlayerInputState(false, false, true));
                     Require(!shot.Active && !shot.FireReady, "Held Space must not auto-fire in next wave.");
-                    simulation.Advance(PlayingSimulation.TickDuration, true, default);
-                    simulation.Advance(PlayingSimulation.TickDuration, true, new PlayerInputState(false, false, true));
+                    simulation.Advance(ArcadeGameplaySimulation.TickDuration, true, default);
+                    simulation.Advance(ArcadeGameplaySimulation.TickDuration, true, new PlayerInputState(false, false, true));
                     Require(shot.Active, "Release then re-press must fire.");
                     shot.Deactivate();
                 }
@@ -58,7 +58,7 @@ namespace UnityInvader.Editor
             }
         }
 
-        internal static void Clear(PlayingSimulation simulation, double elapsed)
+        internal static void Clear(ArcadeGameplaySimulation simulation, double elapsed)
         {
             for (int row = 4; row >= 0; row--)
             {

@@ -3,7 +3,7 @@ using System;
 namespace UnityInvader
 {
     // Logical pixels, independent of Unity transforms. All values are provisional.
-    public sealed class PlayerModel
+    public sealed class PlayerBody
     {
         public const int ScreenWidth  = 224;
         public const int ScreenHeight = 256;

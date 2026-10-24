@@ -11,12 +11,12 @@ namespace UnityInvader
         [FormerlySerializedAs("playerRenderer")]
         [SerializeField]
         private SpriteRenderer      _playerRenderer;
-        private PlayingSimulation Simulation => _gameState.Playing;
+        private ArcadeGameplaySimulation Simulation => _gameState.Playing;
         private SpriteRenderer _shotRenderer;
         private Texture2D      _shotTexture;
         private Sprite         _shotSprite;
 
-        public PlayerModel Player => Simulation.Player;
+        public PlayerBody Player => Simulation.Player;
 
         public PlayerShot Shot => Simulation.Shot;
 
@@ -44,11 +44,11 @@ namespace UnityInvader
         private void ApplyDisplay()
         {
             // Logical origin is bottom-left; Unity origin is the screen center.
-            transform.position               = new Vector3(Player.X - PlayerModel.ScreenWidth / 2f,
-                Player.Y - PlayerModel.ScreenHeight / 2f, 0f);
+            transform.position               = new Vector3(Player.X - PlayerBody.ScreenWidth / 2f,
+                Player.Y - PlayerBody.ScreenHeight / 2f, 0f);
             _playerRenderer.enabled          = _gameState.CurrentState == GameState.Playing;
-            _shotRenderer.transform.position = new Vector3(Shot.X - PlayerModel.ScreenWidth / 2f,
-                Shot.Y - PlayerModel.ScreenHeight / 2f, 0f);
+            _shotRenderer.transform.position = new Vector3(Shot.X - PlayerBody.ScreenWidth / 2f,
+                Shot.Y - PlayerBody.ScreenHeight / 2f, 0f);
             _shotRenderer.enabled            = _gameState.CurrentState == GameState.Playing && Shot.Active;
         }
 

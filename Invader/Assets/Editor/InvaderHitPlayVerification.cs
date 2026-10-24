@@ -211,8 +211,8 @@ namespace UnityInvader.Editor
                     if (_stage == 10)
                     {
                         _steppedTime      = _clockProbe.Elapsed;
-                        int expectedTicks = (int)System.Math.Floor((_steppedTime + 1e-12) / PlayingSimulation.TickDuration);
-                        Require(_clockStartY + expectedTicks * PlayerShot.SpeedPerTick < PlayerModel.ScreenHeight,
+                        int expectedTicks = (int)System.Math.Floor((_steppedTime + 1e-12) / ArcadeGameplaySimulation.TickDuration);
+                        Require(_clockStartY + expectedTicks * PlayerShot.SpeedPerTick < PlayerBody.ScreenHeight,
                             "Clock test requires Shot to remain within the screen.");
                         Require(_player.Shot.Active && _player.Shot.Y == _clockStartY + expectedTicks * PlayerShot.SpeedPerTick,
                             $"Frame {_steppedFrames}: exactly one Advance per frame expected; elapsed={_steppedTime}; ticks={expectedTicks}; ShotY={_player.Shot.Y}.");
