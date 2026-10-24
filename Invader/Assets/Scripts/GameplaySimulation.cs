@@ -3,18 +3,18 @@ namespace UnityInvader
     // Space Invaders' Playing-only clock and interaction rules, independent of Unity.
     public sealed class GameplaySimulation
     {
-        public  const    double     TickDuration        = PlayerUnit.TickDuration;
-        public  const    int        InvaderHitBoxWidth  = 16;
-        public  const    int        InvaderHitBoxHeight = 8;
-        private          double     _accumulatedTime;
-        private readonly PlayerUnit _player             = new PlayerUnit();
-
-        private InvaderFormation _formation = new InvaderFormation();
+        private double           _accumulatedTime;
+        private InvaderFormation _formation       = new InvaderFormation();
 
         public int Score      { get; private set; }
         public int WaveNumber { get; private set; } = 1;
 
         public bool WaveClearRequired { get; private set; }
+
+        public  const    double     TickDuration        = PlayerUnit.TickDuration;
+        public  const    int        InvaderHitBoxWidth  = 16;
+        public  const    int        InvaderHitBoxHeight = 8;
+        private readonly PlayerUnit _player             = new PlayerUnit();
 
         public void StartNextWave()
         {
@@ -68,27 +68,6 @@ namespace UnityInvader
             }
         }
 
-#if UNITY_EDITOR
-        public GameplayVerificationState EditorCapture()
-        {
-            return new GameplayVerificationState(_player.CaptureState(), _formation.EditorCapture(), Score, WaveNumber, WaveClearRequired);
-        }
-
-        public void EditorPrepareShot(int inX, int inY)
-        {
-            _player.EditorPrepareShot(inX, inY);
-        }
-
-        public void EditorDeactivateShot()
-        {
-            _player.ConsumeShotHit();
-        }
-
-        public bool EditorKillInvader(int inId)
-        {
-            return _formation.TryKill(inId);
-        }
-#endif
         private void ResolvePlayerShotHit()
         {
             var shot = _player.CaptureState().Shot;
@@ -123,5 +102,27 @@ namespace UnityInvader
                 }
             }
         }
+
+#if UNITY_EDITOR
+        public GameplayVerificationState EditorCapture()
+        {
+            return new GameplayVerificationState(_player.CaptureState(), _formation.EditorCapture(), Score, WaveNumber, WaveClearRequired);
+        }
+
+        public void EditorPrepareShot(int inX, int inY)
+        {
+            _player.EditorPrepareShot(inX, inY);
+        }
+
+        public void EditorDeactivateShot()
+        {
+            _player.ConsumeShotHit();
+        }
+
+        public bool EditorKillInvader(int inId)
+        {
+            return _formation.TryKill(inId);
+        }
+#endif
     }
 }

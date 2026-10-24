@@ -36,17 +36,7 @@ namespace UnityInvader
     // Logical pixels with a bottom-left origin. Placement and timing are provisional.
     public sealed class InvaderFormation
     {
-        public  const    int           Rows            = 5;
-        public  const    int           Columns         = 11;
-        public  const    int           Spacing         = 16;
-        public  const    int           CellSize        = 16;
-        public  const    int           HorizontalStep  = 2;
-        public  const    int           Descent         = 8;
-        public  const    int           TicksPerStep    = 20;
-        public  const    int           MinimumX        = CellSize / 2;
-        public  const    int           MaximumX        = PlayerBody.ScreenWidth - CellSize / 2 - (Columns - 1) * Spacing;
-        private          int           _ticksUntilStep = TicksPerStep;
-        private readonly InvaderSlot[] _invaders       = new InvaderSlot[Rows * Columns];
+        private int _ticksUntilStep = TicksPerStep;
 
         // X/Y are the center of the top-left slot, not a Unity Transform.
         public int X          { get; private set; } = 32;
@@ -56,6 +46,17 @@ namespace UnityInvader
         public int AliveCount { get; private set; } = Rows * Columns;
 
         public int AnimationFrame => StepCount % 2;
+
+        public  const    int           Rows           = 5;
+        public  const    int           Columns        = 11;
+        public  const    int           Spacing        = 16;
+        public  const    int           CellSize       = 16;
+        public  const    int           HorizontalStep = 2;
+        public  const    int           Descent        = 8;
+        public  const    int           TicksPerStep   = 20;
+        public  const    int           MinimumX       = CellSize / 2;
+        public  const    int           MaximumX       = PlayerBody.ScreenWidth - CellSize / 2 - (Columns - 1) * Spacing;
+        private readonly InvaderSlot[] _invaders      = new InvaderSlot[Rows * Columns];
 
         public InvaderFormation()
         {
@@ -75,18 +76,6 @@ namespace UnityInvader
                 X + slot.Column * Spacing, Y - slot.Row * Spacing,
                 slot.Type, AnimationFrame, slot.Alive, inVisible);
         }
-
-#if UNITY_EDITOR
-        public FormationVerificationState EditorCapture()
-        {
-            var invaders = new InvaderDisplayState[_invaders.Length];
-            for (int id = 0; id < invaders.Length; id++)
-            {
-                invaders[id] = CaptureInvader(id);
-            }
-            return new FormationVerificationState(X, Y, Direction, StepCount, AliveCount, AnimationFrame, invaders);
-        }
-#endif
 
         public bool TryKill(int inId)
         {
@@ -113,5 +102,17 @@ namespace UnityInvader
             }
             StepCount++;
         }
+
+#if UNITY_EDITOR
+        public FormationVerificationState EditorCapture()
+        {
+            var invaders = new InvaderDisplayState[_invaders.Length];
+            for (int id = 0; id < invaders.Length; id++)
+            {
+                invaders[id] = CaptureInvader(id);
+            }
+            return new FormationVerificationState(X, Y, Direction, StepCount, AliveCount, AnimationFrame, invaders);
+        }
+#endif
     }
 }

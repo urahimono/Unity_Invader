@@ -2,16 +2,10 @@ namespace UnityInvader
 {
     public sealed class InvaderFormationSimulation
     {
-        public  const    double           TickDuration = 1.0 / 60.0;
-        private          double           _accumulatedTime;
-        private readonly InvaderFormation _formation   = new InvaderFormation();
+        private double _accumulatedTime;
 
-#if UNITY_EDITOR
-        public FormationVerificationState EditorCapture()
-        {
-            return _formation.EditorCapture();
-        }
-#endif
+        public  const    double           TickDuration = 1.0 / 60.0;
+        private readonly InvaderFormation _formation   = new InvaderFormation();
 
         public void Advance(double inElapsedSeconds, bool inPlaying)
         {
@@ -27,5 +21,12 @@ namespace UnityInvader
                 _accumulatedTime -= TickDuration;
             }
         }
+
+#if UNITY_EDITOR
+        public FormationVerificationState EditorCapture()
+        {
+            return _formation.EditorCapture();
+        }
+#endif
     }
 }

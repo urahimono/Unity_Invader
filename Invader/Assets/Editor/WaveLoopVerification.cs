@@ -71,6 +71,14 @@ namespace UnityInvader.Editor
             Clear(() => inDriver.EditorCapture().Simulation, inDriver.EditorPrepareShot, inDriver.EditorAdvanceFixture, inElapsed);
         }
 
+        internal static void Require(bool inCondition, string inMessage)
+        {
+            if (inCondition == false)
+            {
+                throw new InvalidOperationException(inMessage);
+            }
+        }
+
         // Fixtures arrange shots; the assertions still require actual tick collision and score rules.
         private static void Clear(Func<GameplayVerificationState> inCapture, Action<int, int> inPrepareShot,
             Action<double, bool, PlayerInputState> inAdvance, double inElapsed)
@@ -90,14 +98,6 @@ namespace UnityInvader.Editor
                     Require(!after.Formation.Invaders[row * 11 + column].Alive && !after.Shot.Active,
                         "Each wave must be cleared with real shot collisions.");
                 }
-            }
-        }
-
-        internal static void Require(bool inCondition, string inMessage)
-        {
-            if (inCondition == false)
-            {
-                throw new InvalidOperationException(inMessage);
             }
         }
     }

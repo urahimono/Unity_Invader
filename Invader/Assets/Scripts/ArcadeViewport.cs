@@ -15,6 +15,11 @@ namespace UnityInvader
 
         private void Update()
         {
+            UpdateCameraRect();
+        }
+
+        private void UpdateCameraRect()
+        {
             if (Screen.width <= 0 || Screen.height <= 0)
             {
                 return;

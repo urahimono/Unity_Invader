@@ -9,17 +9,28 @@ namespace UnityInvader
         // Top A/B, Middle A/B, Bottom A/B.
         [FormerlySerializedAs("frames")]
         [SerializeField]
-        private Sprite[]              _frames           = new Sprite[6];
+        private Sprite[] _frames           = new Sprite[6];
         [FormerlySerializedAs("spriteMaterial")]
         [SerializeField]
-        private Material              _spriteMaterial;
+        private Material _spriteMaterial;
         // Preserve the source aspect ratio with the same unit scale for every frame.
         [FormerlySerializedAs("cellDisplayScale")]
         [SerializeField]
-        private Vector2               _cellDisplayScale = Vector2.one;
+        private Vector2  _cellDisplayScale = Vector2.one;
+
         private SpriteRenderer[]      _renderers;
         [System.NonSerialized]
         private InvaderDisplayState[] _display;
+
+        private void OnEnable()
+        {
+            ApplyCachedDisplay();
+        }
+
+        private void OnDisable()
+        {
+            HideRenderers();
+        }
 
         public void ApplyDisplay(ReadOnlySpan<InvaderDisplayState> inDisplay)
         {
@@ -45,9 +56,16 @@ namespace UnityInvader
             ApplyCachedDisplay();
         }
 
-        private void OnEnable()
+        private void HideRenderers()
         {
-            ApplyCachedDisplay();
+            if (_renderers == null)
+            {
+                return;
+            }
+            foreach (var renderer in _renderers)
+            {
+                renderer.enabled = false;
+            }
         }
 
         private void ApplyCachedDisplay()
@@ -63,18 +81,6 @@ namespace UnityInvader
                 renderer.enabled            = isActiveAndEnabled && state.Visible;
                 renderer.sprite             = _frames[(int)state.Type * 2 + state.AnimationFrame];
                 renderer.transform.position = new Vector3(state.DisplayX, state.DisplayY, 0f);
-            }
-        }
-
-        private void OnDisable()
-        {
-            if (_renderers == null)
-            {
-                return;
-            }
-            foreach (var renderer in _renderers)
-            {
-                renderer.enabled = false;
             }
         }
     }

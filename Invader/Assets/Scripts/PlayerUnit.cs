@@ -2,25 +2,16 @@ namespace UnityInvader
 {
     public sealed class PlayerUnit
     {
+        private double _accumulatedTime;
+
         public  const    double     TickDuration = 1.0 / 60.0;
-        private          double     _accumulatedTime;
-        private readonly PlayerBody _player = new PlayerBody();
-        private readonly PlayerShot _shot   = new PlayerShot();
+        private readonly PlayerBody _player      = new PlayerBody();
+        private readonly PlayerShot _shot        = new PlayerShot();
 
         public PlayerState CaptureState()
         {
             return new PlayerState(new BodyState(_player.X, _player.Y),
                 new ShotState(_shot.X, _shot.Y, _shot.Active, _shot.FireReady));
-        }
-
-        internal void ReadFire(bool inPressed)
-        {
-            _shot.ReadFire(inPressed);
-        }
-
-        internal void ConsumeShotHit()
-        {
-            _shot.Deactivate();
         }
 
         public void Advance(double inElapsedSeconds, bool inPlaying, PlayerInputState inInput)
@@ -39,6 +30,16 @@ namespace UnityInvader
                 Tick(inInput);
                 _accumulatedTime -= TickDuration;
             }
+        }
+
+        internal void ReadFire(bool inPressed)
+        {
+            _shot.ReadFire(inPressed);
+        }
+
+        internal void ConsumeShotHit()
+        {
+            _shot.Deactivate();
         }
 
         // GameplaySimulation owns the live clock; Advance remains available for isolated verification.
