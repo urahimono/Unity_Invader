@@ -267,14 +267,14 @@ namespace UnityInvader.Editor
             _nextCheck  = EditorApplication.timeSinceStartup + 0.1;
         }
 
-        private static void CheckFormationDisplay(bool playing)
+        private static void CheckFormationDisplay(bool inPlaying)
         {
             var renderers = _formation.GetComponentsInChildren<SpriteRenderer>();
             Require(renderers.Length == 55, "All 55 display objects must remain.");
             foreach (var slot in _formation.Formation.Invaders)
             {
                 var renderer = renderers[slot.Id];
-                Require(renderer.enabled == (playing && slot.Alive), "Renderer must reflect Playing and Alive.");
+                Require(renderer.enabled == (inPlaying && slot.Alive), "Renderer must reflect Playing and Alive.");
                 Require(renderer.sprite.name == InvaderFormationSceneSetup.FrameNames[(int)slot.Type * 2 + _formation.Formation.AnimationFrame],
                     "Surviving slots must retain synchronized animation.");
                 Require(renderer.transform.position == new Vector3(_formation.Formation.X + slot.Column * 16 - 112,
@@ -282,12 +282,12 @@ namespace UnityInvader.Editor
             }
         }
 
-        private static void Keys(params Key[] keys)
+        private static void Keys(params Key[] inKeys)
         {
-            InputSystem.QueueStateEvent(_keyboard, new KeyboardState(keys));
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState(inKeys));
         }
 
-        private static void Finish(int code)
+        private static void Finish(int inCode)
         {
             SessionState.SetBool(SessionKey, false);
             EditorApplication.update -= Check;
@@ -302,14 +302,14 @@ namespace UnityInvader.Editor
                 _settings.editorInputBehaviorInPlayMode = _editorBehavior;
             }
             EditorApplication.isPaused = false;
-            EditorApplication.Exit(code);
+            EditorApplication.Exit(inCode);
         }
 
-        private static void Require(bool condition, string message)
+        private static void Require(bool inCondition, string inMessage)
         {
-            if (condition == false)
+            if (inCondition == false)
             {
-                throw new InvalidOperationException(message);
+                throw new InvalidOperationException(inMessage);
             }
         }
     }

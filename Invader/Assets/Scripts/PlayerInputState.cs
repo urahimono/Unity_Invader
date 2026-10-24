@@ -6,11 +6,11 @@ namespace UnityInvader
         public bool Right { get; }
         public bool Fire  { get; }
 
-        public PlayerInputState(bool left, bool right, bool fire = false)
+        public PlayerInputState(bool inLeft, bool inRight, bool inFire = false)
         {
-            Left  = left;
-            Right = right;
-            Fire  = fire;
+            Left  = inLeft;
+            Right = inRight;
+            Fire  = inFire;
         }
     }
 }

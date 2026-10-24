@@ -47,11 +47,11 @@ namespace UnityInvader.Editor
             Debug.Log("PLAYER_MOVEMENT_LOGIC_PASS: 30/60/120fps; 60Hz; pause; Right priority; no input; bounds.");
         }
 
-        private static void Require(bool condition, string message)
+        private static void Require(bool inCondition, string inMessage)
         {
-            if (condition == false)
+            if (inCondition == false)
             {
-                throw new InvalidOperationException(message);
+                throw new InvalidOperationException(inMessage);
             }
         }
     }

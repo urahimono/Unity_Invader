@@ -14,9 +14,9 @@ namespace UnityInvader
 
         public PlayingSimulation Playing { get; } = new PlayingSimulation();
 
-        public void ChangeState(GameState nextState)
+        public void ChangeState(GameState inNextState)
         {
-            _currentState = nextState;
+            _currentState = inNextState;
         }
     }
 }

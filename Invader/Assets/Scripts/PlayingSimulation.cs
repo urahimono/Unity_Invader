@@ -33,20 +33,20 @@ namespace UnityInvader
             // Keep Player, Score and the single Shot (including its release gate).
         }
 
-        public void Advance(double elapsedSeconds, bool playing, PlayerInputState input)
+        public void Advance(double inElapsedSeconds, bool inPlaying, PlayerInputState inInput)
         {
-            if (playing == false || WaveClearRequired)
+            if (inPlaying == false || WaveClearRequired)
             {
                 _accumulatedTime = 0;
                 return;
             }
             // Retain release/press sampled between ticks, as before.
-            Shot.ReadFire(input.Fire);
-            _accumulatedTime += elapsedSeconds;
+            Shot.ReadFire(inInput.Fire);
+            _accumulatedTime += inElapsedSeconds;
             while (_accumulatedTime + 1e-12 >= TickDuration)
             {
                 // Deterministic order: Player -> Shot -> Formation -> hit/score.
-                _player.Tick(input);
+                _player.Tick(inInput);
                 Formation.Tick();
                 ResolvePlayerShotHit();
                 _accumulatedTime -= TickDuration;
