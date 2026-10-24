@@ -30,11 +30,11 @@ Attract〜GameOverを一台の筐体としてArcade内で扱う設計です。[S
 | WaveClear | 全滅後に通常更新を止め、暫定1秒待機して次Waveへ進む |
 | GameOver | 値のみ。終了表示・セッション終了は未実装 |
 
-[GameStateController](../Invader/Assets/Scripts/GameStateController.cs) が現在Stateと共有ArcadeGameplaySimulationを保持します。ChangeStateは値の変更だけで、完全な遷移規則の検証や各Stateの処理は持ちません。
+[GameplayDriver](../Invader/Assets/Scripts/GameplayDriver.cs) が現在Stateと共有GameplaySimulationを保持し、CurrentStateとSimulationとして公開します。ChangeStateは値の変更だけで、完全な遷移規則の検証や各Stateの処理は持ちません。
 
 PlayerSelectを独立Stateにせず、Attract中の1P/2P Start入力で参加人数を決める設計方針です。この開始処理自体は未実装です。Creditも独立Stateとして実装していません。
 
-ArcadeのGameplayDriverには開発用 `developmentStartPlaying` が有効で、Start時にPlayingへ進みます。原作の開始手順ではありません。無効ならAttractのままです。実装済みの通常進行は **Playing → WaveClear → Playing（次Wave）** です。
+ArcadeのGameplayオブジェクト上のGameplayDriverには開発用 `_developmentStartPlaying` が有効で、Start時にPlayingへ進みます。原作の開始手順ではありません。無効ならAttractのままです。実装済みの通常進行は **Playing → WaveClear → Playing（次Wave）** です。
 
 ## Playingの責務と依存
 
@@ -43,20 +43,19 @@ flowchart TD
     Input[Unity Input System] --> Reader[PlayerInputReader]
     Reader -->|PlayerInputState| Driver[GameplayDriver.Update]
     Time[Time.deltaTime] --> Driver
-    State[GameStateController] -->|Stateと共有モデル| Driver
-    Driver -->|Advance / StartNextWave| Sim[ArcadeGameplaySimulation]
-    Driver -->|ChangeState| State
+    Driver -->|CurrentStateを保持 / ChangeState| State[GameState]
+    Driver -->|Advance / StartNextWave| Sim[GameplaySimulation]
     Sim --> Models[Player / Shot / Formation / Collision / Score / Wave]
-    State -->|共有モデルを参照| Views[PlayerController / InvaderFormationController]
+    Driver -->|CurrentStateとSimulationを参照| Views[PlayerController / InvaderFormationController]
     Models -->|LateUpdateで表示同期| Views
     Views --> Output[Transform / SpriteRenderer]
 ```
 
 | 要素 | 現在の責務 |
 | --- | --- |
-| [GameplayDriver](../Invader/Assets/Scripts/GameplayDriver.cs) | Unity側の入力と共通時計の唯一の実行時ドライバ。PlayerInputReaderを所有し、Updateで1描画フレームに1回Advanceする。全滅通知を受けてState変更とWaveClear待機を行う |
-| [ArcadeGameplaySimulation](../Invader/Assets/Scripts/ArcadeGameplaySimulation.cs) | Unity非依存。経過時間を60Hz tickへ分解し、Player・Shot・Formation・Collision・Score・Wave番号と次Wave初期化を管理する |
-| [PlayerUnit](../Invader/Assets/Scripts/PlayerUnit.cs) / [PlayerBody](../Invader/Assets/Scripts/PlayerBody.cs) / [PlayerShot](../Invader/Assets/Scripts/PlayerShot.cs) | Player移動と単一Shotのルール。ArcadeGameplaySimulationはPlayerUnit.Tickを使う |
+| [GameplayDriver](../Invader/Assets/Scripts/GameplayDriver.cs) | Unity側のゲーム全体の実行制御を担う唯一のドライバ。現在State・共有GameplaySimulationを保持し、ChangeStateでStateを変更する。PlayerInputReaderを所有し、Updateで1描画フレームに1回Advanceする。全滅通知を受けてState変更とWaveClear待機を行う |
+| [GameplaySimulation](../Invader/Assets/Scripts/GameplaySimulation.cs) | Unity非依存。経過時間を60Hz tickへ分解し、Player・Shot・Formation・Collision・Score・Wave番号と次Wave初期化を管理する |
+| [PlayerUnit](../Invader/Assets/Scripts/PlayerUnit.cs) / [PlayerBody](../Invader/Assets/Scripts/PlayerBody.cs) / [PlayerShot](../Invader/Assets/Scripts/PlayerShot.cs) | Player移動と単一Shotのルール。GameplaySimulationはPlayerUnit.Tickを使う |
 | [InvaderFormation](../Invader/Assets/Scripts/InvaderFormation.cs) / InvaderSlot | 5×11の55slot、Alive、共通位置・方向・移動step・A/Bアニメを保持する。個体ごとに独立移動しない |
 | [PlayerController](../Invader/Assets/Scripts/PlayerController.cs) | PlayerとShotの表示をLateUpdateで同期。Shotの矩形Spriteを実行時生成する。入力・時計・State遷移を担当しない |
 | [InvaderFormationController](../Invader/Assets/Scripts/InvaderFormationController.cs) | Awakeで55個の表示を生成し、LateUpdateで位置・Sprite・表示可否を同期。撃破後も表示オブジェクトを保持し、次Waveでも再利用する |
@@ -68,7 +67,7 @@ PlayerUnit.Advanceと [InvaderFormationSimulation.Advance](../Invader/Assets/Scr
 
 [PlayerInputReader](../Invader/Assets/Scripts/PlayerInputReader.cs) はInput Systemの左右矢印・Spaceを、Space Invaders専用の [PlayerInputState](../Invader/Assets/Scripts/PlayerInputState.cs)（Left / Right / Fireのbool）へ変換します。Credit・Start・Gamepad入力は未実装です。
 
-ArcadeGameplaySimulationは1/60秒ごとに以下を実行します。1描画フレームで複数tick進む場合も、この順序をtickごとに守ります。
+GameplaySimulationは1/60秒ごとに以下を実行します。1描画フレームで複数tick進む場合も、この順序をtickごとに守ります。
 
 1. Player移動
 2. Shot発射・移動・画面外処理
@@ -85,7 +84,7 @@ WaveClearの暫定1秒待機とGameState変更はGameplayDriverにあります�
 
 論理画面は **224×256、左下原点**。モデルの論理ピクセル座標が正で、表示時に `(X - 112, Y - 128)` へ変換します。Transformは表示出力であり、ゲームルールへ読み戻しません。PPUやSpriteの表示倍率は表示側の設定です。
 
-CollisionはArcadeGameplaySimulationの論理矩形判定です。Transform、SpriteRenderer.bounds、Unity Physicsは使いません。Aliveだけを下段→上段、各行左→右で判定し、1 Shotは最初の1体だけを撃破します。ScoreはTop=30 / Middle=20 / Bottom=10の整数論理値で、HUDは未実装です。
+CollisionはGameplaySimulationの論理矩形判定です。Transform、SpriteRenderer.bounds、Unity Physicsは使いません。Aliveだけを下段→上段、各行左→右で判定し、1 Shotは最初の1体だけを撃破します。ScoreはTop=30 / Middle=20 / Bottom=10の整数論理値で、HUDは未実装です。
 
 移動速度、初期配置、左右端、HitBox、WaveClearの1秒は暫定です。60Hzという更新基盤の採用は、これらの数値や原作の厳密なタイミングを確認したことを意味しません。
 
@@ -96,8 +95,8 @@ CollisionはArcadeGameplaySimulationの論理矩形判定です。Transform、Sp
 | 層 | 設計方針 | 現在の実装状況 |
 | --- | --- | --- |
 | Application | HighScore・設定・共通サービスをSceneを跨いで保持し、必要なら永続保存 | 未実装。BootstrapはArcadeロードのみ |
-| Arcade Session | Credit・1P/2Pモード・Current Player・セッション進行 | 未実装。現在はArcadeのGameStateControllerが1つのArcadeGameplaySimulationを保持 |
-| PlayerSlot | 各Player参加中のScore・Lives・Wave・保持が必要と確認された盤面情報 | PlayerSlot・2P退避復元は未実装。ScoreとWaveNumberは現在ArcadeGameplaySimulationにある |
+| Arcade Session | Credit・1P/2Pモード・Current Player・セッション進行 | 未実装。現在はArcadeのGameplayDriverが1つのGameplaySimulationを保持 |
+| PlayerSlot | 各Player参加中のScore・Lives・Wave・保持が必要と確認された盤面情報 | PlayerSlot・2P退避復元は未実装。ScoreとWaveNumberは現在GameplaySimulationにある |
 | Active Wave / Playfield | 現在プレイ中のPlayer・Formation・Shield・UFO等の実行状態 | Player・Formationは実装済み。次WaveではFormationだけを交換。Shield・UFOは未実装 |
 | Transient | Shot・爆発・得点表示等の短命な状態。原則永続化しない | 単一PlayerShotのみ実装。オブジェクトは再利用し、Activeで弾の寿命を表す。爆発・得点表示は未実装 |
 

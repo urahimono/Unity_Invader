@@ -1,7 +1,7 @@
 namespace UnityInvader
 {
     // Space Invaders' Playing-only clock and interaction rules, independent of Unity.
-    public sealed class ArcadeGameplaySimulation
+    public sealed class GameplaySimulation
     {
         public  const    double           TickDuration        = PlayerUnit.TickDuration;
         public  const    int              InvaderHitBoxWidth  = 16;

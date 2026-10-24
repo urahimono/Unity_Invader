@@ -72,11 +72,11 @@ namespace UnityInvader.Editor
             provider.Apply();
             importer.SaveAndReimport();
 
-            var scene = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
-            var state = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
-            if (state == null)
+            var scene  = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
+            var driver = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
+            if (driver == null)
             {
-                throw new InvalidOperationException("Arcade GameState is missing.");
+                throw new InvalidOperationException("Arcade GameplayDriver is missing.");
             }
             var formation = GameObject.Find("InvaderFormation");
             if (formation == null)
@@ -89,7 +89,7 @@ namespace UnityInvader.Editor
                 controller = formation.AddComponent<InvaderFormationController>();
             }
             var serialized                                                  = new SerializedObject(controller);
-            serialized.FindProperty("_gameState").objectReferenceValue      = state;
+            serialized.FindProperty("_gameplayDriver").objectReferenceValue = driver;
             serialized.FindProperty("_spriteMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(
                 "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
             serialized.FindProperty("_cellDisplayScale").vector2Value       = Vector2.one;

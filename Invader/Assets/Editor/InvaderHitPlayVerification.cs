@@ -17,7 +17,6 @@ namespace UnityInvader.Editor
         private static          PlayerController                            _player;
         private static          GameplayDriver                              _gameplayDriver;
         private static          InvaderFormationController                  _formation;
-        private static          GameStateController                         _state;
         private static          SpriteRenderer                              _shotRenderer;
         private static          Keyboard                                    _keyboard;
         private static          InputSettings                               _settings;
@@ -69,18 +68,17 @@ namespace UnityInvader.Editor
                     }
                     _player     = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
                     _formation  = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
-                    _state      = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
                     var drivers = UnityEngine.Object.FindObjectsByType<GameplayDriver>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                     Require(drivers.Length == 1 && drivers[0].isActiveAndEnabled, "Arcade must have exactly one enabled GameplayDriver.");
                     _gameplayDriver = drivers[0];
-                    Require(_player != null && _formation != null && _state != null, "Arcade components missing.");
-                    if (_state.CurrentState != GameState.Playing)
+                    Require(_player != null && _formation != null && _gameplayDriver != null, "Arcade components missing.");
+                    if (_gameplayDriver.CurrentState != GameState.Playing)
                     {
                         return;
                     }
-                    Require(ReferenceEquals(_player.Player, _state.Playing.Player) && ReferenceEquals(_player.Shot, _state.Playing.Shot) &&
-                        ReferenceEquals(_formation.Formation, _state.Playing.Formation), "Controllers must share one Playing simulation.");
-                    Require(_formation.Formation.AliveCount == 55 && _state.Playing.Score == 0, "Initial logical state mismatch.");
+                    Require(ReferenceEquals(_player.Player, _gameplayDriver.Simulation.Player) && ReferenceEquals(_player.Shot, _gameplayDriver.Simulation.Shot) &&
+                        ReferenceEquals(_formation.Formation, _gameplayDriver.Simulation.Formation), "Controllers must share one GameplaySimulation.");
+                    Require(_formation.Formation.AliveCount == 55 && _gameplayDriver.Simulation.Score == 0, "Initial logical state mismatch.");
                     Require(_player.GetComponent<SpriteRenderer>().enabled, "Player must be visible.");
                     _shotRenderer                           = _player.transform.Find("PlayerShot").GetComponent<SpriteRenderer>();
                     _settings                               = InputSystem.settings;
@@ -113,11 +111,11 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 3)
                 {
-                    if (_state.Playing.Score == 0)
+                    if (_gameplayDriver.Simulation.Score == 0)
                     {
                         return;
                     }
-                    Require(_state.Playing.Score == 10 && _formation.Formation.AliveCount == 54 && !_player.Shot.Active,
+                    Require(_gameplayDriver.Simulation.Score == 10 && _formation.Formation.AliveCount == 54 && !_player.Shot.Active,
                         "First Bottom hit must add 10, kill exactly one and consume Shot.");
                     _heldStep  = _formation.Formation.StepCount;
                     _stage     = 4;
@@ -125,7 +123,7 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 4)
                 {
-                    Require(!_player.Shot.Active && !_shotRenderer.enabled && _state.Playing.Score == 10 &&
+                    Require(!_player.Shot.Active && !_shotRenderer.enabled && _gameplayDriver.Simulation.Score == 10 &&
                         _formation.Formation.AliveCount == 54, "Held Space must not respawn or score again after a hit.");
                     Require(_formation.Formation.StepCount > _heldStep, "Formation must keep moving after a kill.");
                     CheckFormationDisplay(true);
@@ -153,7 +151,7 @@ namespace UnityInvader.Editor
                 else if (_stage == 7)
                 {
                     Require(_player.Player.X == _pausedX && _player.Shot.Y == _pausedY && _player.Shot.Active &&
-                        _formation.Formation.StepCount == _pausedStep && _formation.Formation.AliveCount == 54 && _state.Playing.Score == 10,
+                        _formation.Formation.StepCount == _pausedStep && _formation.Formation.AliveCount == 54 && _gameplayDriver.Simulation.Score == 10,
                         "Non-Playing must stop Player/Shot/Formation/collision/score.");
                     Require(!_shotRenderer.enabled && !_player.GetComponent<SpriteRenderer>().enabled, "Non-Playing must hide Player and Shot.");
                     CheckFormationDisplay(false);
@@ -163,7 +161,7 @@ namespace UnityInvader.Editor
                     }
                     else
                     {
-                        _state.ChangeState(GameState.Playing);
+                        _gameplayDriver.ChangeState(GameState.Playing);
                         _stage     = 8;
                         _nextCheck = EditorApplication.timeSinceStartup + 0.05;
                     }
@@ -181,14 +179,14 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 9)
                 {
-                    Require(_state.CurrentState == GameState.Playing && _formation.Formation.AliveCount == 54 && _state.Playing.Score == 10,
+                    Require(_gameplayDriver.CurrentState == GameState.Playing && _formation.Formation.AliveCount == 54 && _gameplayDriver.Simulation.Score == 10,
                         "Surviving Formation must stay Playing and preserve Score.");
                     CheckFormationDisplay(true);
                     // Editor stepping uses its own delta; compare every frame with its actual elapsed time.
                     EditorApplication.isPaused = true;
                     _gameplayDriver.enabled    = false; // Discard partial accumulated time for an exact reference.
                     _gameplayDriver.enabled    = true;
-                    InvaderHitVerification.PrepareShot(_state.Playing, _player.Player.X, 32);
+                    InvaderHitVerification.PrepareShot(_gameplayDriver.Simulation, _player.Player.X, 32);
                     _player.enabled = false;
                     Require(!_player.GetComponent<SpriteRenderer>().enabled && !_shotRenderer.enabled, "Disabling the view must hide its renderers.");
                     _clockStartX    = _player.Player.X;
@@ -211,7 +209,7 @@ namespace UnityInvader.Editor
                     if (_stage == 10)
                     {
                         _steppedTime      = _clockProbe.Elapsed;
-                        int expectedTicks = (int)System.Math.Floor((_steppedTime + 1e-12) / ArcadeGameplaySimulation.TickDuration);
+                        int expectedTicks = (int)System.Math.Floor((_steppedTime + 1e-12) / GameplaySimulation.TickDuration);
                         Require(_clockStartY + expectedTicks * PlayerShot.SpeedPerTick < PlayerBody.ScreenHeight,
                             "Clock test requires Shot to remain within the screen.");
                         Require(_player.Shot.Active && _player.Shot.Y == _clockStartY + expectedTicks * PlayerShot.SpeedPerTick,
@@ -260,7 +258,7 @@ namespace UnityInvader.Editor
 
         private static void Pause()
         {
-            _state.ChangeState(_pausedStates[_stateIndex]);
+            _gameplayDriver.ChangeState(_pausedStates[_stateIndex]);
             _pausedX    = _player.Player.X;
             _pausedY    = _player.Shot.Y;
             _pausedStep = _formation.Formation.StepCount;
