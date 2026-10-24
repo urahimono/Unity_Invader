@@ -433,7 +433,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c4efe0bd95249479b1150276c1b25e5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.PlayingController
+  m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.GameplayDriver
   gameState: {fileID: 788391819}
   developmentStartPlaying: 1
 --- !u!1 &1597011359

@@ -5,7 +5,7 @@ namespace UnityInvader
 {
     // Unity-side input and clock for this game's shared Playing simulation.
     [DisallowMultipleComponent]
-    public sealed class PlayingController : MonoBehaviour
+    public sealed class GameplayDriver : MonoBehaviour
     {
         [FormerlySerializedAs("gameState")]
         [SerializeField]
