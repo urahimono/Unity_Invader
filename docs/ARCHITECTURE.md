@@ -15,7 +15,7 @@ Build Settingsの有効Sceneは次の順です。
 | [Bootstrap.unity](../Invader/Assets/Scenes/Bootstrap.unity) | [Bootstrap](../Invader/Assets/Scripts/Bootstrap.cs) のStartでArcadeをSingleロードする起点。現状は永続サービスを生成・保持しない |
 | [Arcade.unity](../Invader/Assets/Scenes/Arcade.unity) | GameState、Playingの進行、Player・Shot・Formationの表示、カメラを配置する |
 
-Attract〜GameOverを一台の筐体としてArcade内で扱う設計です。[SampleScene](../Invader/Assets/Scenes/SampleScene.unity) は残っていますが、この起動経路には含めません。HighScore保存や設定サービスは未実装です。
+Attract〜GameOverをArcade内で扱う設計です。ゲームプレイの対象は1Pのみとし、2P交代・クレジット投入は実装対象外です。[SampleScene](../Invader/Assets/Scenes/SampleScene.unity) は残っていますが、この起動経路には含めません。HighScore保存や設定サービスは未実装です。
 
 ## GameState
 
@@ -23,16 +23,16 @@ Attract〜GameOverを一台の筐体としてArcade内で扱う設計です。[S
 
 | State | 現在の実装範囲 |
 | --- | --- |
-| Attract | 初期値の仮置き。待機デモ・Credit・Start受付は未実装 |
+| Attract | 初期値の仮置き。待機デモ・ゲーム開始受付は未実装（Creditは実装対象外） |
 | PlayerReady | 値のみ。開始表示・通常の開始遷移は未実装 |
 | Playing | Player移動、単一Shot、Formation、命中・撃破・Score、全滅検出 |
-| PlayerDead | 値のみ。被弾・死亡・残機・交代は未実装 |
+| PlayerDead | 値のみ。被弾・死亡・残機は未実装（2P交代は実装対象外） |
 | WaveClear | 全滅後に通常更新を止め、暫定1秒待機して次Waveへ進む |
 | GameOver | 値のみ。終了表示・セッション終了は未実装 |
 
 [GameplayDriver](../Invader/Assets/Scripts/GameplayDriver.cs) が現在StateとGameplaySimulationを非公開で所有します。State変更もDriver内部の責務で、通常ランタイムへGetterやChangeState APIを公開しません。完全な遷移規則の検証や未実装Stateの処理を追加したものではありません。
 
-PlayerSelectを独立Stateにせず、Attract中の1P/2P Start入力で参加人数を決める設計方針です。この開始処理自体は未実装です。Creditも独立Stateとして実装していません。
+**今後の仕様方針は1P専用・クレジットなし**です。PlayerSelect・Credit専用Stateや2P用のセッション切替は設けません。ゲーム開始・リトライの具体的な操作とState遷移は未設計・未実装です。
 
 ArcadeのGameplayオブジェクト上のGameplayDriverには開発用 `_developmentStartPlaying` が有効で、Start時にPlayingへ進みます。原作の開始手順ではありません。無効ならAttractのままです。実装済みの通常進行は **Playing → WaveClear → Playing（次Wave）** です。
 
@@ -77,7 +77,7 @@ Editor検証はAssets/Editorから、必要な箇所だけ#if UNITY_EDITORのEdi
 
 ### 時間と入力
 
-[PlayerInputReader](../Invader/Assets/Scripts/PlayerInputReader.cs) はInput Systemの左右矢印・Spaceを、Space Invaders専用の [PlayerInputState](../Invader/Assets/Scripts/PlayerInputState.cs)（Left / Right / Fireのbool）へ変換します。Credit・Start・Gamepad入力は未実装です。
+[PlayerInputReader](../Invader/Assets/Scripts/PlayerInputReader.cs) はInput Systemの左右矢印・Spaceを、Space Invaders専用の [PlayerInputState](../Invader/Assets/Scripts/PlayerInputState.cs)（Left / Right / Fireのbool）へ変換します。ゲーム開始用の入力とGamepad入力は未実装です。クレジット入力は実装対象外です。
 
 GameplaySimulationは1/60秒ごとに以下を実行します。1描画フレームで複数tick進む場合も、この順序をtickごとに守ります。
 
@@ -100,6 +100,12 @@ CollisionはGameplaySimulationの論理矩形判定です。Transform、SpriteRe
 
 移動速度、初期配置、左右端、HitBox、WaveClearの1秒は暫定です。60Hzという更新基盤の採用は、これらの数値や原作の厳密なタイミングを確認したことを意味しません。
 
+## 次の設計見直し候補（未決定・未実装）
+
+本プロジェクトではゲームエンジンの機能を実践的に学ぶことも重視し、現在のUnity非依存モデル・60Hz論理tick・表示ControllerへのPush方式を唯一の正解とは扱いません。一方、**現在の実装がこれらの方式で動いている事実は変わりません**。
+
+今後、`Invader`個体のGameObject/Component化、Prefabによる管理、Physics2Dと独自当たり判定の比較、`GameplaySimulation`・`InvaderFormation`の責務再配置などを段階的に検討します。採用方式・移行範囲・更新方式はまだ確定していません。現行の[ADR-0007](adr/0007-push-display-and-encapsulation.md)やコード規約を変更する場合は、実装・設計資料とあわせて明示的に更新します。
+
 ## データ寿命：設計方針と実装の対応
 
 以下の層は所有範囲を考える方針で、同名のクラス群が実装されているわけではありません。
@@ -107,14 +113,13 @@ CollisionはGameplaySimulationの論理矩形判定です。Transform、SpriteRe
 | 層 | 設計方針 | 現在の実装状況 |
 | --- | --- | --- |
 | Application | HighScore・設定・共通サービスをSceneを跨いで保持し、必要なら永続保存 | 未実装。BootstrapはArcadeロードのみ |
-| Arcade Session | Credit・1P/2Pモード・Current Player・セッション進行 | 未実装。現在はArcadeのGameplayDriverが1つのGameplaySimulationを保持 |
-| PlayerSlot | 各Player参加中のScore・Lives・Wave・保持が必要と確認された盤面情報 | PlayerSlot・2P退避復元は未実装。ScoreとWaveNumberは現在GameplaySimulationにある |
+| Game Session（1P） | ゲーム開始からGameOverまでのScore・残機・Wave等の保持と進行 | 専用Sessionクラスは未実装。現在はGameplayDriverが1つのGameplaySimulationを保持し、ScoreとWaveNumberはGameplaySimulationが保持。残機は未実装 |
 | Active Wave / Playfield | 現在プレイ中のPlayer・Formation・Shield・UFO等の実行状態 | Player・Formationは実装済み。次WaveではFormationだけを交換。Shield・UFOは未実装 |
 | Transient | Shot・爆発・得点表示等の短命な状態。原則永続化しない | 単一PlayerShotのみ実装。オブジェクトは再利用し、Activeで弾の寿命を表す。爆発・得点表示は未実装 |
 
 現在の次Wave初期化は、Formationを55体Aliveの初期状態に置き換え、WaveNumberを増やし、全滅通知と蓄積時間をリセットします。Score、Player（Xを含む）、単一PlayerShot（FireReady / release待ちを含む）は保持します。WaveClear中は入力を消費しないため、その間のreleaseだけでは再発射可能になりません。
 
-これは現在の単一モデルによるWaveループで、PlayerSlotやセッションの寿命管理全体を実装したものではありません。
+これは現在の単一モデルによるWaveループで、残機や開始・終了を含む1Pセッションの寿命管理全体を実装したものではありません。
 
 ## 検証と更新
 
