@@ -58,7 +58,7 @@ namespace UnityInvader.Editor
                 rects[index] = new SpriteRect
                 {
                     name = name,
-                    spriteID = existing.FirstOrDefault(rect => rect.name == name)?.spriteID ?? GUID.Generate(),
+                    spriteID = existing.FirstOrDefault(inRect => inRect.name == name)?.spriteID ?? GUID.Generate(),
                     // Unity rects start at bottom-left. Exclude source bottom row y=0.
                     rect = new Rect(index % 2 == 0 ? 540 : 1150,
                         1 + (2 - index / 2) * CellHeight, CellWidth, CellHeight),
@@ -68,7 +68,7 @@ namespace UnityInvader.Editor
             }
             provider.SetSpriteRects(rects);
             provider.GetDataProvider<ISpriteNameFileIdDataProvider>().SetNameFileIdPairs(
-                rects.Select(rect => new SpriteNameFileIdPair(rect.name, rect.spriteID)));
+                rects.Select(inRect => new SpriteNameFileIdPair(inRect.name, inRect.spriteID)));
             provider.Apply();
             importer.SaveAndReimport();
 
@@ -98,7 +98,7 @@ namespace UnityInvader.Editor
             frames.arraySize                                                = 6;
             for (int index = 0; index < 6; index++)
             {
-                frames.GetArrayElementAtIndex(index).objectReferenceValue = sprites.Single(sprite => sprite.name == FrameNames[index]);
+                frames.GetArrayElementAtIndex(index).objectReferenceValue = sprites.Single(inSprite => inSprite.name == FrameNames[index]);
             }
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorSceneManager.SaveScene(scene);

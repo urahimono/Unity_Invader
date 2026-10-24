@@ -161,25 +161,25 @@ namespace UnityInvader.Editor
             _nextCheck = EditorApplication.timeSinceStartup + 0.1;
         }
 
-        private static void CheckDisplay(bool visible)
+        private static void CheckDisplay(bool inVisible)
         {
-            Require(_renderer.enabled == visible, "Shot visibility mismatch.");
+            Require(_renderer.enabled == inVisible, "Shot visibility mismatch.");
             Require(_renderer.transform.position == new Vector3(_player.Shot.X - 112, _player.Shot.Y - 128, 0),
                 "Shot logical/display coordinate mismatch.");
         }
 
-        private static void Finish(int code)
+        private static void Finish(int inCode)
         {
             SessionState.SetBool(SessionKey, false);
             EditorApplication.update -= Check;
-            EditorApplication.Exit(code);
+            EditorApplication.Exit(inCode);
         }
 
-        private static void Require(bool condition, string message)
+        private static void Require(bool inCondition, string inMessage)
         {
-            if (condition == false)
+            if (inCondition == false)
             {
-                throw new InvalidOperationException(message);
+                throw new InvalidOperationException(inMessage);
             }
         }
     }

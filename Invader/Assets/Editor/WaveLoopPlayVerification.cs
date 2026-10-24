@@ -118,7 +118,7 @@ namespace UnityInvader.Editor
                         _state.Playing.Score == _clearedWave * 990 && _state.Playing.Player.X == _pausedX &&
                         !_state.Playing.Shot.Active && !_state.Playing.Shot.FireReady, "Next wave must retain state and block held Fire.");
                     Require(_view.GetComponentsInChildren<SpriteRenderer>().SequenceEqual(_renderers) && _renderers.Length == 55 &&
-                        _renderers.All(r => r.enabled), "Reuse exactly the same 55 visible renderers.");
+                        _renderers.All(inR => inR.enabled), "Reuse exactly the same 55 visible renderers.");
                     Debug.Log($"WAVE_LOOP_PLAY_WAVE_PASS: Wave={_state.Playing.WaveNumber}; Score={_state.Playing.Score}; renderers=55; elapsed={Time.timeAsDouble - _clearStarted}");
                     Keys();
                     _stage     = 5;
@@ -154,9 +154,9 @@ namespace UnityInvader.Editor
             }
         }
 
-        private static void Require(bool condition, string message) => WaveLoopVerification.Require(condition, message);
-        private static void Keys(params Key[] keys) => InputSystem.QueueStateEvent(_keyboard, new KeyboardState(keys));
-        private static void Finish(int code)
+        private static void Require(bool inCondition, string inMessage) => WaveLoopVerification.Require(inCondition, inMessage);
+        private static void Keys(params Key[] inKeys) => InputSystem.QueueStateEvent(_keyboard, new KeyboardState(inKeys));
+        private static void Finish(int inCode)
         {
             SessionState.SetBool(SessionKey, false);
             EditorApplication.update -= Check;
@@ -169,7 +169,7 @@ namespace UnityInvader.Editor
                 _settings.backgroundBehavior            = _background;
                 _settings.editorInputBehaviorInPlayMode = _editorInput;
             }
-            EditorApplication.Exit(code);
+            EditorApplication.Exit(inCode);
         }
     }
 }
