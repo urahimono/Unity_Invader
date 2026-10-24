@@ -39,7 +39,7 @@ namespace UnityInvader.Editor
             importer.SaveAndReimport();
 
             var scene  = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
-            var state  = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
+            var state  = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
             var camera = Camera.main;
             if (state == null || camera == null)
             {
@@ -72,10 +72,10 @@ namespace UnityInvader.Editor
                 controller = player.AddComponent<PlayerController>();
             }
             var serialized                                                  = new SerializedObject(controller);
-            serialized.FindProperty("_gameState").objectReferenceValue      = state;
+            serialized.FindProperty("_gameplayDriver").objectReferenceValue = state;
             serialized.FindProperty("_playerRenderer").objectReferenceValue = renderer;
             serialized.ApplyModifiedPropertiesWithoutUndo();
-            PlayingSceneSetup.ConfigureInScene(state);
+            PlayingSceneSetup.ConfigureInScene();
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             Debug.Log("PLAYER_SCENE_SETUP_PASS");

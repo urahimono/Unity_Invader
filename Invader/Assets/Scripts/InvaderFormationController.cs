@@ -7,7 +7,7 @@ namespace UnityInvader
     {
         [FormerlySerializedAs("gameState")]
         [SerializeField]
-        private GameStateController _gameState;
+        private GameplayDriver      _gameplayDriver;
         // Top A/B, Middle A/B, Bottom A/B.
         [FormerlySerializedAs("frames")]
         [SerializeField]
@@ -21,7 +21,7 @@ namespace UnityInvader
         private Vector2             _cellDisplayScale = Vector2.one;
         private SpriteRenderer[]    _renderers;
 
-        public InvaderFormation Formation => _gameState.Playing.Formation;
+        public InvaderFormation Formation => _gameplayDriver.Simulation.Formation;
 
         private void Awake()
         {
@@ -38,7 +38,7 @@ namespace UnityInvader
             ApplyDisplay();
         }
 
-        // GameplayDriver advances the shared ArcadeGameplaySimulation in Update.
+        // GameplayDriver advances the shared GameplaySimulation in Update.
         private void LateUpdate()
         {
             ApplyDisplay();
@@ -46,7 +46,7 @@ namespace UnityInvader
 
         private void ApplyDisplay()
         {
-            bool playing = _gameState.CurrentState == GameState.Playing;
+            bool playing = _gameplayDriver.CurrentState == GameState.Playing;
             foreach (var slot in Formation.Invaders)
             {
                 var renderer                = _renderers[slot.Id];

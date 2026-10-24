@@ -7,11 +7,11 @@ namespace UnityInvader
     {
         [FormerlySerializedAs("gameState")]
         [SerializeField]
-        private GameStateController _gameState;
+        private GameplayDriver      _gameplayDriver;
         [FormerlySerializedAs("playerRenderer")]
         [SerializeField]
         private SpriteRenderer      _playerRenderer;
-        private ArcadeGameplaySimulation Simulation => _gameState.Playing;
+        private GameplaySimulation Simulation => _gameplayDriver.Simulation;
         private SpriteRenderer _shotRenderer;
         private Texture2D      _shotTexture;
         private Sprite         _shotSprite;
@@ -46,10 +46,10 @@ namespace UnityInvader
             // Logical origin is bottom-left; Unity origin is the screen center.
             transform.position               = new Vector3(Player.X - PlayerBody.ScreenWidth / 2f,
                 Player.Y - PlayerBody.ScreenHeight / 2f, 0f);
-            _playerRenderer.enabled          = _gameState.CurrentState == GameState.Playing;
+            _playerRenderer.enabled          = _gameplayDriver.CurrentState == GameState.Playing;
             _shotRenderer.transform.position = new Vector3(Shot.X - PlayerBody.ScreenWidth / 2f,
                 Shot.Y - PlayerBody.ScreenHeight / 2f, 0f);
-            _shotRenderer.enabled            = _gameState.CurrentState == GameState.Playing && Shot.Active;
+            _shotRenderer.enabled            = _gameplayDriver.CurrentState == GameState.Playing && Shot.Active;
         }
 
         private void OnDisable()

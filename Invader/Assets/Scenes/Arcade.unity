@@ -299,8 +299,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 25a78d8c1cf233b49b6fc0b2f70080c1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.PlayerController
-  gameState: {fileID: 788391819}
-  playerRenderer: {fileID: 649696648}
+  _gameplayDriver: {fileID: 788391821}
+  _playerRenderer: {fileID: 649696648}
 --- !u!212 &649696648
 SpriteRenderer:
   serializedVersion: 3
@@ -385,28 +385,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 788391820}
-  - component: {fileID: 788391819}
   - component: {fileID: 788391821}
   m_Layer: 0
-  m_Name: GameState
+  m_Name: Gameplay
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &788391819
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 788391818}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c65cd894445b12a43a8f3e2b2726578b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.GameStateController
-  currentState: 0
 --- !u!4 &788391820
 Transform:
   m_ObjectHideFlags: 0
@@ -434,8 +420,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c4efe0bd95249479b1150276c1b25e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.GameplayDriver
-  gameState: {fileID: 788391819}
-  developmentStartPlaying: 1
+  _currentState: 0
+  _developmentStartPlaying: 1
 --- !u!1 &1597011359
 GameObject:
   m_ObjectHideFlags: 0
@@ -465,16 +451,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9dc7f4b53fef65a45b684826cdc5c762, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.InvaderFormationController
-  gameState: {fileID: 788391819}
-  frames:
+  _gameplayDriver: {fileID: 788391821}
+  _frames:
   - {fileID: -506154701, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   - {fileID: -478699213, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   - {fileID: -1380865680, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   - {fileID: 1723599204, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   - {fileID: 1420704182, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   - {fileID: -1863489634, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
-  spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
-  cellDisplayScale: {x: 1, y: 1}
+  _spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
+  _cellDisplayScale: {x: 1, y: 1}
 --- !u!4 &1597011361
 Transform:
   m_ObjectHideFlags: 0

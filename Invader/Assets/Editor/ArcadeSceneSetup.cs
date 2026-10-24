@@ -41,7 +41,7 @@ namespace UnityInvader.Editor
             camera.backgroundColor          = Color.black;
             cameraObject.AddComponent<UniversalAdditionalCameraData>();
             cameraObject.AddComponent<AudioListener>();
-            new GameObject("GameState").AddComponent<GameStateController>();
+            new GameObject("Gameplay").AddComponent<GameplayDriver>();
             EditorSceneManager.SaveScene(arcade, ArcadePath);
 
             // Keep the build limited to the two game scenes; retain sample assets on disk.

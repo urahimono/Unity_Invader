@@ -6,7 +6,7 @@ namespace UnityInvader.Editor
 {
     public static class InvaderHitVerification
     {
-        private const           double           Tick  = ArcadeGameplaySimulation.TickDuration;
+        private const           double           Tick  = GameplaySimulation.TickDuration;
         private static readonly PlayerInputState _fire = new PlayerInputState(false, false, true);
 
         [MenuItem("Unity Invader/Verify Invader Hit Logic")]
@@ -22,7 +22,7 @@ namespace UnityInvader.Editor
 
         private static void VerifyKillsAndScore()
         {
-            var simulation = new ArcadeGameplaySimulation();
+            var simulation = new GameplaySimulation();
             Require(simulation.Formation.AliveCount == 55 && simulation.Score == 0, "Initial 55 alive/zero Score required.");
             Hit(simulation, 4, 0);
             Require(simulation.Score == 10 && simulation.Formation.AliveCount == 54 && !simulation.Shot.Active,
@@ -35,7 +35,7 @@ namespace UnityInvader.Editor
             simulation.Advance(Tick / 2, true, _fire);
             Require(simulation.Shot.Active && simulation.Shot.Y == 32, "Release then press must launch again.");
 
-            var cumulative = new ArcadeGameplaySimulation();
+            var cumulative = new GameplaySimulation();
             Hit(cumulative, 4, 0);
             Hit(cumulative, 2, 0);
             Require(cumulative.Score == 30, "Bottom then Middle must total 30.");
@@ -53,7 +53,7 @@ namespace UnityInvader.Editor
             Require(SameFormation(cumulative.Formation, reference) && cumulative.Formation.AliveCount == 52 &&
                 cumulative.Score == 60, "Multiple kills must preserve movement, animation, both edges and fixed bounds.");
 
-            var dead = new ArcadeGameplaySimulation();
+            var dead = new GameplaySimulation();
             Hit(dead, 4, 0);
             PrepareShot(dead, 32, 140);
             dead.Advance(Tick, true, _fire);
@@ -63,7 +63,7 @@ namespace UnityInvader.Editor
             Require(!dead.Shot.Active && !dead.Formation.Invaders[33].Alive && dead.Score == 20 &&
                 dead.Formation.AliveCount == 53, "Shot must pass through Dead slot and hit the next Alive slot.");
 
-            var sharedEdge = new ArcadeGameplaySimulation();
+            var sharedEdge = new GameplaySimulation();
             PrepareShot(sharedEdge, 40, 140);
             sharedEdge.Advance(Tick, true, _fire);
             Require(!sharedEdge.Formation.Invaders[44].Alive && sharedEdge.Formation.Invaders[45].Alive &&
@@ -72,7 +72,7 @@ namespace UnityInvader.Editor
             sharedEdge.Advance(0, true, _fire);
             Require(sharedEdge.Score == 10, "A frame without a tick must not evaluate collision/score.");
 
-            var all = new ArcadeGameplaySimulation();
+            var all      = new GameplaySimulation();
             for (int row = 4; row >= 0; row--)
             {
                 for (int column = 0; column < 11; column++)
@@ -88,7 +88,7 @@ namespace UnityInvader.Editor
 
         private static void VerifyTickAndEdges()
         {
-            var spawn = new ArcadeGameplaySimulation();
+            var spawn = new GameplaySimulation();
             spawn.Advance(Tick, true, new PlayerInputState(false, true, true));
             Require(spawn.Player.X == 113 && spawn.Shot.X == 113 && spawn.Shot.Y == 32,
                 "Player must move before Shot spawn.");
@@ -96,20 +96,20 @@ namespace UnityInvader.Editor
             Require(spawn.Player.X == 114 && spawn.Shot.X == 113 && spawn.Shot.Y == 36,
                 "Shared clock must preserve fixed X, 4px/tick and one shot slot.");
 
-            var ordering = new ArcadeGameplaySimulation();
+            var ordering = new GameplaySimulation();
             ordering.Advance(19 * Tick, true, default);
             PrepareShot(ordering, 24, 140);
             ordering.Advance(Tick, true, _fire);
             Require(ordering.Formation.X == 34 && ordering.Formation.AliveCount == 55 && ordering.Shot.Active,
                 "Formation must move before collision, leaving the old left edge behind.");
 
-            var twoTicks = new ArcadeGameplaySimulation();
+            var twoTicks = new GameplaySimulation();
             PrepareShot(twoTicks, 32, 140);
             twoTicks.Advance(1.0 / 30, true, _fire);
             Require(twoTicks.Formation.AliveCount == 54 && twoTicks.Score == 10 && !twoTicks.Shot.Active,
                 "First-tick-only overlap must hit even if the second tick would be above the box.");
 
-            var verticalEdge = new ArcadeGameplaySimulation();
+            var verticalEdge = new GameplaySimulation();
             PrepareShot(verticalEdge, 32, 132);
             verticalEdge.Advance(Tick, true, _fire);
             Require(verticalEdge.Shot.Y == 136 && verticalEdge.Formation.AliveCount == 55,
@@ -118,7 +118,7 @@ namespace UnityInvader.Editor
             Require(verticalEdge.Formation.AliveCount == 54, "The next 4px tick must overlap, without a vertical gap.");
             foreach (int x in new[] { 23, 201 })
             {
-                var miss = new ArcadeGameplaySimulation();
+                var miss = new GameplaySimulation();
                 PrepareShot(miss, x, 140);
                 miss.Advance(Tick, true, _fire);
                 Require(miss.Formation.AliveCount == 55 && miss.Score == 0 && miss.Shot.Active,
@@ -134,7 +134,7 @@ namespace UnityInvader.Editor
                 {
                     continue;
                 }
-                var simulation = new ArcadeGameplaySimulation();
+                var simulation = new GameplaySimulation();
                 PrepareShot(simulation, 32, 136);
                 simulation.Advance(Tick / 2, true, _fire);
                 simulation.Advance(100, state == GameState.Playing, new PlayerInputState(false, true));
@@ -150,10 +150,10 @@ namespace UnityInvader.Editor
 
         private static void VerifyFrameRates()
         {
-            ArcadeGameplaySimulation reference = null;
+            GameplaySimulation reference = null;
             foreach (int fps in new[] { 30, 60, 120 })
             {
-                var simulation = new ArcadeGameplaySimulation();
+                var simulation = new GameplaySimulation();
                 for (int frame = 0; frame < fps * 20; frame++)
                 {
                     int phase = frame % fps;
@@ -180,7 +180,7 @@ namespace UnityInvader.Editor
         }
 
         // Fixture setup advances individual models without moving Formation; actual assertions use the shared tick.
-        internal static void PrepareShot(ArcadeGameplaySimulation inSimulation, int inX, int inY)
+        internal static void PrepareShot(GameplaySimulation inSimulation, int inX, int inY)
         {
             Require(!inSimulation.Shot.Active, "Fixture requires an empty Shot slot.");
             while (inSimulation.Player.X != inX)
@@ -197,7 +197,7 @@ namespace UnityInvader.Editor
             Require(inSimulation.Shot.Y == inY && inSimulation.Shot.Active, "Fixture Y must be a reachable active Shot position.");
         }
 
-        private static void Hit(ArcadeGameplaySimulation inSimulation, int inRow, int inColumn)
+        private static void Hit(GameplaySimulation inSimulation, int inRow, int inColumn)
         {
             int id = inRow * 11 + inColumn;
             PrepareShot(inSimulation, inSimulation.Formation.X + inColumn * 16, inSimulation.Formation.Y - inRow * 16 - 8);

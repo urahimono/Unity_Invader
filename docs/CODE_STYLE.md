@@ -11,7 +11,7 @@ private int _score;
 protected float _speed;
 private readonly InputAction _left;
 [SerializeField]
-private GameStateController _gameState;
+private GameplayDriver _gameplayDriver;
 ```
 
 private / protected の field は、`readonly`、`static`、`[SerializeField]` の有無にかかわらず対象です。

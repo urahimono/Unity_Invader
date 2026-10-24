@@ -18,6 +18,12 @@ ADR（Architecture Decision Record）は、重要なArchitecture判断と、そ�
 | [0004](0004-unity-game-logic-boundary.md) | Unity依存コードとゲームルールの分離 |
 | [0005](0005-playing-controller-owns-clock.md) | PlayingController（現 GameplayDriver）による入力・共通時計の所有 |
 
+## 後続ADR
+
+| ADR | 判断 |
+| --- | --- |
+| [0006](0006-gameplay-driver-owns-execution-state.md) | GameplayDriverへState・Simulationの保持と実行制御を統合 |
+
 ## 初期記録の根拠
 
 [Issue #15](https://github.com/urahimono/Unity_Invader/issues/15) とNotionの [Unity設計](https://www.notion.so/3ff4f337d5bf814eaa3dd6871eab5160) の確定判断を、Phase 3完了コードと照合しました。Notionには古い暫定案と未実装の責務図も含まれます。現行構造はコードを優先し、ADRには採用理由だけを要約しています。ADR-0005は [PR #13](https://github.com/urahimono/Unity_Invader/pull/13) のレビュー対応を根拠にしています。各ADRは過去会話や外部資料を開かなくても判断の要旨を読めるようにします。

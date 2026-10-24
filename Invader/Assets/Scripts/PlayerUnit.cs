@@ -27,7 +27,7 @@ namespace UnityInvader
             }
         }
 
-        // ArcadeGameplaySimulation owns the live clock; Advance remains available for isolated verification.
+        // GameplaySimulation owns the live clock; Advance remains available for isolated verification.
         internal void Tick(PlayerInputState inInput)
         {
             Player.Tick(inInput);

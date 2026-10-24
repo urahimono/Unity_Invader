@@ -18,7 +18,7 @@ namespace UnityInvader.Editor
         private static          double              _deadline;
         private static          double              _nextCheck;
         private static          PlayerController    _player;
-        private static          GameStateController _state;
+        private static          GameplayDriver      _state;
         private static          SpriteRenderer      _renderer;
         private static readonly GameState[]         _pausedStates = {
             GameState.Attract, GameState.PlayerReady, GameState.PlayerDead, GameState.WaveClear, GameState.GameOver
@@ -63,7 +63,7 @@ namespace UnityInvader.Editor
                         return;
                     }
                     _player = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
-                    _state  = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
+                    _state  = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
                     Require(_player != null && _state != null, "Player/State missing.");
                     if (_state.CurrentState != GameState.Playing)
                     {

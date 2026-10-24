@@ -14,7 +14,7 @@ namespace UnityInvader.Editor
         private static double                     _nextCheck;
         private static double                     _deadline;
         private static InvaderFormationController _controller;
-        private static GameStateController        _state;
+        private static GameplayDriver             _state;
         private static PlayerController           _player;
         private static int                        _pausedStep;
         private static int                        _pausedX;
@@ -72,7 +72,7 @@ namespace UnityInvader.Editor
                         return;
                     }
                     _controller = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
-                    _state      = UnityEngine.Object.FindAnyObjectByType<GameStateController>();
+                    _state      = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
                     _player     = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
                     Require(_controller != null && _player != null && _state != null, "Arcade components missing.");
                     if (_state.CurrentState != GameState.Playing)

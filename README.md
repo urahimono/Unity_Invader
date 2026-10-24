@@ -33,9 +33,9 @@ Unityのバージョンは更新後の `Invader/ProjectSettings/ProjectVersion.t
 
 Player移動の確認はBootstrapからPlayし、Gameビューにフォーカスして左右矢印キーを押してください。
 射撃はSpaceです。押しっぱなしで再発射しないため、離してから再押下してください。
-ArcadeのGameStateにある `GameplayDriver` の `Development Start Playing` が、開発確認用にGameStateをPlayingへ変更します。
+ArcadeのGameplayにある `GameplayDriver` の `Development Start Playing` が、開発確認用にGameStateをPlayingへ変更します。
 本来のAttract / Credit / PlayerReady遷移ではありません。このフラグを無効にすればAttractのまま開始します。
-ゲーム全体の進行は `ArcadeGameplaySimulation`、プレイヤー側のまとまりは `PlayerUnit`、自機本体の状態は `PlayerBody`、自機弾は `PlayerShot` が扱います。
+ゲーム全体の実行制御とState・Simulationの保持は `GameplayDriver`、Unity非依存のゲームルールは `GameplaySimulation`、プレイヤー側のまとまりは `PlayerUnit`、自機本体の状態は `PlayerBody`、自機弾は `PlayerShot` が扱います。
 現在の責務境界、State、論理座標、時間・入力の流れは [Architecture](docs/ARCHITECTURE.md) を参照してください。
 
 ## 素材・Sceneの設定
@@ -94,10 +94,10 @@ GUIではBootstrapからPlayし、Gameビューで左右キーとSpaceを操作�
 非Playing停止/非表示・再開と、生存個体が残る間のPlaying維持を検証します。
 Play検証では単一GameplayDriverを確認し、Player表示を無効にした20描画フレームの各フレームで実測deltaTimeの1回分だけ進むことと、
 GameplayDriverを無効にすると表示側だけでは進まないことも検証します。
-`Unity Invader > Configure Gameplay Driver` はUnity Editor APIでArcadeのGameStateへ専用Controllerを接続します。
+`Unity Invader > Configure Gameplay Driver` はUnity Editor APIでArcadeのGameplayに実行制御を設定します。
 Play検証は自身でEditorを終了するため、専用batchで`-quit`を付けず実行してください。
 GUIでは狙ったInvaderとShotだけが消えること、残った編隊の移動・A/B同期・下降反転、
-左右移動と押しっぱなし禁止・release後再発射を確認してください。Scoreは `GameStateController.Playing.Score` で取得できます。
+左右移動と押しっぱなし禁止・release後再発射を確認してください。Scoreは `GameplayDriver.Simulation.Score` で取得できます。
 
 ## Waveループの検証
 
