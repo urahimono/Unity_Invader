@@ -186,8 +186,8 @@ namespace UnityInvader.Editor
                     CheckFormationDisplay(true);
                     // Editor stepping uses its own delta; compare every frame with its actual elapsed time.
                     EditorApplication.isPaused = true;
-                    _gameplayDriver.enabled           = false; // Discard partial accumulated time for an exact reference.
-                    _gameplayDriver.enabled           = true;
+                    _gameplayDriver.enabled    = false; // Discard partial accumulated time for an exact reference.
+                    _gameplayDriver.enabled    = true;
                     InvaderHitVerification.PrepareShot(_state.Playing, _player.Player.X, 32);
                     _player.enabled = false;
                     Require(!_player.GetComponent<SpriteRenderer>().enabled && !_shotRenderer.enabled, "Disabling the view must hide its renderers.");
@@ -227,12 +227,12 @@ namespace UnityInvader.Editor
                         Require(_formation.Formation.StepCount > _clockStartStep,
                             "Formation must advance even with PlayerController disabled.");
                         _gameplayDriver.enabled = false;
-                        _player.enabled  = true;
-                        _clockStartX     = _player.Player.X;
-                        _clockStartY     = _player.Shot.Y;
-                        _clockStartStep  = _formation.Formation.StepCount;
-                        _steppedFrames   = 0;
-                        _stage           = 11;
+                        _player.enabled         = true;
+                        _clockStartX            = _player.Player.X;
+                        _clockStartY            = _player.Shot.Y;
+                        _clockStartStep         = _formation.Formation.StepCount;
+                        _steppedFrames          = 0;
+                        _stage                  = 11;
                         StepFrame();
                         return;
                     }
