@@ -13,7 +13,6 @@ namespace UnityInvader.Editor
     public static class WaveLoopPlayVerification
     {
         private static int                                         _initialDisplayFrame;
-        private const  string                                      SessionKey = "WaveLoopPlayVerification";
         private static int                                         _stage, _clearedWave, _pausedX, _pausedSteps;
         private static double                                      _deadline, _clearStarted, _nextCheck;
         private static GameplayDriver                              _gameplayDriver;
@@ -23,6 +22,8 @@ namespace UnityInvader.Editor
         private static InputSettings                               _settings;
         private static InputSettings.BackgroundBehavior            _background;
         private static InputSettings.EditorInputBehaviorInPlayMode _editorInput;
+
+        private const string SessionKey = "WaveLoopPlayVerification";
 
         public static void Verify()
         {
@@ -168,7 +169,9 @@ namespace UnityInvader.Editor
         }
 
         private static void Require(bool inCondition, string inMessage) => WaveLoopVerification.Require(inCondition, inMessage);
+
         private static void Keys(params Key[] inKeys) => InputSystem.QueueStateEvent(_keyboard, new KeyboardState(inKeys));
+
         private static void Finish(int inCode)
         {
             SessionState.SetBool(SessionKey, false);

@@ -20,6 +20,12 @@ namespace UnityInvader.Editor
             Debug.Log("INVADER_HIT_LOGIC_PASS: AliveCount; dead exclusion; type/cumulative Score; one Shot/one Invader; hit deactivation/release gate; tick order; per-tick overlap; AABB edges; movement after kills; zero alive; non-Playing; 30/60/120fps; Player/Shot/Formation regression.");
         }
 
+        // Fixture setup advances individual models without moving Formation; actual assertions use the shared tick.
+        internal static void PrepareShot(GameplaySimulation inSimulation, int inX, int inY)
+        {
+            inSimulation.EditorPrepareShot(inX, inY);
+        }
+
         private static void VerifyKillsAndScore()
         {
             var simulation = new GameplaySimulation();
@@ -177,12 +183,6 @@ namespace UnityInvader.Editor
                 reference = simulation;
                 Debug.Log($"INVADER_HIT_FPS_PASS: fps={fps}; Score={simulation.Score}; Alive={simulation.EditorCapture().Formation.AliveCount}; PlayerX={simulation.EditorCapture().Player.X}; Shot=({simulation.EditorCapture().Shot.X},{simulation.EditorCapture().Shot.Y},{simulation.EditorCapture().Shot.Active}); Formation=({simulation.EditorCapture().Formation.X},{simulation.EditorCapture().Formation.Y}); Steps={simulation.EditorCapture().Formation.StepCount}");
             }
-        }
-
-        // Fixture setup advances individual models without moving Formation; actual assertions use the shared tick.
-        internal static void PrepareShot(GameplaySimulation inSimulation, int inX, int inY)
-        {
-            inSimulation.EditorPrepareShot(inX, inY);
         }
 
         private static void Hit(GameplaySimulation inSimulation, int inRow, int inColumn)

@@ -9,26 +9,23 @@ namespace UnityInvader
     {
         [FormerlySerializedAs("currentState")]
         [SerializeField]
-        private GameState         _currentState = GameState.Attract;
-        [Tooltip("Temporary development start path; real game-start transitions are not implemented.")]
-        [FormerlySerializedAs("developmentStartPlaying")]
+        private GameState                  _currentState        = GameState.Attract;
         [SerializeField]
-        private bool              _developmentStartPlaying;
+        private PlayerController           _playerController;
+        [SerializeField]
+        private InvaderFormationController _formationController;
+
         private PlayerInputReader _input;
         private double            _waveClearElapsed;
         private bool              _waitingForNextWave;
 
-        [SerializeField]
-        private          PlayerController           _playerController;
-        [SerializeField]
-        private          InvaderFormationController _formationController;
-        private readonly GameplaySimulation         _simulation           = new GameplaySimulation();
-        private readonly InvaderDisplayState[]      _invaderDisplayStates = new InvaderDisplayState[InvaderFormation.Rows * InvaderFormation.Columns];
+        private readonly GameplaySimulation    _simulation           = new GameplaySimulation();
+        private readonly InvaderDisplayState[] _invaderDisplayStates = new InvaderDisplayState[InvaderFormation.Rows * InvaderFormation.Columns];
 
-        private void ChangeState(GameState inNextState)
-        {
-            _currentState = inNextState;
-        }
+        [Tooltip("Temporary development start path; real game-start transitions are not implemented.")]
+        [FormerlySerializedAs("developmentStartPlaying")]
+        [SerializeField]
+        private bool _developmentStartPlaying;
 
         private void OnEnable()
         {
@@ -45,6 +42,29 @@ namespace UnityInvader
         }
 
         private void Update()
+        {
+            UpdateGameplay();
+        }
+
+        private void LateUpdate()
+        {
+            PublishDisplay();
+        }
+
+        private void OnDisable()
+        {
+            _simulation.Advance(0, false, default);
+            _input?.Dispose();
+            _input = null;
+            PublishDisplay();
+        }
+
+        private void ChangeState(GameState inNextState)
+        {
+            _currentState = inNextState;
+        }
+
+        private void UpdateGameplay()
         {
             if (_waitingForNextWave && _currentState == GameState.WaveClear)
             {
@@ -67,11 +87,6 @@ namespace UnityInvader
                 _waitingForNextWave = true;
                 ChangeState(GameState.WaveClear);
             }
-        }
-
-        private void LateUpdate()
-        {
-            PublishDisplay();
         }
 
         private void PublishDisplay()
@@ -113,12 +128,5 @@ namespace UnityInvader
             _simulation.Advance(inElapsed, inPlaying, inInput);
         }
 #endif
-        private void OnDisable()
-        {
-            _simulation.Advance(0, false, default);
-            _input?.Dispose();
-            _input = null;
-            PublishDisplay();
-        }
     }
 }

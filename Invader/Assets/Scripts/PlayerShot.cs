@@ -3,15 +3,17 @@ namespace UnityInvader
     // One logical shot slot. No Unity objects or collision rules.
     public sealed class PlayerShot
     {
-        public const int SpeedPerTick = 4;
-        public const int Width        = 1;
-        public const int Height       = 4;
+        private bool _pendingFire;
+
         public bool Active    { get; private set; }
         public bool FireReady { get; private set; } = true;
 
         public int X { get; private set; }
         public int Y { get; private set; }
-        private bool _pendingFire;
+
+        public const int SpeedPerTick = 4;
+        public const int Width        = 1;
+        public const int Height       = 4;
 
         public void Deactivate()
         {

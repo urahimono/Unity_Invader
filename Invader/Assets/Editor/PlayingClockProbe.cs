@@ -8,10 +8,11 @@ namespace UnityInvader.Editor
     // Test-only observer of completed game frames. Restores the original loop on disposal.
     public sealed class PlayingClockProbe : IDisposable
     {
-        private readonly PlayerLoopSystem _original;
         public int Frames { get; private set; }
 
         public double Elapsed { get; private set; }
+
+        private readonly PlayerLoopSystem _original;
 
         public PlayingClockProbe()
         {
@@ -35,12 +36,12 @@ namespace UnityInvader.Editor
             throw new InvalidOperationException("PostLateUpdate player-loop stage missing.");
         }
 
+        public void Dispose() => PlayerLoop.SetPlayerLoop(_original);
+
         private void Observe()
         {
             Elapsed += Time.deltaTime;
             Frames++;
         }
-
-        public void Dispose() => PlayerLoop.SetPlayerLoop(_original);
     }
 }
