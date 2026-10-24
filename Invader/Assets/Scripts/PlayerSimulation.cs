@@ -6,6 +6,7 @@ namespace UnityInvader
         private       double _accumulatedTime;
 
         public PlayerModel Player { get; } = new PlayerModel();
+
         public PlayerShot Shot { get; } = new PlayerShot();
 
         public void Advance(double elapsedSeconds, bool playing, PlayerInputState input)

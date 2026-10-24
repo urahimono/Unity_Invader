@@ -10,10 +10,14 @@ namespace UnityInvader
         private readonly PlayerSimulation _player             = new PlayerSimulation();
 
         public PlayerModel Player => _player.Player;
+
         public PlayerShot Shot => _player.Shot;
+
         public InvaderFormation Formation { get; private set; } = new InvaderFormation();
+
         public int Score      { get; private set; }
         public int WaveNumber { get; private set; } = 1;
+
         public bool WaveClearRequired { get; private set; }
 
         public void StartNextWave()
