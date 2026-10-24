@@ -18,6 +18,71 @@ private / protected の field は、`readonly`、`static`、`[SerializeField]` �
 
 `const`、property、method、parameter、local variable は対象外です。`const` には今回新しい命名規約を追加せず、既存の扱いを変更しません。
 
+## parameter の役割を示す名前の prefix
+
+parameter 名には、その役割を示す prefix を付けます。名前だけを見ても parameter・local variable・member field を判別できるようにするためです。
+
+| parameter の種類 | 名前の形式 | C# の modifier の扱い |
+| --- | --- | --- |
+| 通常の入力 parameter | `inLowerCamelCase` | 命名のために modifier を追加しない |
+| C# の `in` parameter | `inLowerCamelCase` | 既存の `in` を維持する |
+| C# の `out` parameter | `outLowerCamelCase` | 既存の `out` を維持する |
+| C# の `ref` parameter | `inOutLowerCamelCase` | 既存の `ref` を維持する |
+
+通常の入力 parameter の例:
+
+```csharp
+public InvaderSlot(int inRow, int inColumn)
+{
+    Row    = inRow;
+    Column = inColumn;
+}
+```
+
+`out` parameter の例:
+
+```csharp
+private bool TryGetPosition(
+    int inId,
+    out int outX,
+    out int outY)
+{
+    outX = 0;
+    outY = 0;
+    return true;
+}
+```
+
+`ref` parameter は入力・出力の両方を担うため、`inOut` prefix を使います。
+
+```csharp
+private void UpdateValue(ref int inOutValue)
+{
+    inOutValue++;
+}
+```
+
+ここでの `in` / `out` / `inOut` は parameter **名の prefix** です。入力 parameter を識別する目的だけで C# の `in` modifier を新たに追加してはいけません。既存の parameter modifier は意味を変更せず維持します。
+
+### 他の変数との区別
+
+- input parameter: `inLowerCamelCase`
+- out parameter: `outLowerCamelCase`
+- ref parameter: `inOutLowerCamelCase`
+- local variable: `lowerCamelCase`
+- private / protected field: `_lowerCamelCase`
+- public property: `UpperCamelCase`
+
+### 既存コードへの適用時の確認事項
+
+parameter 名の変更は、named argument を使う呼び出し側に影響する可能性があります。既存コードへの適用時は named argument、constructor 呼び出し、method 呼び出し、override、interface implementation、public API を確認し、名前変更の影響と整合性を確認します。
+
+これは parameter 名の規約であり、型、modifier、戻り値、method 名、overload 構成、処理内容を変更する規約ではありません。
+
+今回の役割別 prefix を EditorConfig で正確かつ安全に表現できるか不明なため、今回 `.editorconfig` は変更しません。
+
+今回の規約追加では既存C#コードを修正しません。既存コードへの適用は、この規約を `develop` へマージした後、別のCodexセッション・後続PRで行います。
+
 ## field に付与する属性の配置
 
 field に付与する属性は、field 宣言と同じ行に記述しません。属性は1属性につき1行で記述し、すべての属性を書いた後の次の行に field 宣言を書きます。
@@ -104,10 +169,10 @@ private int _shotSpeed   = 4;
 同じブロック内で、空行を挟まず連続しているローカル変数宣言・単純代入文はひとまとまりのグループとして扱い、単純代入演算子 `=` の位置を縦に揃えます。
 
 ```csharp
-public InvaderSlot(int row, int column)
+public InvaderSlot(int inRow, int inColumn)
 {
-    Row    = row;
-    Column = column;
+    Row    = inRow;
+    Column = inColumn;
 }
 ```
 
