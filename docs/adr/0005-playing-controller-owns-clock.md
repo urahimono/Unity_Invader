@@ -5,11 +5,11 @@
 
 ## Context
 
-[PR #13](https://github.com/urahimono/Unity_Invader/pull/13) でPlayerControllerがArcadeGameplaySimulation全体をAdvanceする構造を見直しました。Playerの表示担当がFormation・Collision・Scoreまで含むゲーム全体の時計を所有すると、表示の有効・無効とゲーム進行が結び付き、後続のWaveClear等もPlayer表示側へ集中してしまいます。
+[PR #13](https://github.com/urahimono/Unity_Invader/pull/13) でPlayerControllerがPlayingSimulation（現 ArcadeGameplaySimulation）全体をAdvanceする構造を見直しました。Playerの表示担当がFormation・Collision・Scoreまで含むゲーム全体の時計を所有すると、表示の有効・無効とゲーム進行が結び付き、後続のWaveClear等もPlayer表示側へ集中してしまいます。
 
 ## Decision
 
-専用のPlayingControllerをUnity側の入力・共通時計担当とします。ArcadeGameplaySimulationを進める実行時の入口を一つにし、PlayerControllerとInvaderFormationControllerは表示同期担当にします。
+専用のPlayingControllerをUnity側の入力・共通時計担当とします。PlayingSimulation（現 ArcadeGameplaySimulation）を進める実行時の入口を一つにし、PlayerControllerとInvaderFormationControllerは表示同期担当にします。
 
 ## Consequences
 
