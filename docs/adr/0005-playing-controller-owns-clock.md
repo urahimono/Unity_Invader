@@ -1,4 +1,4 @@
-# ADR-0005: PlayingControllerが入力と共通時計を所有する
+# ADR-0005: PlayingController（現 GameplayDriver）が入力と共通時計を所有する
 
 - Status: Accepted
 - Date: 2026-10-23
@@ -9,7 +9,7 @@
 
 ## Decision
 
-専用のPlayingControllerをUnity側の入力・共通時計担当とします。PlayingSimulation（現 ArcadeGameplaySimulation）を進める実行時の入口を一つにし、PlayerControllerとInvaderFormationControllerは表示同期担当にします。
+専用のPlayingController（現 GameplayDriver）をUnity側の入力・共通時計担当とします。PlayingSimulation（現 ArcadeGameplaySimulation）を進める実行時の入口を一つにし、PlayerControllerとInvaderFormationControllerは表示同期担当にします。
 
 ## Consequences
 

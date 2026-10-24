@@ -38,7 +38,7 @@ namespace UnityInvader
             ApplyDisplay();
         }
 
-        // PlayingController advances the shared ArcadeGameplaySimulation in Update.
+        // GameplayDriver advances the shared ArcadeGameplaySimulation in Update.
         private void LateUpdate()
         {
             ApplyDisplay();

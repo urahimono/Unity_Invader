@@ -16,7 +16,7 @@ ADR（Architecture Decision Record）は、重要なArchitecture判断と、そ�
 | [0002](0002-logical-coordinate-system.md) | 224×256論理座標 |
 | [0003](0003-60hz-logical-tick.md) | 60Hz論理tick |
 | [0004](0004-unity-game-logic-boundary.md) | Unity依存コードとゲームルールの分離 |
-| [0005](0005-playing-controller-owns-clock.md) | PlayingControllerによる入力・共通時計の所有 |
+| [0005](0005-playing-controller-owns-clock.md) | PlayingController（現 GameplayDriver）による入力・共通時計の所有 |
 
 ## 初期記録の根拠
 

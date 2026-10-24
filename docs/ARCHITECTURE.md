@@ -34,14 +34,14 @@ Attract〜GameOverを一台の筐体としてArcade内で扱う設計です。[S
 
 PlayerSelectを独立Stateにせず、Attract中の1P/2P Start入力で参加人数を決める設計方針です。この開始処理自体は未実装です。Creditも独立Stateとして実装していません。
 
-ArcadeのPlayingControllerには開発用 `developmentStartPlaying` が有効で、Start時にPlayingへ進みます。原作の開始手順ではありません。無効ならAttractのままです。実装済みの通常進行は **Playing → WaveClear → Playing（次Wave）** です。
+ArcadeのGameplayDriverには開発用 `developmentStartPlaying` が有効で、Start時にPlayingへ進みます。原作の開始手順ではありません。無効ならAttractのままです。実装済みの通常進行は **Playing → WaveClear → Playing（次Wave）** です。
 
 ## Playingの責務と依存
 
 ```mermaid
 flowchart TD
     Input[Unity Input System] --> Reader[PlayerInputReader]
-    Reader -->|PlayerInputState| Driver[PlayingController.Update]
+    Reader -->|PlayerInputState| Driver[GameplayDriver.Update]
     Time[Time.deltaTime] --> Driver
     State[GameStateController] -->|Stateと共有モデル| Driver
     Driver -->|Advance / StartNextWave| Sim[ArcadeGameplaySimulation]
@@ -54,7 +54,7 @@ flowchart TD
 
 | 要素 | 現在の責務 |
 | --- | --- |
-| [PlayingController](../Invader/Assets/Scripts/PlayingController.cs) | Unity側の入力と共通時計の唯一の実行時ドライバ。PlayerInputReaderを所有し、Updateで1描画フレームに1回Advanceする。全滅通知を受けてState変更とWaveClear待機を行う |
+| [GameplayDriver](../Invader/Assets/Scripts/GameplayDriver.cs) | Unity側の入力と共通時計の唯一の実行時ドライバ。PlayerInputReaderを所有し、Updateで1描画フレームに1回Advanceする。全滅通知を受けてState変更とWaveClear待機を行う |
 | [ArcadeGameplaySimulation](../Invader/Assets/Scripts/ArcadeGameplaySimulation.cs) | Unity非依存。経過時間を60Hz tickへ分解し、Player・Shot・Formation・Collision・Score・Wave番号と次Wave初期化を管理する |
 | [PlayerUnit](../Invader/Assets/Scripts/PlayerUnit.cs) / [PlayerBody](../Invader/Assets/Scripts/PlayerBody.cs) / [PlayerShot](../Invader/Assets/Scripts/PlayerShot.cs) | Player移動と単一Shotのルール。ArcadeGameplaySimulationはPlayerUnit.Tickを使う |
 | [InvaderFormation](../Invader/Assets/Scripts/InvaderFormation.cs) / InvaderSlot | 5×11の55slot、Alive、共通位置・方向・移動step・A/Bアニメを保持する。個体ごとに独立移動しない |
@@ -79,7 +79,7 @@ Fireはtick間の入力変化も保持できるよう描画フレームごとに
 
 非Playingでは入力取り込みと通常モデル更新を止め、蓄積時間を破棄します。モデルは保持し、Player・Shot・Formationの表示は隠します。WaveClearRequiredが立った場合も残りtickを進めません。
 
-WaveClearの暫定1秒待機とGameState変更はPlayingControllerにあります。Waveのルールすべてが通常C#側に移っているわけではありません。待機終了時にStartNextWaveを呼び、Playingへ戻します。そのフレームは新Formationを初期状態で表示し、進めません。
+WaveClearの暫定1秒待機とGameState変更はGameplayDriverにあります。Waveのルールすべてが通常C#側に移っているわけではありません。待機終了時にStartNextWaveを呼び、Playingへ戻します。そのフレームは新Formationを初期状態で表示し、進めません。
 
 ### 座標・命中・表示
 
