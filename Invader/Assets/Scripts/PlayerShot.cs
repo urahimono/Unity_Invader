@@ -18,9 +18,9 @@ namespace UnityInvader
             Active = false; // A hit must not re-arm Fire.
         }
 
-        public void ReadFire(bool pressed)
+        public void ReadFire(bool inPressed)
         {
-            if (pressed == false)
+            if (inPressed == false)
             {
                 FireReady = true;
                 return;
@@ -36,7 +36,7 @@ namespace UnityInvader
             }
         }
 
-        public void Tick(PlayerBody player)
+        public void Tick(PlayerBody inPlayer)
         {
             if (Active)
             {
@@ -51,8 +51,8 @@ namespace UnityInvader
                 if (Active == false)
                 {
                     Active = true;
-                    X      = player.X;
-                    Y      = player.Y + 8;
+                    X      = inPlayer.X;
+                    Y      = inPlayer.Y + 8;
                 }
                 _pendingFire = false;
             }

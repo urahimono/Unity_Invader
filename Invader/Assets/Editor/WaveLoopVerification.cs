@@ -58,31 +58,31 @@ namespace UnityInvader.Editor
             }
         }
 
-        internal static void Clear(ArcadeGameplaySimulation simulation, double elapsed)
+        internal static void Clear(ArcadeGameplaySimulation inSimulation, double inElapsed)
         {
             for (int row = 4; row >= 0; row--)
             {
                 for (int column = 0; column < 11; column++)
                 {
-                    InvaderHitVerification.PrepareShot(simulation, simulation.Formation.X + column * 16,
-                        simulation.Formation.Y - row * 16 - 8);
-                    simulation.Advance(elapsed, true, new PlayerInputState(false, false, true));
+                    InvaderHitVerification.PrepareShot(inSimulation, inSimulation.Formation.X + column * 16,
+                        inSimulation.Formation.Y - row * 16 - 8);
+                    inSimulation.Advance(inElapsed, true, new PlayerInputState(false, false, true));
                     // 120fps needs a second frame for a tick.
-                    if (simulation.Shot.Active)
+                    if (inSimulation.Shot.Active)
                     {
-                        simulation.Advance(elapsed, true, new PlayerInputState(false, false, true));
+                        inSimulation.Advance(inElapsed, true, new PlayerInputState(false, false, true));
                     }
-                    Require(!simulation.Formation.Invaders[row * 11 + column].Alive && !simulation.Shot.Active,
+                    Require(!inSimulation.Formation.Invaders[row * 11 + column].Alive && !inSimulation.Shot.Active,
                         "Each wave must be cleared with real shot collisions.");
                 }
             }
         }
 
-        internal static void Require(bool condition, string message)
+        internal static void Require(bool inCondition, string inMessage)
         {
-            if (condition == false)
+            if (inCondition == false)
             {
-                throw new InvalidOperationException(message);
+                throw new InvalidOperationException(inMessage);
             }
         }
     }

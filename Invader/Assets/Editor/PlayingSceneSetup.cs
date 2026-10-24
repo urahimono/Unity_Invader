@@ -26,16 +26,16 @@ namespace UnityInvader.Editor
             Debug.Log("PLAYING_SCENE_SETUP_PASS: one PlayingController owns input/clock and development start.");
         }
 
-        internal static void ConfigureInScene(GameStateController state)
+        internal static void ConfigureInScene(GameStateController inState)
         {
             var controllers = UnityEngine.Object.FindObjectsByType<PlayingController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             if (controllers.Length > 1)
             {
                 throw new InvalidOperationException("Arcade must have only one PlayingController.");
             }
-            var controller                                                = controllers.Length == 1 ? controllers[0] : state.gameObject.AddComponent<PlayingController>();
+            var controller                                                = controllers.Length == 1 ? controllers[0] : inState.gameObject.AddComponent<PlayingController>();
             var serialized                                                = new SerializedObject(controller);
-            serialized.FindProperty("_gameState").objectReferenceValue    = state;
+            serialized.FindProperty("_gameState").objectReferenceValue    = inState;
             serialized.FindProperty("_developmentStartPlaying").boolValue = true;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }

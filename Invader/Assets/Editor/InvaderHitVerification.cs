@@ -180,42 +180,42 @@ namespace UnityInvader.Editor
         }
 
         // Fixture setup advances individual models without moving Formation; actual assertions use the shared tick.
-        internal static void PrepareShot(ArcadeGameplaySimulation simulation, int x, int y)
+        internal static void PrepareShot(ArcadeGameplaySimulation inSimulation, int inX, int inY)
         {
-            Require(!simulation.Shot.Active, "Fixture requires an empty Shot slot.");
-            while (simulation.Player.X != x)
+            Require(!inSimulation.Shot.Active, "Fixture requires an empty Shot slot.");
+            while (inSimulation.Player.X != inX)
             {
-                simulation.Player.Tick(new PlayerInputState(simulation.Player.X > x, simulation.Player.X < x));
+                inSimulation.Player.Tick(new PlayerInputState(inSimulation.Player.X > inX, inSimulation.Player.X < inX));
             }
-            simulation.Shot.ReadFire(false);
-            simulation.Shot.ReadFire(true);
-            simulation.Shot.Tick(simulation.Player);
-            while (simulation.Shot.Y < y)
+            inSimulation.Shot.ReadFire(false);
+            inSimulation.Shot.ReadFire(true);
+            inSimulation.Shot.Tick(inSimulation.Player);
+            while (inSimulation.Shot.Y < inY)
             {
-                simulation.Shot.Tick(simulation.Player);
+                inSimulation.Shot.Tick(inSimulation.Player);
             }
-            Require(simulation.Shot.Y == y && simulation.Shot.Active, "Fixture Y must be a reachable active Shot position.");
+            Require(inSimulation.Shot.Y == inY && inSimulation.Shot.Active, "Fixture Y must be a reachable active Shot position.");
         }
 
-        private static void Hit(ArcadeGameplaySimulation simulation, int row, int column)
+        private static void Hit(ArcadeGameplaySimulation inSimulation, int inRow, int inColumn)
         {
-            int id = row * 11 + column;
-            PrepareShot(simulation, simulation.Formation.X + column * 16, simulation.Formation.Y - row * 16 - 8);
-            simulation.Advance(Tick, true, _fire);
-            Require(!simulation.Formation.Invaders[id].Alive && !simulation.Shot.Active, "Expected target must die and consume Shot.");
+            int id = inRow * 11 + inColumn;
+            PrepareShot(inSimulation, inSimulation.Formation.X + inColumn * 16, inSimulation.Formation.Y - inRow * 16 - 8);
+            inSimulation.Advance(Tick, true, _fire);
+            Require(!inSimulation.Formation.Invaders[id].Alive && !inSimulation.Shot.Active, "Expected target must die and consume Shot.");
         }
 
-        private static bool SameFormation(InvaderFormation a, InvaderFormation b)
+        private static bool SameFormation(InvaderFormation inA, InvaderFormation inB)
         {
-            return a.X == b.X && a.Y == b.Y && a.Direction == b.Direction && a.StepCount == b.StepCount &&
-                a.AnimationFrame == b.AnimationFrame;
+            return inA.X == inB.X && inA.Y == inB.Y && inA.Direction == inB.Direction && inA.StepCount == inB.StepCount &&
+                inA.AnimationFrame == inB.AnimationFrame;
         }
 
-        private static void Require(bool condition, string message)
+        private static void Require(bool inCondition, string inMessage)
         {
-            if (condition == false)
+            if (inCondition == false)
             {
-                throw new InvalidOperationException(message);
+                throw new InvalidOperationException(inMessage);
             }
         }
     }

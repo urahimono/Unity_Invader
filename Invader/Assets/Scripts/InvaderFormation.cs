@@ -17,10 +17,10 @@ namespace UnityInvader
 
         public bool Alive { get; private set; } = true;
 
-        public InvaderSlot(int row, int column)
+        public InvaderSlot(int inRow, int inColumn)
         {
-            Row    = row;
-            Column = column;
+            Row    = inRow;
+            Column = inColumn;
         }
 
         internal bool TryKill()
@@ -72,9 +72,9 @@ namespace UnityInvader
             Invaders = Array.AsReadOnly(slots);
         }
 
-        public bool TryKill(int id)
+        public bool TryKill(int inId)
         {
-            if (Invaders[id].TryKill() == false)
+            if (Invaders[inId].TryKill() == false)
             {
                 return false;
             }

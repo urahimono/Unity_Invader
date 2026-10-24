@@ -144,14 +144,14 @@ namespace UnityInvader.Editor
             _nextCheck  = EditorApplication.timeSinceStartup + 0.4;
         }
 
-        private static void CheckDisplay(bool visible)
+        private static void CheckDisplay(bool inVisible)
         {
             var renderers = _controller.GetComponentsInChildren<SpriteRenderer>();
             Require(renderers.Length == 55, "Expected exactly 55 generated renderers.");
             foreach (var slot in _controller.Formation.Invaders)
             {
                 var renderer = renderers[slot.Id];
-                Require(renderer.enabled == visible, "Visibility mismatch.");
+                Require(renderer.enabled == inVisible, "Visibility mismatch.");
                 Require(renderer.sprite.name == InvaderFormationSceneSetup.FrameNames[(int)slot.Type * 2 + _controller.Formation.AnimationFrame], "Frame/type mismatch.");
                 var expected = new Vector3(_controller.Formation.X + slot.Column * 16 - 112,
                     _controller.Formation.Y - slot.Row * 16 - 128, 0);
@@ -178,7 +178,7 @@ namespace UnityInvader.Editor
                 foreach (int frame in new[] { 0, 1 })
                 {
                     string name     = InvaderFormationSceneSetup.FrameNames[(int)slot.Type * 2 + frame];
-                    renderer.sprite = sprites.Single(sprite => sprite.name == name);
+                    renderer.sprite = sprites.Single(inSprite => inSprite.name == name);
                     Require(renderer.transform.position == position && renderer.bounds.center == boundsCenter,
                         "A/B-only switching must preserve display position and bounds center.");
                     Require(formation.X == x && formation.Y == y && formation.StepCount == step && formation.Direction == direction,
@@ -188,18 +188,18 @@ namespace UnityInvader.Editor
             }
         }
 
-        private static void Finish(int exitCode)
+        private static void Finish(int inExitCode)
         {
             SessionState.SetBool("InvaderFormationPlayVerification", false);
             EditorApplication.update -= Check;
-            EditorApplication.Exit(exitCode);
+            EditorApplication.Exit(inExitCode);
         }
 
-        private static void Require(bool condition, string message)
+        private static void Require(bool inCondition, string inMessage)
         {
-            if (condition == false)
+            if (inCondition == false)
             {
-                throw new InvalidOperationException(message);
+                throw new InvalidOperationException(inMessage);
             }
         }
     }

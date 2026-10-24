@@ -6,14 +6,14 @@ namespace UnityInvader
         private       double _accumulatedTime;
         public InvaderFormation Formation { get; } = new InvaderFormation();
 
-        public void Advance(double elapsedSeconds, bool playing)
+        public void Advance(double inElapsedSeconds, bool inPlaying)
         {
-            if (playing == false)
+            if (inPlaying == false)
             {
                 _accumulatedTime = 0;
                 return;
             }
-            _accumulatedTime += elapsedSeconds;
+            _accumulatedTime += inElapsedSeconds;
             while (_accumulatedTime + 1e-12 >= TickDuration)
             {
                 Formation.Tick();

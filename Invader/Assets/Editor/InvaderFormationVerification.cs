@@ -63,19 +63,19 @@ namespace UnityInvader.Editor
             Debug.Log("INVADER_FORMATION_LOGIC_PASS: 55 identities/types; 60Hz; 30/60/120fps; A/B; both edges; 8px descent; pause/resume; Player regression.");
         }
 
-        private static void Step(InvaderFormation formation)
+        private static void Step(InvaderFormation inFormation)
         {
             for (int tick = 0; tick < InvaderFormation.TicksPerStep; tick++)
             {
-                formation.Tick();
+                inFormation.Tick();
             }
         }
 
-        private static void Require(bool condition, string message)
+        private static void Require(bool inCondition, string inMessage)
         {
-            if (condition == false)
+            if (inCondition == false)
             {
-                throw new InvalidOperationException(message);
+                throw new InvalidOperationException(inMessage);
             }
         }
     }

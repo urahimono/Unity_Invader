@@ -69,11 +69,11 @@ namespace UnityInvader.Editor
             Debug.Log("PLAYER_SHOT_LOGIC_PASS: single slot; release gate; fixed X; spawn; 4px/tick; upper edge; all non-Playing states; 30/60/120fps; Player/Formation regression.");
         }
 
-        private static void Require(bool condition, string message)
+        private static void Require(bool inCondition, string inMessage)
         {
-            if (condition == false)
+            if (inCondition == false)
             {
-                throw new InvalidOperationException(message);
+                throw new InvalidOperationException(inMessage);
             }
         }
     }

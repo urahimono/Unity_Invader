@@ -9,28 +9,28 @@ namespace UnityInvader
 
         public PlayerShot Shot { get; } = new PlayerShot();
 
-        public void Advance(double elapsedSeconds, bool playing, PlayerInputState input)
+        public void Advance(double inElapsedSeconds, bool inPlaying, PlayerInputState inInput)
         {
-            if (playing == false)
+            if (inPlaying == false)
             {
                 _accumulatedTime = 0;
                 return;
             }
 
             // Sample every render frame so release/press between logical ticks is retained.
-            Shot.ReadFire(input.Fire);
-            _accumulatedTime += elapsedSeconds;
+            Shot.ReadFire(inInput.Fire);
+            _accumulatedTime += inElapsedSeconds;
             while (_accumulatedTime + 1e-12 >= TickDuration)
             {
-                Tick(input);
+                Tick(inInput);
                 _accumulatedTime -= TickDuration;
             }
         }
 
         // ArcadeGameplaySimulation owns the live clock; Advance remains available for isolated verification.
-        internal void Tick(PlayerInputState input)
+        internal void Tick(PlayerInputState inInput)
         {
-            Player.Tick(input);
+            Player.Tick(inInput);
             Shot.Tick(Player);
         }
     }

@@ -14,9 +14,9 @@ namespace UnityInvader
 
         public ArcadeGameplaySimulation Playing { get; } = new ArcadeGameplaySimulation();
 
-        public void ChangeState(GameState nextState)
+        public void ChangeState(GameState inNextState)
         {
-            _currentState = nextState;
+            _currentState = inNextState;
         }
     }
 }
