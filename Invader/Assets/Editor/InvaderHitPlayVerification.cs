@@ -15,7 +15,7 @@ namespace UnityInvader.Editor
         private static          int                                         _stage, _stateIndex, _shotX, _initialPlayerX, _pausedX, _pausedY, _pausedStep, _heldStep;
         private static          double                                      _deadline, _nextCheck;
         private static          PlayerController                            _player;
-        private static          GameplayDriver                           _playing;
+        private static          GameplayDriver                              _playing;
         private static          InvaderFormationController                  _formation;
         private static          GameStateController                         _state;
         private static          SpriteRenderer                              _shotRenderer;
@@ -240,7 +240,7 @@ namespace UnityInvader.Editor
                         "Enabled views must not advance the simulation when GameplayDriver is disabled.");
                     Require(_player.GetComponent<SpriteRenderer>().enabled && _player.transform.position == new Vector3(_player.Player.X - 112, _player.Player.Y - 128, 0),
                         "Player display must still synchronize while the clock is disabled.");
-                    Debug.Log("PLAYING_CONTROLLER_CLOCK_PASS: exactly one driver; each of 20 rendered frames matches one Advance of actual deltaTime with Player view disabled; 20 frames frozen with driver disabled and views enabled.");
+                    Debug.Log("GAMEPLAY_DRIVER_CLOCK_PASS: exactly one driver; each of 20 rendered frames matches one Advance of actual deltaTime with Player view disabled; 20 frames frozen with driver disabled and views enabled.");
                     Debug.Log("INVADER_HIT_PLAY_PASS: Bootstrap -> Arcade -> Playing; shared simulation; virtual keyboard; hit/Score/display; held Fire/release/re-press; all non-Playing states freeze; resume; surviving Formation stays Playing.");
                     Finish(0);
                 }
