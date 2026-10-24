@@ -10,7 +10,7 @@
 
 - `GameplayDriver`などの管理クラスが、内部で所有する `GameplaySimulation` や他の可変管理オブジェクトを外部へそのまま返すこと。
 - 他クラスが `_driver.Simulation.Formation.Invaders` のように、複数の内部オブジェクトを辿って状態を取得・変更したり、そのメソッドを呼んだりすること。チェーンをローカル変数や独自Getterに分割しても禁止です。
-- `PlayerController` / `InvaderFormationController` のような表示クラスが、`GameplayDriver`またはゲームモデルを参照・検索して内部状態を取りに行くこと。
+- `PlayerController` / `InvaderFormationController` のような表示クラスが、`GameplayDriver`またはゲームモデルを`[SerializeField]`・引数・Interface・検索などを通じて保持し、内部状態を取りに行くこと。**Interfaceに隠しても実体がGameplayDriverなら禁止**します。
 - `IReadOnlyList<T>`や `IReadOnlyCollection<T>`で包んだだけの**可変参照型要素**を、「不変データ」と見なして外部公開すること。
 
 NG（**現状コードに存在する、後続の修正対象となる構造**）:
@@ -29,7 +29,7 @@ formation.TryKill(0);
 
 - 何かを**実行**させるときは、所有者が意味のある操作を公開し、その内部で処理を完結させます（Tell, Don't Ask）。
 - 何かを**表示**するときは、所有者・進行担当が必要最小限の値、または可変オブジェクトの参照を含まない不変の表示用データを渡します。表示側は受け取った値をRenderer等へ反映し、ゲーム進行には関与しません。
-- `GameplayDriver`をゲーム進行の唯一の実行入口とし、表示ControllerからDriverやSimulationへの依存を作りません。画面更新の具体的な手段は既存のUnityライフサイクルと同期順序を守り、必要最小限に設計します。
+- `GameplayDriver`をゲーム進行の唯一の実行入口とし、表示ControllerからDriverやSimulationへの依存を作りません。`GameplayDriver`が表示Controllerを保持し、必要な表示情報をPushします。画面更新の具体的な手段は既存のUnityライフサイクルと同期順序を守り、必要最小限に設計します。
 - `int`、`bool`、`enum`などの値の取得や、不変の値データの公開は、責務・依存方向を壊さない範囲で可能です。**Getter一般やC# propertyそのものの禁止ではありません。**
 
 OK（データを表示側へ渡す方向を示す概念例）:
@@ -55,6 +55,34 @@ _playerController.ApplyDisplay(inPlayerDisplayState);
 
 上記は**設計の例示**であり、`PlayerDisplayState`や `ApplyDisplay` は現時点の実装APIではありません。既存コードの実装をそのまま表すものではありません。
 
+### GameplayDriverの公開APIと表示データの受け渡し
+
+- `GameplayDriver`のランタイム向け公開Getter・状態遷移用publicメソッドは原則不要です。`CurrentState`・`Simulation`・`ChangeState`のような現行の公開APIは、後続の実装修正で必要性を見直し、内部処理に閉じます。
+- 表示ControllerはDriver、Simulation、PlayerBody、Shot、Formation等の可変ゲームモデルの参照を**保持せず、取得もしません**。`GetComponent<GameplayDriver>()`や、Driverを実装元とするInterfaceの注入でも回避できません。
+- `GameplayDriver`側が`PlayerController`と`InvaderFormationController`を保持し、進行後に表示専用の値データを`Apply`等のメソッドへPushする構造を基本とします。Controllerは描画処理と表示用Unityオブジェクトを管理するだけで、更新の主導権やモデルの操作権を持ちません。
+- 変化するデータを継続して扱う必要がある場合も、値・不変スナップショットを優先します。Interface方式を採用するなら、参照先がDriverや可変モデルの実体になっていないか確認します。必要のないInterfaceや共通Managerは作りません。
+- Unityの更新順序、初期表示、非表示・再有効化、Wave切替時の表示と55体のRenderer再利用を壊さない具体的な実装方法は、実装PRで検証します。ここで新しいランタイムAPIやクラスを作成済みとは扱いません。
+
+### Editor検証用APIの分離
+
+- Editor検証でState変更やモデルの観測が必要でも、**検証用という理由だけでランタイム向けの公開APIを追加・維持しません**。
+- Editor専用の検証処理は`Assets/Editor/`などのEditor専用アセンブリに置きます。ランタイムアセンブリ側に検証専用の入口が必要なときだけ、`#if UNITY_EDITOR`で囲んだ最小限のAPIを検討します。製品ビルドに含めないことが条件です。
+- Editor専用APIでも、`GameplaySimulation`など所有する可変オブジェクトの実体を返すGetterを安易に作りません。確認は可能な限り値・不変スナップショット、操作は用途を限定した検証メソッドで行います。
+- `#if UNITY_EDITOR`はUnity EditorのPlay Mode中にも有効です。**Editor環境でのアクセス制御を保証する仕組みではありません**。通常のランタイム処理は検証用APIへ依存せず、表示ControllerへDriver参照を渡さないという原則を維持します。
+
+概念例（既存APIではない）:
+
+```csharp
+#if UNITY_EDITOR
+public void EditorSetState(GameState inNextState)
+{
+    ChangeState(inNextState);
+}
+#endif
+```
+
+Editor検証のために公開範囲を広げるのではなく、まず既存のVerificationが必要とする観測・操作を特定し、必要最小限の入口だけを設けます。
+
 ### レビュー時の確認
 
 - 公開APIから可変な内部管理オブジェクトを取得できないか。
@@ -62,6 +90,8 @@ _playerController.ApplyDisplay(inPlayerDisplayState);
 - 表示専用クラスがゲームロジックの保持先・実装を知る必要がない構造になっているか。
 - 受け渡すデータが可変の参照（配列・リストの可変要素を含む）を漏らしていないか。
 - 既存テストの都合だけで実装側に可変オブジェクト公開を追加していないか。
+- 表示ControllerがDriverを直接またはInterface越しに参照していないか。情報がDriver側から表示側へPushされているか。
+- GameplayDriverのpublic APIは本当に通常のランタイムから必要とされるか。Editor検証用APIは製品ビルドから分離されているか。
 
 現在の `GameplayDriver` / `GameplaySimulation` / 表示Controllerなどには、この規約に合わない参照公開が残っています。**この規約PRではルールのみを追加し、実装修正は後続PRとして別途実施します。** 実装済みと誤認しないようにしてください。
 
@@ -74,7 +104,7 @@ private int _score;
 protected float _speed;
 private readonly InputAction _left;
 [SerializeField]
-private GameplayDriver _gameplayDriver;
+private SpriteRenderer _playerRenderer;
 ```
 
 private / protected の field は、`readonly`、`static`、`[SerializeField]` の有無にかかわらず対象です。
@@ -273,7 +303,7 @@ field / const 宣言には既存の「field / const 宣言のグループ内の�
 
 property は、同じ property section 内で「同じ型 × 同じ宣言形式」をひとまとまりのグループとして扱います。同じグループに属する property は連続して配置します。
 
-グループは property の型と宣言形式を組み合わせて分けます。たとえば、`int` + accessor block、`int` + expression-bodied、`IReadOnlyList<InvaderSlot>` + accessor block は、それぞれ別グループです。
+グループは property の型と宣言形式を組み合わせて分けます。たとえば、`int` + accessor block、`int` + expression-bodied、`IReadOnlyList<int>` + accessor block は、それぞれ別グループです。
 
 同じ property section 内で、異なる property グループ同士は空行1行で区切ります。グループ判定は既存規約どおり「同じ型 × 同じ宣言形式」とし、同じグループ内には空行を入れません。
 
@@ -290,7 +320,7 @@ public int AliveCount { get; private set; } = Rows * Columns;
 
 public int AnimationFrame => StepCount % 2;
 
-public IReadOnlyList<InvaderSlot> Invaders { get; }
+public IReadOnlyList<int> Invaders { get; }
 ```
 
 ### property section と並び替えの範囲
