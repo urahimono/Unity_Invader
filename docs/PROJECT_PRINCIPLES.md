@@ -20,7 +20,10 @@
 
 - クラスが所有する可変の管理オブジェクト・ゲームモデルの実体を、公開Getter・property・メソッド戻り値で外部へ横流ししません。読み取り専用のGetterでも、返した参照先の変更を禁止できるわけではありません。
 - 呼び出し側が他クラスの内部オブジェクトをGetterで辿って、そこからさらに状態取得・操作する連鎖アクセスを禁止します。必要な操作は責務を持つ所有者に意図を伝えるメソッドとして提供します。
-- 表示側のControllerは、GameplayDriverやGameplaySimulationの内部を参照・探索しません。必要な表示情報は責務側から値または実体を公開しない不変の表示データとして一方向に渡し、表示側は描画へ反映するだけにします。
+- `PlayerController`・`InvaderFormationController`などの表示Controllerは、`GameplayDriver`・`GameplaySimulation`への参照を保持・検索・取得しません。型をInterfaceへ置き換えても実体が`GameplayDriver`であれば、この禁止を回避したことにはなりません。
+- `GameplayDriver`が必要な表示Controllerを参照し、進行後に必要な表示情報だけを一方向に渡す（Push）構造を基本とします。表示Controllerは値、または可変モデル参照を含まない不変の表示用データを受け取り、描画へ反映するだけにします。
+- `GameplayDriver`のState・Simulation・状態遷移操作はゲーム進行の内部責務であり、通常のランタイム向けpublic Getterや操作メソッドを原則設けません。外部から必要とされる場合は、公開前に責務と依存方向を再検討します。
+- Editor検証の都合でランタイム向け公開APIを増やしません。検証用の読み取り・操作は必要最小限に絞り、`Editor/`配下の専用コードや`#if UNITY_EDITOR`等で製品ビルドから分離します。`UNITY_EDITOR`はEditorのPlay Modeでも有効なため、分離だけでなく通常のランタイム処理からそのAPIを呼ばない設計を守ります。
 - 単純な値型・enumの読み取りpropertyまで一律に禁止するものではありません。公開APIの妥当性は、内部参照の漏出、責務、依存方向に照らして判断します。具体的なNG/OK例とレビュー基準は [CODE_STYLE.md](CODE_STYLE.md) を参照します。
 
 ## 必要最小限の設計と共有
