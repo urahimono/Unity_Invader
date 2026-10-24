@@ -72,7 +72,7 @@ namespace UnityInvader.Editor
             sharedEdge.Advance(0, true, _fire);
             Require(sharedEdge.Score == 10, "A frame without a tick must not evaluate collision/score.");
 
-            var all      = new GameplaySimulation();
+            var all = new GameplaySimulation();
             for (int row = 4; row >= 0; row--)
             {
                 for (int column = 0; column < 11; column++)

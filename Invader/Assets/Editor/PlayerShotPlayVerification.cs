@@ -18,7 +18,7 @@ namespace UnityInvader.Editor
         private static          double              _deadline;
         private static          double              _nextCheck;
         private static          PlayerController    _player;
-        private static          GameplayDriver      _state;
+        private static          GameplayDriver      _gameplayDriver;
         private static          SpriteRenderer      _renderer;
         private static readonly GameState[]         _pausedStates = {
             GameState.Attract, GameState.PlayerReady, GameState.PlayerDead, GameState.WaveClear, GameState.GameOver
@@ -62,10 +62,10 @@ namespace UnityInvader.Editor
                     {
                         return;
                     }
-                    _player = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
-                    _state  = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
-                    Require(_player != null && _state != null, "Player/State missing.");
-                    if (_state.CurrentState != GameState.Playing)
+                    _player         = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
+                    _gameplayDriver = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
+                    Require(_player != null && _gameplayDriver != null, "Player/GameplayDriver missing.");
+                    if (_gameplayDriver.CurrentState != GameState.Playing)
                     {
                         return;
                     }
@@ -100,7 +100,7 @@ namespace UnityInvader.Editor
                     }
                     else
                     {
-                        _state.ChangeState(GameState.Playing);
+                        _gameplayDriver.ChangeState(GameState.Playing);
                         _stage     = 3;
                         _nextCheck = EditorApplication.timeSinceStartup + 0.04;
                     }
@@ -156,7 +156,7 @@ namespace UnityInvader.Editor
 
         private static void Pause()
         {
-            _state.ChangeState(_pausedStates[_stateIndex]);
+            _gameplayDriver.ChangeState(_pausedStates[_stateIndex]);
             _pausedY   = _player.Shot.Y;
             _nextCheck = EditorApplication.timeSinceStartup + 0.1;
         }

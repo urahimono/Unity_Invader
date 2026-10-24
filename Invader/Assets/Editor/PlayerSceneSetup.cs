@@ -39,9 +39,9 @@ namespace UnityInvader.Editor
             importer.SaveAndReimport();
 
             var scene  = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
-            var state  = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
+            var driver = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
             var camera = Camera.main;
-            if (state == null || camera == null)
+            if (driver == null || camera == null)
             {
                 throw new InvalidOperationException("Arcade foundation missing.");
             }
@@ -72,7 +72,7 @@ namespace UnityInvader.Editor
                 controller = player.AddComponent<PlayerController>();
             }
             var serialized                                                  = new SerializedObject(controller);
-            serialized.FindProperty("_gameplayDriver").objectReferenceValue = state;
+            serialized.FindProperty("_gameplayDriver").objectReferenceValue = driver;
             serialized.FindProperty("_playerRenderer").objectReferenceValue = renderer;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             PlayingSceneSetup.ConfigureInScene();

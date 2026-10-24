@@ -14,7 +14,7 @@ namespace UnityInvader.Editor
         private static double                     _nextCheck;
         private static double                     _deadline;
         private static InvaderFormationController _controller;
-        private static GameplayDriver             _state;
+        private static GameplayDriver             _gameplayDriver;
         private static PlayerController           _player;
         private static int                        _pausedStep;
         private static int                        _pausedX;
@@ -71,11 +71,11 @@ namespace UnityInvader.Editor
                     {
                         return;
                     }
-                    _controller = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
-                    _state      = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
-                    _player     = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
-                    Require(_controller != null && _player != null && _state != null, "Arcade components missing.");
-                    if (_state.CurrentState != GameState.Playing)
+                    _controller     = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
+                    _gameplayDriver = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
+                    _player         = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
+                    Require(_controller != null && _player != null && _gameplayDriver != null, "Arcade components missing.");
+                    if (_gameplayDriver.CurrentState != GameState.Playing)
                     {
                         return;
                     }
@@ -114,7 +114,7 @@ namespace UnityInvader.Editor
                     }
                     else
                     {
-                        _state.ChangeState(GameState.Playing);
+                        _gameplayDriver.ChangeState(GameState.Playing);
                         _stage     = 5;
                         _nextCheck = EditorApplication.timeSinceStartup + 0.5;
                     }
@@ -137,7 +137,7 @@ namespace UnityInvader.Editor
         private static void BeginPausedState()
         {
             var states = new[] { GameState.Attract, GameState.PlayerReady, GameState.PlayerDead, GameState.WaveClear, GameState.GameOver };
-            _state.ChangeState(states[_stateIndex]);
+            _gameplayDriver.ChangeState(states[_stateIndex]);
             _pausedStep = _controller.Formation.StepCount;
             _pausedX    = _controller.Formation.X;
             _pausedY    = _controller.Formation.Y;
