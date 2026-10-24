@@ -8,6 +8,7 @@ if errorlevel 1 goto root_error
 set "repoRoot=%CD%"
 set "projectPath=%repoRoot%\Invader"
 set "statusFile="
+set "otherStatusFile="
 
 echo [INFO] Repository: "%repoRoot%"
 git --version
@@ -22,7 +23,37 @@ rem Capture status separately so a Git failure cannot look like a clean tree.
 set "statusFile=%TEMP%\LaunchDevelopUnity-%RANDOM%-%RANDOM%.tmp"
 git status --porcelain=v1 --untracked-files=all > "%statusFile%"
 if errorlevel 1 goto git_error
+for %%F in ("%statusFile%") do if %%~zF GTR 0 goto check_project_settings
+goto status_clean
+
+:check_project_settings
+rem Only these three Unity-generated ProjectSettings may be automatically restored.
+rem Preserve their edits in git stash first; do not touch staged or unrelated changes.
+git diff --cached --quiet
+if errorlevel 1 goto dirty_error
+set "otherStatusFile=%TEMP%\LaunchDevelopUnity-other-%RANDOM%-%RANDOM%.tmp"
+git status --porcelain=v1 --untracked-files=all -- . ^
+    ":(exclude)Invader/ProjectSettings/Packages/com.unity.learn.iet-framework/Settings.json" ^
+    ":(exclude)Invader/ProjectSettings/ProjectAuditorSettings.asset" ^
+    ":(exclude)Invader/ProjectSettings/QualitySettings.asset" > "%otherStatusFile%"
+if errorlevel 1 goto git_error
+for %%F in ("%otherStatusFile%") do if %%~zF GTR 0 goto dirty_error
+del "%otherStatusFile%"
+set "otherStatusFile="
+
+echo [INFO] Only the three allowed Unity ProjectSettings files are modified.
+echo [INFO] Saving their local edits in git stash before restoring them...
+git stash push -m "LaunchDevelopUnity: Unity ProjectSettings backup" -- ^
+    "Invader/ProjectSettings/Packages/com.unity.learn.iet-framework/Settings.json" ^
+    "Invader/ProjectSettings/ProjectAuditorSettings.asset" ^
+    "Invader/ProjectSettings/QualitySettings.asset"
+if errorlevel 1 goto git_error
+git status --porcelain=v1 --untracked-files=all > "%statusFile%"
+if errorlevel 1 goto git_error
 for %%F in ("%statusFile%") do if %%~zF GTR 0 goto dirty_error
+echo [INFO] Allowed settings are clean; previous edits can be found with git stash list.
+
+:status_clean
 del "%statusFile%"
 set "statusFile="
 
@@ -82,8 +113,9 @@ goto fail
 
 :fail
 if defined statusFile if exist "%statusFile%" del "%statusFile%"
+if defined otherStatusFile if exist "%otherStatusFile%" del "%otherStatusFile%"
 popd
-echo [ERROR] Stopped. No files were discarded or stashed automatically.
+echo [ERROR] Stopped. No changes were discarded; any automatic stash was retained.
 pause
 endlocal
 exit /b 1
