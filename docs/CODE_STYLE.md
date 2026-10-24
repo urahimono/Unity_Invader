@@ -141,6 +141,48 @@ field / const 宣言には既存の「field / const 宣言のグループ内の�
 
 今回の規約追加では既存C#コードを修正しません。既存コードへの適用は、この規約を `develop` へマージした後、別のCodexセッション・後続PRで行います。
 
+## property のグループ化と列揃え
+
+property は、同じ property section 内で「同じ型 × 同じ宣言形式」をひとまとまりのグループとして扱います。同じグループに属する property は連続して配置します。
+
+グループは property の型と宣言形式を組み合わせて分けます。たとえば、`int` + accessor block、`int` + expression-bodied、`IReadOnlyList<InvaderSlot>` + accessor block は、それぞれ別グループです。
+
+accessor block を持つ property は、property 名の後ろへ空白を入れて、同じグループ内の `{` の開始位置を縦に揃えます。型の異なる property を無理に同じ列へ揃える必要はありません。
+
+```csharp
+public int X          { get; private set; } = 32;
+public int Y          { get; private set; } = 208;
+public int Direction  { get; private set; } = 1;
+public int StepCount  { get; private set; }
+public int AliveCount { get; private set; } = Rows * Columns;
+
+public int AnimationFrame => StepCount % 2;
+
+public IReadOnlyList<InvaderSlot> Invaders { get; }
+```
+
+### property section と並び替えの範囲
+
+property section は、method、field、nested type、region 等の構造的な境界で区切られた property のまとまりです。同じ section 内で同じグループの property が離れている場合は、グループ化のために並び替えを許可します。section を越えた移動は要求せず、以下を守ります。
+
+- method を越えて property を移動しません。
+- field を越えて property を移動しません。
+- nested type を越えて property を移動しません。
+- region 等の構造的な境界を越えて移動しません。
+- 属性やコメントと property の結び付きを壊しません。
+- 同じグループ内の property の元の相対順序を維持します。
+- property の型、名前、visibility、accessor、initializer、expression を変更しません。
+
+### expression-bodied property と既存規約との関係
+
+expression-bodied property は、同じ型でも accessor block を持つ property とは別グループとして扱います。たとえば `public int AnimationFrame => StepCount % 2;` は上の accessor block のグループへ混ぜません。expression そのものは変更しません。
+
+field / const 宣言、ローカル変数宣言、単純代入文には、それぞれ既存の列揃え規約をそのまま使用します。今回の規約はそれらの対象や内容を変更するものではありません。
+
+標準の EditorConfig 設定だけでは property のグルーピングや列揃えを正確に表現するのは難しいため、本書を正本とし、今回 `.editorconfig` は変更しません。
+
+今回の規約追加では既存C#コードを修正しません。既存コードへの適用は、この規約を `develop` へマージした後、別のCodexセッション・後続PRで行います。
+
 ## 文の波括弧と本文の改行
 
 `if`、`else`、`for`、`foreach`、`while`、`do`、`using` 文、`lock` は、本文が1文だけの場合でも波括弧を省略しません。本文は波括弧内へ改行して記述し、`if (condition) { DoA(); }` のような1行形式は使用しません。
