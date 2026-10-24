@@ -2,6 +2,69 @@
 
 本書は、このプロジェクトで確定したコード規約を共有するための文書です。規約は今後、合意した項目から段階的に追加します。設計原則・構造・設計判断は既存の PROJECT_PRINCIPLES・ARCHITECTURE・ADR で扱います。
 
+## カプセル化：内部管理オブジェクトの参照公開を禁止する
+
+**管理・ゲームロジック・表示の責務を守るため、所有している可変オブジェクトの参照をGetter・property・メソッド戻り値で外部へ公開しないこと。** `get;` や `private set;` は、返された参照先の不変性を保証しません。
+
+### 禁止する実装
+
+- `GameplayDriver`などの管理クラスが、内部で所有する `GameplaySimulation` や他の可変管理オブジェクトを外部へそのまま返すこと。
+- 他クラスが `_driver.Simulation.Formation.Invaders` のように、複数の内部オブジェクトを辿って状態を取得・変更したり、そのメソッドを呼んだりすること。チェーンをローカル変数や独自Getterに分割しても禁止です。
+- `PlayerController` / `InvaderFormationController` のような表示クラスが、`GameplayDriver`またはゲームモデルを参照・検索して内部状態を取りに行くこと。
+- `IReadOnlyList<T>`や `IReadOnlyCollection<T>`で包んだだけの**可変参照型要素**を、「不変データ」と見なして外部公開すること。
+
+NG（**現状コードに存在する、後続の修正対象となる構造**）:
+
+```csharp
+public GameplaySimulation Simulation { get; } = new GameplaySimulation();
+public PlayerBody Player => _player.Player;
+public PlayerShot Shot => _player.Shot;
+
+// 別のComponent側から内部オブジェクトを辿る
+var formation = _gameplayDriver.Simulation.Formation;
+formation.TryKill(0);
+```
+
+### 原則とする実装
+
+- 何かを**実行**させるときは、所有者が意味のある操作を公開し、その内部で処理を完結させます（Tell, Don't Ask）。
+- 何かを**表示**するときは、所有者・進行担当が必要最小限の値、または可変オブジェクトの参照を含まない不変の表示用データを渡します。表示側は受け取った値をRenderer等へ反映し、ゲーム進行には関与しません。
+- `GameplayDriver`をゲーム進行の唯一の実行入口とし、表示ControllerからDriverやSimulationへの依存を作りません。画面更新の具体的な手段は既存のUnityライフサイクルと同期順序を守り、必要最小限に設計します。
+- `int`、`bool`、`enum`などの値の取得や、不変の値データの公開は、責務・依存方向を壊さない範囲で可能です。**Getter一般やC# propertyそのものの禁止ではありません。**
+
+OK（データを表示側へ渡す方向を示す概念例）:
+
+```csharp
+public readonly struct PlayerDisplayState
+{
+    public int  X       { get; }
+    public int  Y       { get; }
+    public bool Visible { get; }
+
+    public PlayerDisplayState(int inX, int inY, bool inVisible)
+    {
+        X       = inX;
+        Y       = inY;
+        Visible = inVisible;
+    }
+}
+
+// GameplayDriverが表示状態を渡す。PlayerControllerはDriverやSimulationを参照しない。
+_playerController.ApplyDisplay(inPlayerDisplayState);
+```
+
+上記は**設計の例示**であり、`PlayerDisplayState`や `ApplyDisplay` は現時点の実装APIではありません。既存コードの実装をそのまま表すものではありません。
+
+### レビュー時の確認
+
+- 公開APIから可変な内部管理オブジェクトを取得できないか。
+- メソッド内部のローカル変数経由を含め、他クラスの内部構造を辿るアクセスがないか。
+- 表示専用クラスがゲームロジックの保持先・実装を知る必要がない構造になっているか。
+- 受け渡すデータが可変の参照（配列・リストの可変要素を含む）を漏らしていないか。
+- 既存テストの都合だけで実装側に可変オブジェクト公開を追加していないか。
+
+現在の `GameplayDriver` / `GameplaySimulation` / 表示Controllerなどには、この規約に合わない参照公開が残っています。**この規約PRではルールのみを追加し、実装修正は後続PRとして別途実施します。** 実装済みと誤認しないようにしてください。
+
 ## private / protected field の命名
 
 private / protected の field は、先頭に `_` を付けた lowerCamelCase とします。
