@@ -10,6 +10,7 @@ namespace UnityInvader.Editor
     {
         private readonly PlayerLoopSystem _original;
         public int Frames { get; private set; }
+
         public double Elapsed { get; private set; }
 
         public PlayingClockProbe()

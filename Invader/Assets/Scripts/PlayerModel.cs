@@ -12,6 +12,7 @@ namespace UnityInvader
         public const int MaximumX     = ScreenWidth - SpriteSize / 2;
 
         public int X { get; private set; } = ScreenWidth / 2;
+
         public int Y => 24;
 
         public void Tick(PlayerInputState input)

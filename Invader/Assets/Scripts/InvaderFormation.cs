@@ -9,9 +9,12 @@ namespace UnityInvader
     {
         public int Row    { get; }
         public int Column { get; }
+
         public int Id => Row * InvaderFormation.Columns + Column;
+
         public InvaderType Type => Row == 0 ? InvaderType.Top :
             Row < 3 ? InvaderType.Middle : InvaderType.Bottom;
+
         public bool Alive { get; private set; } = true;
 
         public InvaderSlot(int row, int column)
@@ -51,7 +54,9 @@ namespace UnityInvader
         public int Direction  { get; private set; } = 1;
         public int StepCount  { get; private set; }
         public int AliveCount { get; private set; } = Rows * Columns;
+
         public int AnimationFrame => StepCount % 2;
+
         public IReadOnlyList<InvaderSlot> Invaders { get; }
 
         public InvaderFormation()

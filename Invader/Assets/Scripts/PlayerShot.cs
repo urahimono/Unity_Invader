@@ -8,6 +8,7 @@ namespace UnityInvader
         public const int Height       = 4;
         public bool Active    { get; private set; }
         public bool FireReady { get; private set; } = true;
+
         public int X { get; private set; }
         public int Y { get; private set; }
         private bool _pendingFire;

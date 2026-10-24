@@ -11,6 +11,7 @@ namespace UnityInvader
         private GameState _currentState = GameState.Attract;
 
         public GameState CurrentState => _currentState;
+
         public PlayingSimulation Playing { get; } = new PlayingSimulation();
 
         public void ChangeState(GameState nextState)

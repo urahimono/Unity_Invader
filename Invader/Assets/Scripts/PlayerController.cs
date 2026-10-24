@@ -17,6 +17,7 @@ namespace UnityInvader
         private Sprite         _shotSprite;
 
         public PlayerModel Player => Simulation.Player;
+
         public PlayerShot Shot => Simulation.Shot;
 
         private void OnEnable()
