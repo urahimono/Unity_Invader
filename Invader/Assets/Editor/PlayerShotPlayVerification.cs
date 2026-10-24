@@ -11,16 +11,17 @@ namespace UnityInvader.Editor
     // Dedicated batch process; omit -quit. This verifier exits the Editor itself.
     public static class PlayerShotPlayVerification
     {
-        private const           string              SessionKey    = "PlayerShotPlayVerification";
-        private static          int                 _stage;
-        private static          int                 _stateIndex;
-        private static          int                 _pausedY;
-        private static          double              _deadline;
-        private static          double              _nextCheck;
-        private static          PlayerController    _player;
-        private static          GameplayDriver      _gameplayDriver;
-        private static          SpriteRenderer      _renderer;
-        private static readonly GameState[]         _pausedStates = {
+        private static          int              _initialDisplayFrame;
+        private const           string           SessionKey    = "PlayerShotPlayVerification";
+        private static          int              _stage;
+        private static          int              _stateIndex;
+        private static          int              _pausedY;
+        private static          double           _deadline;
+        private static          double           _nextCheck;
+        private static          PlayerController _player;
+        private static          GameplayDriver   _gameplayDriver;
+        private static          SpriteRenderer   _renderer;
+        private static readonly GameState[]      _pausedStates = {
             GameState.Attract, GameState.PlayerReady, GameState.PlayerDead, GameState.WaveClear, GameState.GameOver
         };
 
@@ -62,10 +63,20 @@ namespace UnityInvader.Editor
                     {
                         return;
                     }
+                    // Editor callbacks can observe Start before the first pushed LateUpdate display.
+                    if (_initialDisplayFrame < 0)
+                    {
+                        _initialDisplayFrame = Time.frameCount;
+                        return;
+                    }
+                    if (Time.frameCount <= _initialDisplayFrame + 1)
+                    {
+                        return;
+                    }
                     _player         = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
                     _gameplayDriver = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
                     Require(_player != null && _gameplayDriver != null, "Player/GameplayDriver missing.");
-                    if (_gameplayDriver.CurrentState != GameState.Playing)
+                    if (_gameplayDriver.EditorCapture().CurrentState != GameState.Playing)
                     {
                         return;
                     }
@@ -73,12 +84,11 @@ namespace UnityInvader.Editor
                     var formation = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
                     Require(formation != null && formation.GetComponentsInChildren<SpriteRenderer>().Length == 55,
                         "Formation must retain 55 renderers.");
-                    Require(_player.GetComponent<SpriteRenderer>().enabled, "Player must be visible.");
+                    Require(_player.GetComponent<SpriteRenderer>().enabled, $"Player must be visible: state={_gameplayDriver.EditorCapture().CurrentState}; active={_player.isActiveAndEnabled}; pos={_player.transform.position}; frame={Time.frameCount}; initial={_initialDisplayFrame}.");
                     Require(_player.GetComponentsInChildren<SpriteRenderer>().Length == 2, "Exactly one Shot renderer required.");
                     _renderer = _player.transform.Find("PlayerShot").GetComponent<SpriteRenderer>();
                     Require(!_renderer.enabled, "Inactive shot must be hidden.");
-                    _player.Shot.ReadFire(true);
-                    _player.Shot.Tick(_player.Player);
+                    _gameplayDriver.EditorPrepareShot(_gameplayDriver.EditorCapture().Simulation.Player.X, 32);
                     _stage     = 1;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.04;
                 }
@@ -92,7 +102,7 @@ namespace UnityInvader.Editor
                 else if (_stage == 2)
                 {
                     CheckDisplay(false);
-                    Require(_player.Shot.Active && _player.Shot.Y == _pausedY, "Non-Playing must preserve and stop Shot.");
+                    Require(_gameplayDriver.EditorCapture().Simulation.Shot.Active && _gameplayDriver.EditorCapture().Simulation.Shot.Y == _pausedY, "Non-Playing must preserve and stop Shot.");
                     _stateIndex++;
                     if (_stateIndex < _pausedStates.Length)
                     {
@@ -100,7 +110,7 @@ namespace UnityInvader.Editor
                     }
                     else
                     {
-                        _gameplayDriver.ChangeState(GameState.Playing);
+                        _gameplayDriver.EditorSetState(GameState.Playing);
                         _stage     = 3;
                         _nextCheck = EditorApplication.timeSinceStartup + 0.04;
                     }
@@ -108,7 +118,7 @@ namespace UnityInvader.Editor
                 else
                 {
                     CheckDisplay(true);
-                    Require(_player.Shot.Y > _pausedY, "Shot must resume.");
+                    Require(_gameplayDriver.EditorCapture().Simulation.Shot.Y > _pausedY, "Shot must resume.");
                     Debug.Log("PLAYER_SHOT_PLAY_PASS: Input System arrows/Space press/release; Bootstrap -> Arcade -> Playing; one 1x4 Shot renderer; logical/display conversion; all non-Playing states hidden/stopped/preserved; resume; Player and 55 Formation renderers present.");
                     Finish(0);
                 }
@@ -156,15 +166,15 @@ namespace UnityInvader.Editor
 
         private static void Pause()
         {
-            _gameplayDriver.ChangeState(_pausedStates[_stateIndex]);
-            _pausedY   = _player.Shot.Y;
+            _gameplayDriver.EditorSetState(_pausedStates[_stateIndex]);
+            _pausedY   = _gameplayDriver.EditorCapture().Simulation.Shot.Y;
             _nextCheck = EditorApplication.timeSinceStartup + 0.1;
         }
 
         private static void CheckDisplay(bool inVisible)
         {
             Require(_renderer.enabled == inVisible, "Shot visibility mismatch.");
-            Require(_renderer.transform.position == new Vector3(_player.Shot.X - 112, _player.Shot.Y - 128, 0),
+            Require(_renderer.transform.position == new Vector3(_gameplayDriver.EditorCapture().Simulation.Shot.X - 112, _gameplayDriver.EditorCapture().Simulation.Shot.Y - 128, 0),
                 "Shot logical/display coordinate mismatch.");
         }
 

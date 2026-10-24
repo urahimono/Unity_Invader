@@ -43,7 +43,7 @@ Player移動の確認はBootstrapからPlayし、Gameビューにフォーカス
 射撃はSpaceです。押しっぱなしで再発射しないため、離してから再押下してください。
 ArcadeのGameplayにある `GameplayDriver` の `Development Start Playing` が、開発確認用にGameStateをPlayingへ変更します。
 本来のAttract / Credit / PlayerReady遷移ではありません。このフラグを無効にすればAttractのまま開始します。
-ゲーム全体の実行制御とState・Simulationの保持は `GameplayDriver`、Unity非依存のゲームルールは `GameplaySimulation`、プレイヤー側のまとまりは `PlayerUnit`、自機本体の状態は `PlayerBody`、自機弾は `PlayerShot` が扱います。
+ゲーム全体の実行制御とState・Simulation・表示Controllerの所有は `GameplayDriver`、Unity非依存のゲームルールは `GameplaySimulation`、プレイヤー側のまとまりは `PlayerUnit`、自機本体の状態は `PlayerBody`、自機弾は `PlayerShot` が扱います。
 現在の責務境界、State、論理座標、時間・入力の流れは [Architecture](docs/ARCHITECTURE.md) を参照してください。
 
 ## 素材・Sceneの設定
@@ -105,7 +105,7 @@ GameplayDriverを無効にすると表示側だけでは進まないことも検
 `Unity Invader > Configure Gameplay Driver` はUnity Editor APIでArcadeのGameplayに実行制御を設定します。
 Play検証は自身でEditorを終了するため、専用batchで`-quit`を付けず実行してください。
 GUIでは狙ったInvaderとShotだけが消えること、残った編隊の移動・A/B同期・下降反転、
-左右移動と押しっぱなし禁止・release後再発射を確認してください。Scoreは `GameplayDriver.Simulation.Score` で取得できます。
+左右移動と押しっぱなし禁止・release後再発射を確認してください。Score等の検証値はEditor専用の `GameplayDriver.EditorCapture()` が返す不変スナップショットで確認します。通常ランタイムへSimulationやState操作APIは公開しません。
 
 ## Waveループの検証
 
@@ -118,4 +118,10 @@ Bootstrapから実ControllerでWaveClearへ遷移し、約1秒の停止、Wave 2
 仮想Keyboardの押しっぱなし/release/再押下、同じ55 Rendererの再利用を検証します。
 専用batchで実行し、このPlay検証には `-quit` を付けないでください。
 GUIでは最後の撃破後の停止、55体の再表示、次Waveの操作・射撃・撃破、
-表示重複・位置飛びの有無を確認してください。Score/WaveNumberは論理プロパティで確認できます。
+表示重複・位置飛びの有無を確認してください。Score/WaveNumberはEditor専用スナップショットで確認できます。
+
+## 表示の依存方向と検証
+
+GameplayDriverがStart / LateUpdateから不変の表示値を両ControllerへPushします。表示ControllerはDriverやゲームモデルを参照・検索せず、受信値の反映とRendererの保持・非表示・再Enable時の復帰だけを担当します。55体分の表示バッファとRendererは再利用します。
+
+専用batchの `-executeMethod UnityInvader.Editor.PushDisplayVerification.Verify` は参照方向、SceneのDriver→表示Controller接続、初期化後200回の表示データ生成・Pushでの管理ヒープ割り当て0バイトを確認します。WaveLoop Play検証からも実行します。各Verificationのモデル観測・Fixture操作はEditor専用APIを利用し、可変な内部モデルのGetterは使用しません。Formation Play検証ではDisable / 再Enable時の非表示・復帰・Renderer再利用も確認します。

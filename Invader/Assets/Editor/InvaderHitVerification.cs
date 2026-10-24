@@ -23,56 +23,56 @@ namespace UnityInvader.Editor
         private static void VerifyKillsAndScore()
         {
             var simulation = new GameplaySimulation();
-            Require(simulation.Formation.AliveCount == 55 && simulation.Score == 0, "Initial 55 alive/zero Score required.");
+            Require(simulation.EditorCapture().Formation.AliveCount == 55 && simulation.Score == 0, "Initial 55 alive/zero Score required.");
             Hit(simulation, 4, 0);
-            Require(simulation.Score == 10 && simulation.Formation.AliveCount == 54 && !simulation.Shot.Active,
+            Require(simulation.Score == 10 && simulation.EditorCapture().Formation.AliveCount == 54 && !simulation.EditorCapture().Shot.Active,
                 "Bottom kill must deactivate Shot, decrement count and add 10.");
-            Require(!simulation.Formation.TryKill(44) && simulation.Formation.AliveCount == 54,
+            Require(!simulation.EditorKillInvader(44) && simulation.EditorCapture().Formation.AliveCount == 54,
                 "Repeated kill must not decrement AliveCount.");
             simulation.Advance(2, true, _fire);
-            Require(!simulation.Shot.Active && simulation.Score == 10, "A hit must not re-arm held Fire.");
+            Require(!simulation.EditorCapture().Shot.Active && simulation.Score == 10, "A hit must not re-arm held Fire.");
             simulation.Advance(Tick / 2, true, default);
             simulation.Advance(Tick / 2, true, _fire);
-            Require(simulation.Shot.Active && simulation.Shot.Y == 32, "Release then press must launch again.");
+            Require(simulation.EditorCapture().Shot.Active && simulation.EditorCapture().Shot.Y == 32, "Release then press must launch again.");
 
             var cumulative = new GameplaySimulation();
             Hit(cumulative, 4, 0);
             Hit(cumulative, 2, 0);
             Require(cumulative.Score == 30, "Bottom then Middle must total 30.");
             Hit(cumulative, 0, 0);
-            Require(cumulative.Score == 60 && cumulative.Formation.AliveCount == 52, "Adding Top must total 60 and 52 alive.");
-            Require(cumulative.Formation.Invaders.Count == 55 && cumulative.Formation.Invaders[44].Id == 44 &&
-                cumulative.Formation.Invaders[44].Row == 4 && cumulative.Formation.Invaders[44].Column == 0 &&
-                cumulative.Formation.Invaders[44].Type == InvaderType.Bottom, "Dead slot identity must remain intact.");
+            Require(cumulative.Score == 60 && cumulative.EditorCapture().Formation.AliveCount == 52, "Adding Top must total 60 and 52 alive.");
+            Require(cumulative.EditorCapture().Formation.Invaders.Count == 55 && cumulative.EditorCapture().Formation.Invaders[44].Id == 44 &&
+                cumulative.EditorCapture().Formation.Invaders[44].Row == 4 && cumulative.EditorCapture().Formation.Invaders[44].Column == 0 &&
+                cumulative.EditorCapture().Formation.Invaders[44].Type == InvaderType.Bottom, "Dead slot identity must remain intact.");
             var reference = new InvaderFormation();
             for (int tick = 0; tick < 1203; tick++)
             {
                 reference.Tick();
             }
             cumulative.Advance(20, true, default);
-            Require(SameFormation(cumulative.Formation, reference) && cumulative.Formation.AliveCount == 52 &&
+            Require(SameFormation(cumulative.EditorCapture().Formation, reference.EditorCapture()) && cumulative.EditorCapture().Formation.AliveCount == 52 &&
                 cumulative.Score == 60, "Multiple kills must preserve movement, animation, both edges and fixed bounds.");
 
             var dead = new GameplaySimulation();
             Hit(dead, 4, 0);
             PrepareShot(dead, 32, 140);
             dead.Advance(Tick, true, _fire);
-            Require(dead.Shot.Active && dead.Formation.AliveCount == 54 && dead.Score == 10,
+            Require(dead.EditorCapture().Shot.Active && dead.EditorCapture().Formation.AliveCount == 54 && dead.Score == 10,
                 "Dead bottom slot must not consume Shot or score again.");
             dead.Advance(3 * Tick, true, _fire);
-            Require(!dead.Shot.Active && !dead.Formation.Invaders[33].Alive && dead.Score == 20 &&
-                dead.Formation.AliveCount == 53, "Shot must pass through Dead slot and hit the next Alive slot.");
+            Require(!dead.EditorCapture().Shot.Active && !dead.EditorCapture().Formation.Invaders[33].Alive && dead.Score == 20 &&
+                dead.EditorCapture().Formation.AliveCount == 53, "Shot must pass through Dead slot and hit the next Alive slot.");
 
             var sharedEdge = new GameplaySimulation();
             PrepareShot(sharedEdge, 40, 140);
             sharedEdge.Advance(Tick, true, _fire);
-            Require(!sharedEdge.Formation.Invaders[44].Alive && sharedEdge.Formation.Invaders[45].Alive &&
-                sharedEdge.Formation.AliveCount == 54 && sharedEdge.Score == 10 && !sharedEdge.Shot.Active,
+            Require(!sharedEdge.EditorCapture().Formation.Invaders[44].Alive && sharedEdge.EditorCapture().Formation.Invaders[45].Alive &&
+                sharedEdge.EditorCapture().Formation.AliveCount == 54 && sharedEdge.Score == 10 && !sharedEdge.EditorCapture().Shot.Active,
                 "A 1px Shot crossing two adjacent boxes must kill only the first column.");
             sharedEdge.Advance(0, true, _fire);
             Require(sharedEdge.Score == 10, "A frame without a tick must not evaluate collision/score.");
 
-            var all = new GameplaySimulation();
+            var all      = new GameplaySimulation();
             for (int row = 4; row >= 0; row--)
             {
                 for (int column = 0; column < 11; column++)
@@ -80,9 +80,9 @@ namespace UnityInvader.Editor
                     Hit(all, row, column);
                 }
             }
-            Require(all.Formation.AliveCount == 0 && all.Score == 990, "55 real hits must yield zero alive and 990 Score.");
+            Require(all.EditorCapture().Formation.AliveCount == 0 && all.Score == 990, "55 real hits must yield zero alive and 990 Score.");
             all.Advance(1, true, default);
-            Require(all.WaveClearRequired && all.Formation.StepCount == 2 && all.Formation.Invaders.Count == 55 && all.Score == 990,
+            Require(all.WaveClearRequired && all.EditorCapture().Formation.StepCount == 2 && all.EditorCapture().Formation.Invaders.Count == 55 && all.Score == 990,
                 "Zero alive must preserve slots/Score and stop until the controller starts the next wave.");
         }
 
@@ -90,38 +90,38 @@ namespace UnityInvader.Editor
         {
             var spawn = new GameplaySimulation();
             spawn.Advance(Tick, true, new PlayerInputState(false, true, true));
-            Require(spawn.Player.X == 113 && spawn.Shot.X == 113 && spawn.Shot.Y == 32,
+            Require(spawn.EditorCapture().Player.X == 113 && spawn.EditorCapture().Shot.X == 113 && spawn.EditorCapture().Shot.Y == 32,
                 "Player must move before Shot spawn.");
             spawn.Advance(Tick, true, new PlayerInputState(false, true, true));
-            Require(spawn.Player.X == 114 && spawn.Shot.X == 113 && spawn.Shot.Y == 36,
+            Require(spawn.EditorCapture().Player.X == 114 && spawn.EditorCapture().Shot.X == 113 && spawn.EditorCapture().Shot.Y == 36,
                 "Shared clock must preserve fixed X, 4px/tick and one shot slot.");
 
             var ordering = new GameplaySimulation();
             ordering.Advance(19 * Tick, true, default);
             PrepareShot(ordering, 24, 140);
             ordering.Advance(Tick, true, _fire);
-            Require(ordering.Formation.X == 34 && ordering.Formation.AliveCount == 55 && ordering.Shot.Active,
+            Require(ordering.EditorCapture().Formation.X == 34 && ordering.EditorCapture().Formation.AliveCount == 55 && ordering.EditorCapture().Shot.Active,
                 "Formation must move before collision, leaving the old left edge behind.");
 
             var twoTicks = new GameplaySimulation();
             PrepareShot(twoTicks, 32, 140);
             twoTicks.Advance(1.0 / 30, true, _fire);
-            Require(twoTicks.Formation.AliveCount == 54 && twoTicks.Score == 10 && !twoTicks.Shot.Active,
+            Require(twoTicks.EditorCapture().Formation.AliveCount == 54 && twoTicks.Score == 10 && !twoTicks.EditorCapture().Shot.Active,
                 "First-tick-only overlap must hit even if the second tick would be above the box.");
 
             var verticalEdge = new GameplaySimulation();
             PrepareShot(verticalEdge, 32, 132);
             verticalEdge.Advance(Tick, true, _fire);
-            Require(verticalEdge.Shot.Y == 136 && verticalEdge.Formation.AliveCount == 55,
+            Require(verticalEdge.EditorCapture().Shot.Y == 136 && verticalEdge.EditorCapture().Formation.AliveCount == 55,
                 "Shot top touching box bottom has no positive overlap.");
             verticalEdge.Advance(Tick, true, _fire);
-            Require(verticalEdge.Formation.AliveCount == 54, "The next 4px tick must overlap, without a vertical gap.");
+            Require(verticalEdge.EditorCapture().Formation.AliveCount == 54, "The next 4px tick must overlap, without a vertical gap.");
             foreach (int x in new[] { 23, 201 })
             {
                 var miss = new GameplaySimulation();
                 PrepareShot(miss, x, 140);
                 miss.Advance(Tick, true, _fire);
-                Require(miss.Formation.AliveCount == 55 && miss.Score == 0 && miss.Shot.Active,
+                Require(miss.EditorCapture().Formation.AliveCount == 55 && miss.Score == 0 && miss.EditorCapture().Shot.Active,
                     "Shot outside the left/right box edges must miss.");
             }
         }
@@ -138,13 +138,13 @@ namespace UnityInvader.Editor
                 PrepareShot(simulation, 32, 136);
                 simulation.Advance(Tick / 2, true, _fire);
                 simulation.Advance(100, state == GameState.Playing, new PlayerInputState(false, true));
-                Require(simulation.Player.X == 32 && simulation.Shot.Y == 136 && simulation.Shot.Active &&
-                    !simulation.Shot.FireReady && simulation.Formation.StepCount == 0 && simulation.Score == 0 &&
-                    simulation.Formation.AliveCount == 55, "Non-Playing must stop Player/Shot/Formation/input/collision/Score.");
+                Require(simulation.EditorCapture().Player.X == 32 && simulation.EditorCapture().Shot.Y == 136 && simulation.EditorCapture().Shot.Active &&
+                    !simulation.EditorCapture().Shot.FireReady && simulation.EditorCapture().Formation.StepCount == 0 && simulation.Score == 0 &&
+                    simulation.EditorCapture().Formation.AliveCount == 55, "Non-Playing must stop Player/Shot/Formation/input/collision/Score.");
                 simulation.Advance(Tick / 2, true, _fire);
-                Require(simulation.Score == 0 && simulation.Shot.Y == 136, "Paused fractional time must be discarded.");
+                Require(simulation.Score == 0 && simulation.EditorCapture().Shot.Y == 136, "Paused fractional time must be discarded.");
                 simulation.Advance(Tick / 2, true, _fire);
-                Require(simulation.Score == 10 && simulation.Formation.AliveCount == 54, "Resume must hit on the next full tick.");
+                Require(simulation.Score == 10 && simulation.EditorCapture().Formation.AliveCount == 54, "Resume must hit on the next full tick.");
             }
         }
 
@@ -160,52 +160,40 @@ namespace UnityInvader.Editor
                     simulation.Advance(1.0 / fps, true,
                         new PlayerInputState(phase >= fps / 2, phase < fps / 2, phase < fps / 5));
                 }
-                Require(simulation.Score > 0 && simulation.Formation.AliveCount < 55, "FPS comparison must exercise real hits.");
+                Require(simulation.Score > 0 && simulation.EditorCapture().Formation.AliveCount < 55, "FPS comparison must exercise real hits.");
                 if (reference != null)
                 {
-                    Require(simulation.Player.X == reference.Player.X && simulation.Score == reference.Score &&
-                        simulation.Shot.Active == reference.Shot.Active && simulation.Shot.X == reference.Shot.X &&
-                        simulation.Shot.Y == reference.Shot.Y && simulation.Shot.FireReady == reference.Shot.FireReady &&
-                        simulation.Formation.AliveCount == reference.Formation.AliveCount && SameFormation(simulation.Formation, reference.Formation),
+                    Require(simulation.EditorCapture().Player.X == reference.EditorCapture().Player.X && simulation.Score == reference.Score &&
+                        simulation.EditorCapture().Shot.Active == reference.EditorCapture().Shot.Active && simulation.EditorCapture().Shot.X == reference.EditorCapture().Shot.X &&
+                        simulation.EditorCapture().Shot.Y == reference.EditorCapture().Shot.Y && simulation.EditorCapture().Shot.FireReady == reference.EditorCapture().Shot.FireReady &&
+                        simulation.EditorCapture().Formation.AliveCount == reference.EditorCapture().Formation.AliveCount && SameFormation(simulation.EditorCapture().Formation, reference.EditorCapture().Formation),
                         "30/60/120fps must match all logical state after 1200 ticks.");
                     for (int id = 0; id < 55; id++)
                     {
-                        Require(simulation.Formation.Invaders[id].Alive == reference.Formation.Invaders[id].Alive,
+                        Require(simulation.EditorCapture().Formation.Invaders[id].Alive == reference.EditorCapture().Formation.Invaders[id].Alive,
                             "Every killed ID must match across frame rates.");
                     }
                 }
                 reference = simulation;
-                Debug.Log($"INVADER_HIT_FPS_PASS: fps={fps}; Score={simulation.Score}; Alive={simulation.Formation.AliveCount}; PlayerX={simulation.Player.X}; Shot=({simulation.Shot.X},{simulation.Shot.Y},{simulation.Shot.Active}); Formation=({simulation.Formation.X},{simulation.Formation.Y}); Steps={simulation.Formation.StepCount}");
+                Debug.Log($"INVADER_HIT_FPS_PASS: fps={fps}; Score={simulation.Score}; Alive={simulation.EditorCapture().Formation.AliveCount}; PlayerX={simulation.EditorCapture().Player.X}; Shot=({simulation.EditorCapture().Shot.X},{simulation.EditorCapture().Shot.Y},{simulation.EditorCapture().Shot.Active}); Formation=({simulation.EditorCapture().Formation.X},{simulation.EditorCapture().Formation.Y}); Steps={simulation.EditorCapture().Formation.StepCount}");
             }
         }
 
         // Fixture setup advances individual models without moving Formation; actual assertions use the shared tick.
         internal static void PrepareShot(GameplaySimulation inSimulation, int inX, int inY)
         {
-            Require(!inSimulation.Shot.Active, "Fixture requires an empty Shot slot.");
-            while (inSimulation.Player.X != inX)
-            {
-                inSimulation.Player.Tick(new PlayerInputState(inSimulation.Player.X > inX, inSimulation.Player.X < inX));
-            }
-            inSimulation.Shot.ReadFire(false);
-            inSimulation.Shot.ReadFire(true);
-            inSimulation.Shot.Tick(inSimulation.Player);
-            while (inSimulation.Shot.Y < inY)
-            {
-                inSimulation.Shot.Tick(inSimulation.Player);
-            }
-            Require(inSimulation.Shot.Y == inY && inSimulation.Shot.Active, "Fixture Y must be a reachable active Shot position.");
+            inSimulation.EditorPrepareShot(inX, inY);
         }
 
         private static void Hit(GameplaySimulation inSimulation, int inRow, int inColumn)
         {
             int id = inRow * 11 + inColumn;
-            PrepareShot(inSimulation, inSimulation.Formation.X + inColumn * 16, inSimulation.Formation.Y - inRow * 16 - 8);
+            PrepareShot(inSimulation, inSimulation.EditorCapture().Formation.X + inColumn * 16, inSimulation.EditorCapture().Formation.Y - inRow * 16 - 8);
             inSimulation.Advance(Tick, true, _fire);
-            Require(!inSimulation.Formation.Invaders[id].Alive && !inSimulation.Shot.Active, "Expected target must die and consume Shot.");
+            Require(!inSimulation.EditorCapture().Formation.Invaders[id].Alive && !inSimulation.EditorCapture().Shot.Active, "Expected target must die and consume Shot.");
         }
 
-        private static bool SameFormation(InvaderFormation inA, InvaderFormation inB)
+        private static bool SameFormation(FormationVerificationState inA, FormationVerificationState inB)
         {
             return inA.X == inB.X && inA.Y == inB.Y && inA.Direction == inB.Direction && inA.StepCount == inB.StepCount &&
                 inA.AnimationFrame == inB.AnimationFrame;

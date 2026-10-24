@@ -10,10 +10,10 @@ namespace UnityInvader.Editor
         public static void Verify()
         {
             var formation = new InvaderFormation();
-            Require(formation.Invaders.Count == 55, "Expected 55 slots.");
+            Require(formation.EditorCapture().Invaders.Count == 55, "Expected 55 slots.");
             for (int id = 0; id < 55; id++)
             {
-                var slot = formation.Invaders[id];
+                var slot = formation.EditorCapture().Invaders[id];
                 Require(slot.Id == id && slot.Row == id / 11 && slot.Column == id % 11, "Slot identity failed.");
                 Require(slot.Type == (id < 11 ? InvaderType.Top : id < 33 ? InvaderType.Middle : InvaderType.Bottom), "Row type failed.");
             }
@@ -47,18 +47,18 @@ namespace UnityInvader.Editor
                 {
                     simulation.Advance(1.0 / fps, true);
                 }
-                Require(simulation.Formation.StepCount == 60 && simulation.Formation.X == 56 &&
-                    simulation.Formation.Y == 184 && simulation.Formation.Direction == -1 &&
-                    simulation.Formation.AnimationFrame == 0, "30/60/120fps results must match after both edges.");
+                Require(simulation.EditorCapture().StepCount == 60 && simulation.EditorCapture().X == 56 &&
+                    simulation.EditorCapture().Y == 184 && simulation.EditorCapture().Direction == -1 &&
+                    simulation.EditorCapture().AnimationFrame == 0, "30/60/120fps results must match after both edges.");
             }
             var paused = new InvaderFormationSimulation();
             paused.Advance(InvaderFormationSimulation.TickDuration / 2, true);
             paused.Advance(100, false);
             paused.Advance(InvaderFormationSimulation.TickDuration / 2, true);
             paused.Advance(19 * InvaderFormationSimulation.TickDuration, true);
-            Require(paused.Formation.StepCount == 0, "Paused time and partial ticks must not carry over.");
+            Require(paused.EditorCapture().StepCount == 0, "Paused time and partial ticks must not carry over.");
             paused.Advance(InvaderFormationSimulation.TickDuration / 2, true);
-            Require(paused.Formation.StepCount == 1, "Resume must advance normally.");
+            Require(paused.EditorCapture().StepCount == 1, "Resume must advance normally.");
             PlayerMovementVerification.Verify();
             Debug.Log("INVADER_FORMATION_LOGIC_PASS: 55 identities/types; 60Hz; 30/60/120fps; A/B; both edges; 8px descent; pause/resume; Player regression.");
         }

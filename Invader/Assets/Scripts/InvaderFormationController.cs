@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -5,57 +6,63 @@ namespace UnityInvader
 {
     public sealed class InvaderFormationController : MonoBehaviour
     {
-        [FormerlySerializedAs("gameState")]
-        [SerializeField]
-        private GameplayDriver      _gameplayDriver;
         // Top A/B, Middle A/B, Bottom A/B.
         [FormerlySerializedAs("frames")]
         [SerializeField]
-        private Sprite[]            _frames           = new Sprite[6];
+        private Sprite[]              _frames           = new Sprite[6];
         [FormerlySerializedAs("spriteMaterial")]
         [SerializeField]
-        private Material            _spriteMaterial;
+        private Material              _spriteMaterial;
         // Preserve the source aspect ratio with the same unit scale for every frame.
         [FormerlySerializedAs("cellDisplayScale")]
         [SerializeField]
-        private Vector2             _cellDisplayScale = Vector2.one;
-        private SpriteRenderer[]    _renderers;
+        private Vector2               _cellDisplayScale = Vector2.one;
+        private SpriteRenderer[]      _renderers;
+        [System.NonSerialized]
+        private InvaderDisplayState[] _display;
 
-        public InvaderFormation Formation => _gameplayDriver.Simulation.Formation;
-
-        private void Awake()
+        public void ApplyDisplay(ReadOnlySpan<InvaderDisplayState> inDisplay)
         {
-            _renderers = new SpriteRenderer[Formation.Invaders.Count];
-            foreach (var slot in Formation.Invaders)
+            if (_renderers == null || _renderers.Length == 0)
             {
-                var instance = new GameObject($"Invader {slot.Id} ({slot.Row},{slot.Column})");
-                instance.transform.SetParent(transform, false);
-                instance.transform.localScale = new Vector3(_cellDisplayScale.x, _cellDisplayScale.y, 1f);
-                var renderer                  = instance.AddComponent<SpriteRenderer>();
-                renderer.sharedMaterial       = _spriteMaterial;
-                _renderers[slot.Id]           = renderer;
+                _renderers  = new SpriteRenderer[inDisplay.Length];
+                for (int id = 0; id < inDisplay.Length; id++)
+                {
+                    var state    = inDisplay[id];
+                    var instance = new GameObject($"Invader {state.Id} ({state.Row},{state.Column})");
+                    instance.transform.SetParent(transform, false);
+                    instance.transform.localScale = new Vector3(_cellDisplayScale.x, _cellDisplayScale.y, 1f);
+                    var renderer                  = instance.AddComponent<SpriteRenderer>();
+                    renderer.sharedMaterial       = _spriteMaterial;
+                    _renderers[id]                = renderer;
+                }
             }
-            ApplyDisplay();
-        }
-
-        // GameplayDriver advances the shared GameplaySimulation in Update.
-        private void LateUpdate()
-        {
-            ApplyDisplay();
-        }
-
-        private void ApplyDisplay()
-        {
-            bool playing = _gameplayDriver.CurrentState == GameState.Playing;
-            foreach (var slot in Formation.Invaders)
+            if (_display == null || _display.Length != inDisplay.Length)
             {
-                var renderer                = _renderers[slot.Id];
-                renderer.enabled            = playing && slot.Alive;
-                renderer.sprite             = _frames[(int)slot.Type * 2 + Formation.AnimationFrame];
-                // Transform is output only. No game rule reads display positions.
-                renderer.transform.position = new Vector3(
-                    Formation.X + slot.Column * InvaderFormation.Spacing - PlayerBody.ScreenWidth / 2f,
-                    Formation.Y - slot.Row * InvaderFormation.Spacing - PlayerBody.ScreenHeight / 2f, 0f);
+                _display = new InvaderDisplayState[inDisplay.Length];
+            }
+            inDisplay.CopyTo(_display);
+            ApplyCachedDisplay();
+        }
+
+        private void OnEnable()
+        {
+            ApplyCachedDisplay();
+        }
+
+        private void ApplyCachedDisplay()
+        {
+            if (_renderers == null || _display == null || _display.Length != _renderers.Length)
+            {
+                return;
+            }
+            for (int id = 0; id < _renderers.Length; id++)
+            {
+                var state                   = _display[id];
+                var renderer                = _renderers[id];
+                renderer.enabled            = isActiveAndEnabled && state.Visible;
+                renderer.sprite             = _frames[(int)state.Type * 2 + state.AnimationFrame];
+                renderer.transform.position = new Vector3(state.DisplayX, state.DisplayY, 0f);
             }
         }
 

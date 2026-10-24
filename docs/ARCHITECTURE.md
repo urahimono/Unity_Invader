@@ -30,7 +30,7 @@ Attract〜GameOverを一台の筐体としてArcade内で扱う設計です。[S
 | WaveClear | 全滅後に通常更新を止め、暫定1秒待機して次Waveへ進む |
 | GameOver | 値のみ。終了表示・セッション終了は未実装 |
 
-[GameplayDriver](../Invader/Assets/Scripts/GameplayDriver.cs) が現在Stateと共有GameplaySimulationを保持し、CurrentStateとSimulationとして公開します。ChangeStateは値の変更だけで、完全な遷移規則の検証や各Stateの処理は持ちません。
+[GameplayDriver](../Invader/Assets/Scripts/GameplayDriver.cs) が現在StateとGameplaySimulationを非公開で所有します。State変更もDriver内部の責務で、通常ランタイムへGetterやChangeState APIを公開しません。完全な遷移規則の検証や未実装Stateの処理を追加したものではありません。
 
 PlayerSelectを独立Stateにせず、Attract中の1P/2P Start入力で参加人数を決める設計方針です。この開始処理自体は未実装です。Creditも独立Stateとして実装していません。
 
@@ -41,27 +41,39 @@ ArcadeのGameplayオブジェクト上のGameplayDriverには開発用 `_develop
 ```mermaid
 flowchart TD
     Input[Unity Input System] --> Reader[PlayerInputReader]
-    Reader -->|PlayerInputState| Driver[GameplayDriver.Update]
+    Reader -->|PlayerInputState| Driver[GameplayDriver.Update / LateUpdate]
     Time[Time.deltaTime] --> Driver
-    Driver -->|CurrentStateを保持 / ChangeState| State[GameState]
-    Driver -->|Advance / StartNextWave| Sim[GameplaySimulation]
-    Sim --> Models[Player / Shot / Formation / Collision / Score / Wave]
-    Driver -->|CurrentStateとSimulationを参照| Views[PlayerController / InvaderFormationController]
-    Models -->|LateUpdateで表示同期| Views
-    Views --> Output[Transform / SpriteRenderer]
+    Driver -->|Stateを非公開で保持・変更| State[GameState]
+    Driver -->|所有 / Advance / StartNextWave / CopyDisplayState| Sim[GameplaySimulation]
+    Sim --> Unit[PlayerUnit owns PlayerBody / PlayerShot]
+    Sim --> Formation[InvaderFormation owns InvaderSlot]
+    Driver -->|LateUpdate: PlayerDisplayStateをPush| PlayerView[PlayerController]
+    Driver -->|LateUpdate: 55個のInvaderDisplayStateをPush| FormationView[InvaderFormationController]
+    PlayerView --> Output[Transform / SpriteRenderer]
+    FormationView --> Output
 ```
 
 | 要素 | 現在の責務 |
 | --- | --- |
-| [GameplayDriver](../Invader/Assets/Scripts/GameplayDriver.cs) | Unity側のゲーム全体の実行制御を担う唯一のドライバ。現在State・共有GameplaySimulationを保持し、ChangeStateでStateを変更する。PlayerInputReaderを所有し、Updateで1描画フレームに1回Advanceする。全滅通知を受けてState変更とWaveClear待機を行う |
-| [GameplaySimulation](../Invader/Assets/Scripts/GameplaySimulation.cs) | Unity非依存。経過時間を60Hz tickへ分解し、Player・Shot・Formation・Collision・Score・Wave番号と次Wave初期化を管理する |
+| [GameplayDriver](../Invader/Assets/Scripts/GameplayDriver.cs) | Unity側のゲーム全体の実行制御を担う唯一のドライバ。現在State・GameplaySimulation・両表示Controllerを非公開で保持し、Stateを内部で変更する。PlayerInputReaderを所有し、Updateで1描画フレームに1回Advanceする。全滅通知を受けてState変更とWaveClear待機を行う。LateUpdateで値の表示データをPushする |
+| [GameplaySimulation](../Invader/Assets/Scripts/GameplaySimulation.cs) | Unity非依存。経過時間を60Hz tickへ分解し、Player・Shot・Formation・Collision・Score・Wave番号と次Wave初期化を管理する。可変モデルは返さず、表示バッファへ不変の値を書き出す |
 | [PlayerUnit](../Invader/Assets/Scripts/PlayerUnit.cs) / [PlayerBody](../Invader/Assets/Scripts/PlayerBody.cs) / [PlayerShot](../Invader/Assets/Scripts/PlayerShot.cs) | Player移動と単一Shotのルール。GameplaySimulationはPlayerUnit.Tickを使う |
 | [InvaderFormation](../Invader/Assets/Scripts/InvaderFormation.cs) / InvaderSlot | 5×11の55slot、Alive、共通位置・方向・移動step・A/Bアニメを保持する。個体ごとに独立移動しない |
-| [PlayerController](../Invader/Assets/Scripts/PlayerController.cs) | PlayerとShotの表示をLateUpdateで同期。Shotの矩形Spriteを実行時生成する。入力・時計・State遷移を担当しない |
-| [InvaderFormationController](../Invader/Assets/Scripts/InvaderFormationController.cs) | Awakeで55個の表示を生成し、LateUpdateで位置・Sprite・表示可否を同期。撃破後も表示オブジェクトを保持し、次Waveでも再利用する |
+| [PlayerController](../Invader/Assets/Scripts/PlayerController.cs) | PlayerDisplayStateを受信してPlayerとShotの表示を同期。Shotの矩形Spriteを初回配信時に生成する。Driver・Simulation・モデルを保持も検索もしない |
+| [InvaderFormationController](../Invader/Assets/Scripts/InvaderFormationController.cs) | 初回配信で55個の表示を生成し、InvaderDisplayStateの値だけから位置・Sprite・表示可否を同期。Driver・Simulation・モデルを保持も検索もしない。撃破後・次Wave・再Enableでも同じRendererを再利用する |
 | [ArcadeViewport](../Invader/Assets/Scripts/ArcadeViewport.cs) | カメラ表示領域を224:256に保つ表示側の調整 |
 
 PlayerUnit.Advanceと [InvaderFormationSimulation.Advance](../Invader/Assets/Scripts/InvaderFormationSimulation.cs) は単独モデルの回帰検証用です。実際のPlayingではそれぞれの独立時計を回しません。
+
+### 表示とカプセル化
+
+Driver.Updateで入力・tick・State遷移を進め、Driver.LateUpdateで表示値を生成して両ControllerのApplyDisplayへPushします。初期表示はStartでも配信します。PlayerDisplayStateとInvaderDisplayStateは可変モデル参照を含まないreadonly structです。Driverの55要素バッファとFormation表示側のキャッシュ配列は再利用し、毎フレーム新しい配列・List・InvaderSlotを渡しません。Formationへの配信はReadOnlySpanで同期的に渡し、表示側が自分のバッファへ値コピーします。
+
+表示Controllerは受信値だけをキャッシュし、独自のUpdate / LateUpdateやDriver検索を持ちません。DisableでRendererを隠し、再Enableで最新のキャッシュから表示を復帰します。DriverはDisable時に蓄積時間を破棄して最終表示値を配信し、以後Simulationを進めません。非Playingの表示可否もDriverが渡す値に含めます。
+
+PlayerUnitのBody・Shot、GameplaySimulationのPlayerUnit・Formation、InvaderFormationのSlot配列は非公開です。PlayerUnit.CaptureStateやInvaderFormation.CaptureInvaderは不変の値だけを返し、所有者内部の更新・Collisionと表示生成に使います。単独検証用InvaderFormationSimulationもFormation実体を公開しません。
+
+Editor検証はAssets/Editorから、必要な箇所だけ#if UNITY_EDITORのEditorCapture / EditorSetState / EditorPrepareShot / EditorDeactivateShot / EditorAdvanceFixture等を利用します。観測は値スナップショット（Slotもreadonly structの要素を複製）で、Simulation・Body・Shot・Formationの実体は返しません。通常ランタイム処理はEditor専用APIを呼びません。境界と判断理由は [ADR-0007](adr/0007-push-display-and-encapsulation.md) を参照してください。
 
 ### 時間と入力
 

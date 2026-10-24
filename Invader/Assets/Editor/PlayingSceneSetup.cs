@@ -28,9 +28,11 @@ namespace UnityInvader.Editor
             {
                 throw new InvalidOperationException("Arcade must have only one GameplayDriver.");
             }
-            var controller                                                = controllers.Length == 1 ? controllers[0] : new GameObject("Gameplay").AddComponent<GameplayDriver>();
-            var serialized                                                = new SerializedObject(controller);
-            serialized.FindProperty("_developmentStartPlaying").boolValue = true;
+            var controller                                                       = controllers.Length == 1 ? controllers[0] : new GameObject("Gameplay").AddComponent<GameplayDriver>();
+            var serialized                                                       = new SerializedObject(controller);
+            serialized.FindProperty("_developmentStartPlaying").boolValue        = true;
+            serialized.FindProperty("_playerController").objectReferenceValue    = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
+            serialized.FindProperty("_formationController").objectReferenceValue = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
     }

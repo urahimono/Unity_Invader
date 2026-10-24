@@ -26,23 +26,23 @@ namespace UnityInvader.Editor
                 {
                     simulation.Advance(1.0 / framesPerSecond, true, new PlayerInputState(false, true));
                 }
-                Require(simulation.Player.X == 172, "Expected 60 logical ticks per second.");
+                Require(simulation.CaptureState().Player.X == 172, "Expected 60 logical ticks per second.");
             }
 
             var paused = new PlayerUnit();
             paused.Advance(PlayerUnit.TickDuration / 2, true, new PlayerInputState(true, false));
-            Require(paused.Player.X == 112, "Sub-tick input must not move Player.");
+            Require(paused.CaptureState().Player.X == 112, "Sub-tick input must not move Player.");
             paused.Advance(10, false, new PlayerInputState(true, false));
             paused.Advance(PlayerUnit.TickDuration / 2, true, new PlayerInputState(true, false));
-            Require(paused.Player.X == 112, "Paused time and partial ticks must not carry over.");
+            Require(paused.CaptureState().Player.X == 112, "Paused time and partial ticks must not carry over.");
             paused.Advance(PlayerUnit.TickDuration / 2, true, new PlayerInputState(true, false));
-            Require(paused.Player.X == 111, "Left input must move left.");
+            Require(paused.CaptureState().Player.X == 111, "Left input must move left.");
             paused.Advance(1, true, new PlayerInputState(true, true));
-            Require(paused.Player.X == 171, "Both directions must move right by 60 pixels per second.");
+            Require(paused.CaptureState().Player.X == 171, "Both directions must move right by 60 pixels per second.");
             paused.Advance(10, true, new PlayerInputState(true, false));
-            Require(paused.Player.X == PlayerBody.MinimumX, "Left bound failed.");
+            Require(paused.CaptureState().Player.X == PlayerBody.MinimumX, "Left bound failed.");
             paused.Advance(10, true, new PlayerInputState(false, true));
-            Require(paused.Player.X == PlayerBody.MaximumX, "Right bound failed.");
+            Require(paused.CaptureState().Player.X == PlayerBody.MaximumX, "Right bound failed.");
 
             Debug.Log("PLAYER_MOVEMENT_LOGIC_PASS: 30/60/120fps; 60Hz; pause; Right priority; no input; bounds.");
         }

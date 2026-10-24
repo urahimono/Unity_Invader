@@ -299,7 +299,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 25a78d8c1cf233b49b6fc0b2f70080c1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.PlayerController
-  _gameplayDriver: {fileID: 788391821}
   _playerRenderer: {fileID: 649696648}
 --- !u!212 &649696648
 SpriteRenderer:
@@ -422,6 +421,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.GameplayDriver
   _currentState: 0
   _developmentStartPlaying: 1
+  _playerController: {fileID: 649696647}
+  _formationController: {fileID: 1597011360}
 --- !u!1 &1597011359
 GameObject:
   m_ObjectHideFlags: 0
@@ -451,7 +452,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9dc7f4b53fef65a45b684826cdc5c762, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.InvaderFormationController
-  _gameplayDriver: {fileID: 788391821}
   _frames:
   - {fileID: -506154701, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   - {fileID: -478699213, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
