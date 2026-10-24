@@ -179,16 +179,18 @@ namespace UnityInvader.Prototypes.Physics2DProbe.Editor
         private static void ConfigureRenderer(GameObject inObject, Sprite inSprite, Material inMaterial,
             Vector2 inSize, Color inColor)
         {
-            var renderer        = inObject.GetComponent<SpriteRenderer>();
-            if (renderer == null)
-            {
-                renderer = inObject.AddComponent<SpriteRenderer>();
-            }
+            // Scale only the visual child so the root Collider2D keeps its configured dimensions.
+            var visual = new GameObject("Visual");
+            visual.transform.SetParent(inObject.transform, false);
+            var renderer = visual.AddComponent<SpriteRenderer>();
+
             renderer.sprite         = inSprite;
             renderer.sharedMaterial = inMaterial;
-            renderer.drawMode       = SpriteDrawMode.Sliced;
-            renderer.size           = inSize;
+            renderer.drawMode       = SpriteDrawMode.Simple;
             renderer.color          = inColor;
+
+            var spriteSize              = inSprite.bounds.size;
+            visual.transform.localScale = new Vector3(inSize.x / spriteSize.x, inSize.y / spriteSize.y, 1f);
         }
 
         private static Physics2DProbeFormation CreateFormation(string inName, Transform inParent,

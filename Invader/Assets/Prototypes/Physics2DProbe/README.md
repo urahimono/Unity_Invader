@@ -16,7 +16,9 @@
    - 単色正方形の `ProbeSquare.png`（生成画像。元ゲームの素材は不使用）
 4. 生成後は同じメニュー、またはProjectウィンドウの `Physics2DProbe.unity` のダブルクリックで開けます。既存Sceneがあれば開くだけなので、Inspectorでの調整を上書きしません。
 
-Build Settingsには追加せず、本編Scene・ProjectSettings・Packageは変更しません。生成物を共有する場合は、それぞれUnityが生成した `.meta` も一緒に管理してください。
+Build Settingsには追加せず、本編Scene・ProjectSettings・Packageは変更しません。`Generated/` 内のScene・Prefab・画像・各 `.meta` と、フォルダー自身の `Generated.meta` は、一時的な試作の生成物として `.gitignore` で除外します。Gitへ追加せず、各環境でメニューから生成してください。これらの生成物は `git status` の未追跡ファイルに出ないため、`LaunchDevelopUnity.bat` の未追跡ファイルチェックを妨げません。
+
+以前の生成物がある場合は、Play Modeを停止し、Projectウィンドウで `Generated` フォルダーを削除してから生成メニューを再実行してください（Inspectorでの調整も初期化されます）。メニューは既存Scene・Prefabを上書きしないため、表示方式の修正を反映するには再生成が必要です。
 
 ## 操作と期待結果
 
@@ -37,6 +39,7 @@ Consoleには `PHYSICS2D_PROBE_DEFEAT` と生存数・通知回数が出ます�
 
 - Invader Prefab：`Physics2DProbeInvader`、`BoxCollider2D`（サイズ1×1、Triggerオフ）、`SpriteRenderer`。
 - Shot Prefab：`Physics2DProbeShot`（Speed 4、Lifetime 3秒）、`Rigidbody2D`（Dynamic、Gravity Scale 0、回転固定、Discrete）、`BoxCollider2D`（0.35×0.6、Triggerオン）、`SpriteRenderer`。
+- 実際の表示は両Prefabの子 `Visual` の `SpriteRenderer`（Simple）です。Borderや9-sliceには依存せず、Spriteの元寸法から子のScaleを計算して、Invaderは1×1、Shotは0.35×0.6のCollider寸法に合わせます。Colliderを持つ親のScaleは変更しません。Invaderの親に必須Componentとして残る `SpriteRenderer` はSprite未設定で、表示には使いません。
 - Formation：Invader Prefabと生成位置配列。左は1点、右はx=-0.5/+0.5の2点。Reset後に反映されます。
 - Arena：両Formation、Shot Prefab、発射位置の参照。Prefabの値は次の生成・発射へ反映されます。Play中の変更は通常どおり停止時に失われます。
 - 位置はUnityワールド座標、速度は単位/秒で、Transform/Rigidbody2Dが位置の正です。本編の224×256論理ピクセルとは対応付けていません。
