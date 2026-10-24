@@ -1,6 +1,6 @@
 # ADR-0006: GameplayDriverへゲーム全体の実行制御を統合する
 
-- Status: Accepted
+- Status: Superseded by [ADR-0007](0007-push-display-and-encapsulation.md)
 - Date: 2026-10-24
 
 ## Context

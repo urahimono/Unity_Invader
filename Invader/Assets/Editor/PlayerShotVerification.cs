@@ -14,27 +14,26 @@ namespace UnityInvader.Editor
             var release       = new PlayerInputState(false, false);
             var inactive      = new PlayerUnit();
             inactive.Advance(10, false, fire);
-            Require(!inactive.Shot.Active && inactive.Shot.FireReady, "Non-Playing input must not fire or change the gate.");
+            Require(!inactive.CaptureState().Shot.Active && inactive.CaptureState().Shot.FireReady, "Non-Playing input must not fire or change the gate.");
             var simulation = new PlayerUnit();
-            var shot       = simulation.Shot;
             simulation.Advance(tick, true, new PlayerInputState(false, true, true));
-            Require(shot.Active && shot.X == 113 && shot.Y == 32, "Spawn must use current tick Player X and Y+8.");
+            Require(simulation.CaptureState().Shot.Active && simulation.CaptureState().Shot.X == 113 && simulation.CaptureState().Shot.Y == 32, "Spawn must use current tick Player X and Y+8.");
             simulation.Advance(tick, true, new PlayerInputState(false, true, true));
-            Require(shot.X == 113 && simulation.Player.X == 114 && shot.Y == 36, "Shot X must stay fixed; speed must be 4px/tick.");
+            Require(simulation.CaptureState().Shot.X == 113 && simulation.CaptureState().Player.X == 114 && simulation.CaptureState().Shot.Y == 36, "Shot X must stay fixed; speed must be 4px/tick.");
             simulation.Advance(tick, true, release);
             simulation.Advance(tick, true, fire);
-            Require(shot.Y == 44, "Press while active must not replace the slot.");
+            Require(simulation.CaptureState().Shot.Y == 44, "Press while active must not replace the slot.");
             simulation.Advance(51 * tick, true, fire);
-            Require(shot.Active && shot.Y == 248, "Shot must remain active below upper edge.");
+            Require(simulation.CaptureState().Shot.Active && simulation.CaptureState().Shot.Y == 248, "Shot must remain active below upper edge.");
             simulation.Advance(tick, true, fire);
-            Require(shot.Active && shot.Y == 252, "Shot must remain active at Y=252.");
+            Require(simulation.CaptureState().Shot.Active && simulation.CaptureState().Shot.Y == 252, "Shot must remain active at Y=252.");
             simulation.Advance(tick, true, fire);
-            Require(!shot.Active && shot.Y == 256, "Shot must disappear at the upper edge.");
+            Require(!simulation.CaptureState().Shot.Active && simulation.CaptureState().Shot.Y == 256, "Shot must disappear at the upper edge.");
             simulation.Advance(2, true, fire);
-            Require(!shot.Active && !shot.FireReady, "Held fire must not respawn after disappearance.");
+            Require(!simulation.CaptureState().Shot.Active && !simulation.CaptureState().Shot.FireReady, "Held fire must not respawn after disappearance.");
             simulation.Advance(tick / 2, true, release);
             simulation.Advance(tick / 2, true, fire);
-            Require(shot.Active && shot.X == 114 && shot.Y == 32, "Release between ticks must allow a fresh shot.");
+            Require(simulation.CaptureState().Shot.Active && simulation.CaptureState().Shot.X == 114 && simulation.CaptureState().Shot.Y == 32, "Release between ticks must allow a fresh simulation.CaptureState().Shot.");
             foreach (GameState state in Enum.GetValues(typeof(GameState)))
             {
                 if (state == GameState.Playing)
@@ -42,28 +41,28 @@ namespace UnityInvader.Editor
                     continue;
                 }
                 simulation.Advance(tick / 2, true, fire);
-                int y = shot.Y;
+                int y = simulation.CaptureState().Shot.Y;
                 simulation.Advance(10, state == GameState.Playing, release);
-                Require(shot.Active && shot.Y == y && !shot.FireReady, "Non-Playing must preserve and stop the slot/input state.");
+                Require(simulation.CaptureState().Shot.Active && simulation.CaptureState().Shot.Y == y && !simulation.CaptureState().Shot.FireReady, "Non-Playing must preserve and stop the slot/input state.");
                 simulation.Advance(tick / 2, true, fire);
-                Require(shot.Y == y, "Paused partial time must be discarded.");
+                Require(simulation.CaptureState().Shot.Y == y, "Paused partial time must be discarded.");
                 simulation.Advance(tick / 2, true, fire);
-                Require(shot.Y == y + 4, "Resume must advance one tick.");
+                Require(simulation.CaptureState().Shot.Y == y + 4, "Resume must advance one tick.");
             }
             foreach (int fps in new[] { 30, 60, 120 })
             {
-                var timed = new PlayerUnit();
+                var timed      = new PlayerUnit();
                 for (int frame = 0; frame < fps / 2; frame++)
                 {
                     timed.Advance(1.0 / fps, true, new PlayerInputState(false, true, true));
                 }
-                Require(timed.Shot.Active && timed.Shot.X == 113 && timed.Shot.Y == 148 && timed.Player.X == 142,
+                Require(timed.CaptureState().Shot.Active && timed.CaptureState().Shot.X == 113 && timed.CaptureState().Shot.Y == 148 && timed.CaptureState().Player.X == 142,
                     "30/60/120fps must produce the same 30-tick result.");
                 for (int frame = 0; frame < fps * 2; frame++)
                 {
                     timed.Advance(1.0 / fps, true, fire);
                 }
-                Require(!timed.Shot.Active, "All FPS cases must disappear without held-fire respawn.");
+                Require(!timed.CaptureState().Shot.Active, "All FPS cases must disappear without held-fire respawn.");
             }
             InvaderFormationVerification.Verify();
             Debug.Log("PLAYER_SHOT_LOGIC_PASS: single slot; release gate; fixed X; spawn; 4px/tick; upper edge; all non-Playing states; 30/60/120fps; Player/Formation regression.");

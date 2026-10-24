@@ -10,6 +10,7 @@ namespace UnityInvader.Editor
     // Batch entry point: run without -quit; this verifier exits after Play Mode checks.
     public static class InvaderFormationPlayVerification
     {
+        private static int                        _initialDisplayFrame;
         private static int                        _stage;
         private static double                     _nextCheck;
         private static double                     _deadline;
@@ -49,8 +50,9 @@ namespace UnityInvader.Editor
             {
                 return;
             }
-            _stage    = 0;
-            _deadline = EditorApplication.timeSinceStartup + 60;
+            _stage               = 0;
+            _initialDisplayFrame = -1;
+            _deadline            = EditorApplication.timeSinceStartup + 60;
             EditorApplication.update -= Check;
             EditorApplication.update += Check;
         }
@@ -71,11 +73,21 @@ namespace UnityInvader.Editor
                     {
                         return;
                     }
+                    // Editor callbacks can observe Start before the first pushed LateUpdate display.
+                    if (_initialDisplayFrame < 0)
+                    {
+                        _initialDisplayFrame = Time.frameCount;
+                        return;
+                    }
+                    if (Time.frameCount <= _initialDisplayFrame + 1)
+                    {
+                        return;
+                    }
                     _controller     = UnityEngine.Object.FindAnyObjectByType<InvaderFormationController>();
                     _gameplayDriver = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
                     _player         = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
                     Require(_controller != null && _player != null && _gameplayDriver != null, "Arcade components missing.");
-                    if (_gameplayDriver.CurrentState != GameState.Playing)
+                    if (_gameplayDriver.EditorCapture().CurrentState != GameState.Playing)
                     {
                         return;
                     }
@@ -85,12 +97,21 @@ namespace UnityInvader.Editor
                 else if (_stage == 10)
                 {
                     CheckDisplay(true);
+                    var renderers       = _controller.GetComponentsInChildren<SpriteRenderer>();
+                    var before          = _gameplayDriver.EditorCapture().Simulation;
+                    _controller.enabled = false;
+                    Require(renderers.All(inRenderer => !inRenderer.enabled), "Disabled Formation view must hide every renderer.");
+                    _controller.enabled = true;
+                    CheckDisplay(true);
+                    Require(renderers.SequenceEqual(_controller.GetComponentsInChildren<SpriteRenderer>()) &&
+                        _gameplayDriver.EditorCapture().Simulation.Formation.StepCount == before.Formation.StepCount,
+                        "Re-enabled view must restore cached display, reuse renderers and never tick logic.");
                     VerifyFrameSwitch();
                     Require(_player.GetComponent<SpriteRenderer>().enabled, "Player must remain visible in Playing.");
                     // Step the model to the opposite frame, then let the normal Update display it.
                     for (int tick = 0; tick < InvaderFormation.TicksPerStep; tick++)
                     {
-                        _controller.Formation.Tick();
+                        _gameplayDriver.EditorAdvanceFixture(GameplaySimulation.TickDuration, true, default);
                     }
                     _stage     = 3;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.02;
@@ -105,8 +126,8 @@ namespace UnityInvader.Editor
                 else if (_stage == 4)
                 {
                     CheckDisplay(false);
-                    Require(_controller.Formation.StepCount == _pausedStep && _controller.Formation.X == _pausedX &&
-                        _controller.Formation.Y == _pausedY, "Non-Playing formation must stop.");
+                    Require(_gameplayDriver.EditorCapture().Simulation.Formation.StepCount == _pausedStep && _gameplayDriver.EditorCapture().Simulation.Formation.X == _pausedX &&
+                        _gameplayDriver.EditorCapture().Simulation.Formation.Y == _pausedY, "Non-Playing formation must stop.");
                     _stateIndex++;
                     if (_stateIndex < 5)
                     {
@@ -114,7 +135,7 @@ namespace UnityInvader.Editor
                     }
                     else
                     {
-                        _gameplayDriver.ChangeState(GameState.Playing);
+                        _gameplayDriver.EditorSetState(GameState.Playing);
                         _stage     = 5;
                         _nextCheck = EditorApplication.timeSinceStartup + 0.5;
                     }
@@ -122,7 +143,7 @@ namespace UnityInvader.Editor
                 else
                 {
                     CheckDisplay(true);
-                    Require(_controller.Formation.StepCount > _pausedStep, "Formation must resume in Playing.");
+                    Require(_gameplayDriver.EditorCapture().Simulation.Formation.StepCount > _pausedStep, "Formation must resume in Playing.");
                     Debug.Log("INVADER_FORMATION_PLAY_PASS: Bootstrap -> Arcade -> Playing; 55 renderers; six 480x241 centered sprites; PPU 30; unit scale; A/B-only switching preserves logical/display positions; synchronized display; Player present/visible; all five non-Playing states hidden/stopped; resume. Keyboard input requires GUI verification.");
                     Finish(0);
                 }
@@ -137,10 +158,10 @@ namespace UnityInvader.Editor
         private static void BeginPausedState()
         {
             var states = new[] { GameState.Attract, GameState.PlayerReady, GameState.PlayerDead, GameState.WaveClear, GameState.GameOver };
-            _gameplayDriver.ChangeState(states[_stateIndex]);
-            _pausedStep = _controller.Formation.StepCount;
-            _pausedX    = _controller.Formation.X;
-            _pausedY    = _controller.Formation.Y;
+            _gameplayDriver.EditorSetState(states[_stateIndex]);
+            _pausedStep = _gameplayDriver.EditorCapture().Simulation.Formation.StepCount;
+            _pausedX    = _gameplayDriver.EditorCapture().Simulation.Formation.X;
+            _pausedY    = _gameplayDriver.EditorCapture().Simulation.Formation.Y;
             _nextCheck  = EditorApplication.timeSinceStartup + 0.4;
         }
 
@@ -148,13 +169,13 @@ namespace UnityInvader.Editor
         {
             var renderers = _controller.GetComponentsInChildren<SpriteRenderer>();
             Require(renderers.Length == 55, "Expected exactly 55 generated renderers.");
-            foreach (var slot in _controller.Formation.Invaders)
+            foreach (var slot in _gameplayDriver.EditorCapture().Simulation.Formation.Invaders)
             {
                 var renderer = renderers[slot.Id];
                 Require(renderer.enabled == inVisible, "Visibility mismatch.");
-                Require(renderer.sprite.name == InvaderFormationSceneSetup.FrameNames[(int)slot.Type * 2 + _controller.Formation.AnimationFrame], "Frame/type mismatch.");
-                var expected = new Vector3(_controller.Formation.X + slot.Column * 16 - 112,
-                    _controller.Formation.Y - slot.Row * 16 - 128, 0);
+                Require(renderer.sprite.name == InvaderFormationSceneSetup.FrameNames[(int)slot.Type * 2 + _gameplayDriver.EditorCapture().Simulation.Formation.AnimationFrame], "Frame/type mismatch.");
+                var expected = new Vector3(_gameplayDriver.EditorCapture().Simulation.Formation.X + slot.Column * 16 - 112,
+                    _gameplayDriver.EditorCapture().Simulation.Formation.Y - slot.Row * 16 - 128, 0);
                 Require(renderer.transform.position == expected, "Logical-to-display position mismatch.");
                 Require(renderer.transform.localScale == Vector3.one && renderer.transform.lossyScale == Vector3.one,
                     "Display must use unit scale without non-uniform stretching.");
@@ -166,7 +187,7 @@ namespace UnityInvader.Editor
         private static void VerifyFrameSwitch()
         {
             var sprites   = AssetDatabase.LoadAllAssetsAtPath(InvaderFormationSceneSetup.TexturePath).OfType<Sprite>().ToArray();
-            var formation = _controller.Formation;
+            var formation = _gameplayDriver.EditorCapture().Simulation.Formation;
             int x         = formation.X, y = formation.Y, step = formation.StepCount, direction = formation.Direction;
             var renderers = _controller.GetComponentsInChildren<SpriteRenderer>();
             foreach (var slot in formation.Invaders)

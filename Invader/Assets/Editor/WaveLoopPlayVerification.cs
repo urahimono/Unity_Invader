@@ -12,6 +12,7 @@ namespace UnityInvader.Editor
     // Dedicated batch Editor, without -quit. Fixtures position shots; runtime controller handles transitions.
     public static class WaveLoopPlayVerification
     {
+        private static int                                         _initialDisplayFrame;
         private const  string                                      SessionKey = "WaveLoopPlayVerification";
         private static int                                         _stage, _clearedWave, _pausedX, _pausedSteps;
         private static double                                      _deadline, _clearStarted, _nextCheck;
@@ -25,6 +26,7 @@ namespace UnityInvader.Editor
 
         public static void Verify()
         {
+            PushDisplayVerification.Verify();
             WaveLoopVerification.Verify();
             EditorSceneManager.OpenScene("Assets/Scenes/Bootstrap.unity");
             SessionState.SetBool(SessionKey, true);
@@ -39,8 +41,9 @@ namespace UnityInvader.Editor
             {
                 return;
             }
-            _stage    = _clearedWave = 0;
-            _deadline = EditorApplication.timeSinceStartup + 60;
+            _stage               = _clearedWave = 0;
+            _initialDisplayFrame = -1;
+            _deadline            = EditorApplication.timeSinceStartup + 60;
             EditorApplication.update -= Check;
             EditorApplication.update += Check;
         }
@@ -61,8 +64,18 @@ namespace UnityInvader.Editor
                     {
                         return;
                     }
+                    // Editor callbacks can observe Start before the first pushed LateUpdate display.
+                    if (_initialDisplayFrame < 0)
+                    {
+                        _initialDisplayFrame = Time.frameCount;
+                        return;
+                    }
+                    if (Time.frameCount <= _initialDisplayFrame + 1)
+                    {
+                        return;
+                    }
                     _gameplayDriver = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
-                    if (_gameplayDriver == null || _gameplayDriver.CurrentState != GameState.Playing)
+                    if (_gameplayDriver == null || _gameplayDriver.EditorCapture().CurrentState != GameState.Playing)
                     {
                         return;
                     }
@@ -80,16 +93,16 @@ namespace UnityInvader.Editor
                 else if (_stage == 1)
                 {
                     // Keep the real InputReader holding Space during clear and into the next wave.
-                    _gameplayDriver.Simulation.Shot.Deactivate();
-                    WaveLoopVerification.Clear(_gameplayDriver.Simulation, GameplaySimulation.TickDuration);
-                    _pausedX     = _gameplayDriver.Simulation.Player.X;
-                    _pausedSteps = _gameplayDriver.Simulation.Formation.StepCount;
+                    _gameplayDriver.EditorDeactivateShot();
+                    WaveLoopVerification.Clear(_gameplayDriver, GameplaySimulation.TickDuration);
+                    _pausedX     = _gameplayDriver.EditorCapture().Simulation.Player.X;
+                    _pausedSteps = _gameplayDriver.EditorCapture().Simulation.Formation.StepCount;
                     _clearedWave++;
                     _stage = 2;
                 }
                 else if (_stage == 2)
                 {
-                    if (_gameplayDriver.CurrentState != GameState.WaveClear)
+                    if (_gameplayDriver.EditorCapture().CurrentState != GameState.WaveClear)
                     {
                         return;
                     }
@@ -100,39 +113,39 @@ namespace UnityInvader.Editor
                 }
                 else if (_stage == 3)
                 {
-                    Require(_gameplayDriver.CurrentState == GameState.WaveClear && _gameplayDriver.Simulation.Player.X == _pausedX &&
-                        _gameplayDriver.Simulation.Formation.StepCount == _pausedSteps && _gameplayDriver.Simulation.Score == _clearedWave * 990 &&
-                        !_gameplayDriver.Simulation.Shot.Active && !_gameplayDriver.Simulation.Shot.FireReady, "WaveClear must freeze progress/input/Score.");
+                    Require(_gameplayDriver.EditorCapture().CurrentState == GameState.WaveClear && _gameplayDriver.EditorCapture().Simulation.Player.X == _pausedX &&
+                        _gameplayDriver.EditorCapture().Simulation.Formation.StepCount == _pausedSteps && _gameplayDriver.EditorCapture().Simulation.Score == _clearedWave * 990 &&
+                        !_gameplayDriver.EditorCapture().Simulation.Shot.Active && !_gameplayDriver.EditorCapture().Simulation.Shot.FireReady, "WaveClear must freeze progress/input/Score.");
                     Keys(Key.Space);
                     _stage = 4;
                 }
                 else if (_stage == 4)
                 {
-                    if (_gameplayDriver.CurrentState != GameState.Playing)
+                    if (_gameplayDriver.EditorCapture().CurrentState != GameState.Playing)
                     {
                         return;
                     }
                     Require(Time.timeAsDouble - _clearStarted >= 0.9 && Time.timeAsDouble - _clearStarted < 1.3,
                         "WaveClear must last approximately one second.");
-                    Require(_gameplayDriver.Simulation.WaveNumber == _clearedWave + 1 && _gameplayDriver.Simulation.Formation.AliveCount == 55 &&
-                        _gameplayDriver.Simulation.Score == _clearedWave * 990 && _gameplayDriver.Simulation.Player.X == _pausedX &&
-                        !_gameplayDriver.Simulation.Shot.Active && !_gameplayDriver.Simulation.Shot.FireReady, "Next wave must retain state and block held Fire.");
+                    Require(_gameplayDriver.EditorCapture().Simulation.WaveNumber == _clearedWave + 1 && _gameplayDriver.EditorCapture().Simulation.Formation.AliveCount == 55 &&
+                        _gameplayDriver.EditorCapture().Simulation.Score == _clearedWave * 990 && _gameplayDriver.EditorCapture().Simulation.Player.X == _pausedX &&
+                        !_gameplayDriver.EditorCapture().Simulation.Shot.Active && !_gameplayDriver.EditorCapture().Simulation.Shot.FireReady, "Next wave must retain state and block held Fire.");
                     Require(_view.GetComponentsInChildren<SpriteRenderer>().SequenceEqual(_renderers) && _renderers.Length == 55 &&
                         _renderers.All(inR => inR.enabled), "Reuse exactly the same 55 visible renderers.");
-                    Debug.Log($"WAVE_LOOP_PLAY_WAVE_PASS: Wave={_gameplayDriver.Simulation.WaveNumber}; Score={_gameplayDriver.Simulation.Score}; renderers=55; elapsed={Time.timeAsDouble - _clearStarted}");
+                    Debug.Log($"WAVE_LOOP_PLAY_WAVE_PASS: Wave={_gameplayDriver.EditorCapture().Simulation.WaveNumber}; Score={_gameplayDriver.EditorCapture().Simulation.Score}; renderers=55; elapsed={Time.timeAsDouble - _clearStarted}");
                     Keys();
                     _stage     = 5;
                     _nextCheck = EditorApplication.timeSinceStartup + 0.05;
                 }
                 else if (_stage == 5)
                 {
-                    Require(_gameplayDriver.Simulation.Shot.FireReady, "Release must re-arm.");
+                    Require(_gameplayDriver.EditorCapture().Simulation.Shot.FireReady, "Release must re-arm.");
                     Keys(Key.Space);
                     _stage = 6;
                 }
                 else if (_stage == 6)
                 {
-                    if (_gameplayDriver.Simulation.Shot.Active == false)
+                    if (_gameplayDriver.EditorCapture().Simulation.Shot.Active == false)
                     {
                         return;
                     }

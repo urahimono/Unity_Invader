@@ -23,6 +23,7 @@ ADR（Architecture Decision Record）は、重要なArchitecture判断と、そ�
 | ADR | 判断 |
 | --- | --- |
 | [0006](0006-gameplay-driver-owns-execution-state.md) | GameplayDriverへState・Simulationの保持と実行制御を統合 |
+| [0007](0007-push-display-and-encapsulation.md) | Driverから表示値をPushし、可変モデルを所有者内部に閉じる（0006をSupersede） |
 
 ## 初期記録の根拠
 

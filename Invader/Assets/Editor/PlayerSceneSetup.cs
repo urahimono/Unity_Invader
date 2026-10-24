@@ -61,8 +61,8 @@ namespace UnityInvader.Editor
             {
                 renderer = player.AddComponent<SpriteRenderer>();
             }
-            renderer.sprite           = AssetDatabase.LoadAssetAtPath<Sprite>(texturePath);
-            renderer.sharedMaterial   = AssetDatabase.LoadAssetAtPath<Material>(
+            renderer.sprite         = AssetDatabase.LoadAssetAtPath<Sprite>(texturePath);
+            renderer.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(
                 "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
             renderer.enabled          = false;
             player.transform.position = new Vector3(0f, 24f - PlayerBody.ScreenHeight / 2f, 0f);
@@ -72,7 +72,6 @@ namespace UnityInvader.Editor
                 controller = player.AddComponent<PlayerController>();
             }
             var serialized                                                  = new SerializedObject(controller);
-            serialized.FindProperty("_gameplayDriver").objectReferenceValue = driver;
             serialized.FindProperty("_playerRenderer").objectReferenceValue = renderer;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             PlayingSceneSetup.ConfigureInScene();

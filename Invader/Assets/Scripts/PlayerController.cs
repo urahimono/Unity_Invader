@@ -5,51 +5,50 @@ namespace UnityInvader
 {
     public sealed class PlayerController : MonoBehaviour
     {
-        [FormerlySerializedAs("gameState")]
-        [SerializeField]
-        private GameplayDriver      _gameplayDriver;
         [FormerlySerializedAs("playerRenderer")]
         [SerializeField]
-        private SpriteRenderer      _playerRenderer;
-        private GameplaySimulation Simulation => _gameplayDriver.Simulation;
-        private SpriteRenderer _shotRenderer;
-        private Texture2D      _shotTexture;
-        private Sprite         _shotSprite;
+        private SpriteRenderer     _playerRenderer;
+        private SpriteRenderer     _shotRenderer;
+        private Texture2D          _shotTexture;
+        private Sprite             _shotSprite;
+        [System.NonSerialized]
+        private PlayerDisplayState _display;
+        [System.NonSerialized]
+        private bool               _hasDisplay;
 
-        public PlayerBody Player => Simulation.Player;
-
-        public PlayerShot Shot => Simulation.Shot;
-
-        private void OnEnable()
+        public void ApplyDisplay(PlayerDisplayState inDisplay)
         {
+            _display    = inDisplay;
+            _hasDisplay = true;
             if (_shotRenderer == null)
             {
                 var shotObject = new GameObject("PlayerShot");
                 shotObject.transform.SetParent(transform, false);
                 _shotRenderer = shotObject.AddComponent<SpriteRenderer>();
-                _shotTexture  = new Texture2D(PlayerShot.Width, PlayerShot.Height) { filterMode = FilterMode.Point };
+                _shotTexture  = new Texture2D(inDisplay.ShotWidth, inDisplay.ShotHeight) { filterMode = FilterMode.Point };
                 _shotTexture.SetPixels(new[] { Color.white, Color.white, Color.white, Color.white });
                 _shotTexture.Apply();
-                _shotSprite          = Sprite.Create(_shotTexture, new Rect(0, 0, PlayerShot.Width, PlayerShot.Height), new Vector2(0.5f, 0f), 1);
+                _shotSprite          = Sprite.Create(_shotTexture, new Rect(0, 0, inDisplay.ShotWidth, inDisplay.ShotHeight), new Vector2(0.5f, 0f), 1);
                 _shotRenderer.sprite = _shotSprite;
             }
-            ApplyDisplay();
+            ApplyCachedDisplay();
         }
 
-        private void LateUpdate()
+        private void OnEnable()
         {
-            ApplyDisplay();
+            ApplyCachedDisplay();
         }
 
-        private void ApplyDisplay()
+        private void ApplyCachedDisplay()
         {
-            // Logical origin is bottom-left; Unity origin is the screen center.
-            transform.position               = new Vector3(Player.X - PlayerBody.ScreenWidth / 2f,
-                Player.Y - PlayerBody.ScreenHeight / 2f, 0f);
-            _playerRenderer.enabled          = _gameplayDriver.CurrentState == GameState.Playing;
-            _shotRenderer.transform.position = new Vector3(Shot.X - PlayerBody.ScreenWidth / 2f,
-                Shot.Y - PlayerBody.ScreenHeight / 2f, 0f);
-            _shotRenderer.enabled            = _gameplayDriver.CurrentState == GameState.Playing && Shot.Active;
+            if (_hasDisplay == false)
+            {
+                return;
+            }
+            transform.position               = new Vector3(_display.X, _display.Y, 0f);
+            _playerRenderer.enabled          = isActiveAndEnabled && _display.Visible;
+            _shotRenderer.transform.position = new Vector3(_display.ShotX, _display.ShotY, 0f);
+            _shotRenderer.enabled            = isActiveAndEnabled && _display.ShotVisible;
         }
 
         private void OnDisable()

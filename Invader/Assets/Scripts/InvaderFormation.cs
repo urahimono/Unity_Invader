@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace UnityInvader
 {
@@ -37,16 +36,17 @@ namespace UnityInvader
     // Logical pixels with a bottom-left origin. Placement and timing are provisional.
     public sealed class InvaderFormation
     {
-        public  const int Rows            = 5;
-        public  const int Columns         = 11;
-        public  const int Spacing         = 16;
-        public  const int CellSize        = 16;
-        public  const int HorizontalStep  = 2;
-        public  const int Descent         = 8;
-        public  const int TicksPerStep    = 20;
-        public  const int MinimumX        = CellSize / 2;
-        public  const int MaximumX        = PlayerBody.ScreenWidth - CellSize / 2 - (Columns - 1) * Spacing;
-        private       int _ticksUntilStep = TicksPerStep;
+        public  const    int           Rows            = 5;
+        public  const    int           Columns         = 11;
+        public  const    int           Spacing         = 16;
+        public  const    int           CellSize        = 16;
+        public  const    int           HorizontalStep  = 2;
+        public  const    int           Descent         = 8;
+        public  const    int           TicksPerStep    = 20;
+        public  const    int           MinimumX        = CellSize / 2;
+        public  const    int           MaximumX        = PlayerBody.ScreenWidth - CellSize / 2 - (Columns - 1) * Spacing;
+        private          int           _ticksUntilStep = TicksPerStep;
+        private readonly InvaderSlot[] _invaders       = new InvaderSlot[Rows * Columns];
 
         // X/Y are the center of the top-left slot, not a Unity Transform.
         public int X          { get; private set; } = 32;
@@ -57,24 +57,40 @@ namespace UnityInvader
 
         public int AnimationFrame => StepCount % 2;
 
-        public IReadOnlyList<InvaderSlot> Invaders { get; }
-
         public InvaderFormation()
         {
-            var slots = new InvaderSlot[Rows * Columns];
             for (int row = 0; row < Rows; row++)
             {
                 for (int column = 0; column < Columns; column++)
                 {
-                    slots[row * Columns + column] = new InvaderSlot(row, column);
+                    _invaders[row * Columns + column] = new InvaderSlot(row, column);
                 }
             }
-            Invaders = Array.AsReadOnly(slots);
         }
+
+        public InvaderDisplayState CaptureInvader(int inId, bool inVisible = true)
+        {
+            var slot = _invaders[inId];
+            return new InvaderDisplayState(slot.Id, slot.Row, slot.Column,
+                X + slot.Column * Spacing, Y - slot.Row * Spacing,
+                slot.Type, AnimationFrame, slot.Alive, inVisible);
+        }
+
+#if UNITY_EDITOR
+        public FormationVerificationState EditorCapture()
+        {
+            var invaders = new InvaderDisplayState[_invaders.Length];
+            for (int id = 0; id < invaders.Length; id++)
+            {
+                invaders[id] = CaptureInvader(id);
+            }
+            return new FormationVerificationState(X, Y, Direction, StepCount, AliveCount, AnimationFrame, invaders);
+        }
+#endif
 
         public bool TryKill(int inId)
         {
-            if (Invaders[inId].TryKill() == false)
+            if (_invaders[inId].TryKill() == false)
             {
                 return false;
             }

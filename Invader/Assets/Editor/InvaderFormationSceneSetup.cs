@@ -57,13 +57,13 @@ namespace UnityInvader.Editor
                 string name  = FrameNames[index];
                 rects[index] = new SpriteRect
                 {
-                    name = name,
+                    name     = name,
                     spriteID = existing.FirstOrDefault(inRect => inRect.name == name)?.spriteID ?? GUID.Generate(),
                     // Unity rects start at bottom-left. Exclude source bottom row y=0.
                     rect = new Rect(index % 2 == 0 ? 540 : 1150,
                         1 + (2 - index / 2) * CellHeight, CellWidth, CellHeight),
                     alignment = SpriteAlignment.Center,
-                    pivot = new Vector2(0.5f, 0.5f)
+                    pivot     = new Vector2(0.5f, 0.5f)
                 };
             }
             provider.SetSpriteRects(rects);
@@ -89,18 +89,18 @@ namespace UnityInvader.Editor
                 controller = formation.AddComponent<InvaderFormationController>();
             }
             var serialized                                                  = new SerializedObject(controller);
-            serialized.FindProperty("_gameplayDriver").objectReferenceValue = driver;
             serialized.FindProperty("_spriteMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(
                 "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
-            serialized.FindProperty("_cellDisplayScale").vector2Value       = Vector2.one;
-            var sprites                                                     = AssetDatabase.LoadAllAssetsAtPath(TexturePath).OfType<Sprite>().ToArray();
-            var frames                                                      = serialized.FindProperty("_frames");
-            frames.arraySize                                                = 6;
+            serialized.FindProperty("_cellDisplayScale").vector2Value = Vector2.one;
+            var sprites                                               = AssetDatabase.LoadAllAssetsAtPath(TexturePath).OfType<Sprite>().ToArray();
+            var frames                                                = serialized.FindProperty("_frames");
+            frames.arraySize                                          = 6;
             for (int index = 0; index < 6; index++)
             {
                 frames.GetArrayElementAtIndex(index).objectReferenceValue = sprites.Single(inSprite => inSprite.name == FrameNames[index]);
             }
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            PlayingSceneSetup.ConfigureInScene();
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             InvaderFormationVerification.Verify();
