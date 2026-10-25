@@ -1,63 +1,114 @@
+using UnityEngine;
+
 namespace UnityInvader
 {
-    // One logical shot slot. No Unity objects or collision rules.
-    public sealed class PlayerShot
+    [DisallowMultipleComponent]
+    [RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D))]
+    public sealed class PlayerShot : MonoBehaviour
     {
-        private bool _pendingFire;
+        [SerializeField]
+        private SpriteRenderer _renderer;
 
-        public bool Active    { get; private set; }
-        public bool FireReady { get; private set; } = true;
+        private Rigidbody2D    _body;
+        private bool           _playing;
+        private bool           _resolvingHit;
 
-        public int X { get; private set; }
-        public int Y { get; private set; }
+        public bool InFlight => gameObject.activeSelf;
 
-        public const int SpeedPerTick = 4;
-        public const int Width        = 1;
-        public const int Height       = 4;
+        public  const float Width  = 1f;
+        public  const float Height = 4f;
+        private const float Speed  = 240f * ArcadeViewport.UnitsPerPixel;
 
-        public void Deactivate()
+        private void Awake()
         {
-            Active = false; // A hit must not re-arm Fire.
+            CacheComponents();
         }
 
-        public void ReadFire(bool inPressed)
+        private void OnEnable()
         {
-            if (inPressed == false)
+            ApplyPlayingState();
+        }
+
+        private void FixedUpdate()
+        {
+            CheckScreenExit();
+        }
+
+        private void OnTriggerEnter2D(Collider2D inOther)
+        {
+            if (inOther.TryGetComponent<Invader>(out var invader))
             {
-                FireReady = true;
-                return;
-            }
-            if (FireReady == false)
-            {
-                return;
-            }
-            FireReady = false; // Consume presses even while the slot is occupied.
-            if (Active == false)
-            {
-                _pendingFire = true;
+                ResolveHit(invader);
             }
         }
 
-        public void Tick(PlayerBody inPlayer)
+        private void OnDisable()
         {
-            if (Active)
+            if (_body != null)
             {
-                Y += SpeedPerTick;
-                if (Y >= PlayerBody.ScreenHeight)
-                {
-                    Active = false;
-                }
+                _body.simulated = false;
             }
-            if (_pendingFire)
+        }
+
+        public bool TryLaunch(Vector2 inPosition)
+        {
+            if (_playing == false || InFlight)
             {
-                if (Active == false)
-                {
-                    Active = true;
-                    X      = inPlayer.X;
-                    Y      = inPlayer.Y + 8;
-                }
-                _pendingFire = false;
+                return false;
             }
+            CacheComponents();
+            _body.position     = inPosition;
+            transform.position = inPosition;
+            _resolvingHit      = false;
+            gameObject.SetActive(true);
+            return true;
+        }
+
+        internal void SetPlaying(bool inPlaying)
+        {
+            _playing = inPlaying;
+            CacheComponents();
+            ApplyPlayingState();
+        }
+
+        private void CacheComponents()
+        {
+            if (_body == null)
+            {
+                _body = GetComponent<Rigidbody2D>();
+            }
+        }
+
+        private void ApplyPlayingState()
+        {
+            CacheComponents();
+            bool playing         = _playing && isActiveAndEnabled;
+            _renderer.enabled    = playing;
+            _body.simulated      = playing;
+            _body.linearVelocity = playing ? Vector2.up * Speed : Vector2.zero;
+        }
+
+        private void CheckScreenExit()
+        {
+            if (_playing && _body.position.y >= ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel)
+            {
+                gameObject.SetActive(false);
+            }
+        }
+
+        private void ResolveHit(Invader inInvader)
+        {
+            if (_playing == false || isActiveAndEnabled == false || _resolvingHit)
+            {
+                return;
+            }
+            _resolvingHit = true;
+            if (inInvader.TryReceiveHit())
+            {
+                // Inactive state consumes this reusable shot immediately after an accepted hit.
+                gameObject.SetActive(false);
+            }
+            _resolvingHit = false;
         }
     }
 }

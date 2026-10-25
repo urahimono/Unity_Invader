@@ -1,6 +1,6 @@
 # ADR-0004: Unity依存コードとゲームルールを分離する
 
-- Status: Accepted
+- Status: Superseded by [ADR-0008](0008-component-gameplay.md)
 - Date: 2026-10-23
 
 ## Context

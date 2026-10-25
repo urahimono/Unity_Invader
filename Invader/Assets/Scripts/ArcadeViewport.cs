@@ -7,6 +7,10 @@ namespace UnityInvader
     {
         private Camera _arcadeCamera;
 
+        public const int   ScreenWidth   = 224;
+        public const int   ScreenHeight  = 256;
+        public const float UnitsPerPixel = 0.01f;
+
         private void OnEnable()
         {
             _arcadeCamera = GetComponent<Camera>();
@@ -24,7 +28,7 @@ namespace UnityInvader
             {
                 return;
             }
-            float targetAspect = (float)PlayerBody.ScreenWidth / PlayerBody.ScreenHeight;
+            float targetAspect = (float)ScreenWidth / ScreenHeight;
             float screenAspect = (float)Screen.width / Screen.height;
             if (screenAspect > targetAspect)
             {

@@ -15,7 +15,7 @@ Unityを使用してSpace Invadersの挙動を再現する個人開発・学習�
 
 - Unity Project Root: `Invader/`
 - Unity: `6000.6.4f1`
-- 現在の状態: Bootstrap → Arcadeの起動経路とGameStateの土台に、Playing上のPlayer左右移動、55体のInvaderFormation、単一PlayerShot、論理命中・撃破・Score加算、全滅から次Waveへのループを実装しています。
+- 現在の状態: Bootstrap → Arcadeの起動経路とGameStateの土台に、Playing上のPlayer左右移動、55体の編隊、単一弾、命中・撃破・Score、次WaveをComponent/Physics2Dへ移行中です。下記のEditorメニューによるScene移行が必要です。
 
 Unity Hubから `Invader/` を指定して、上記バージョンのEditorで開いてください。
 
@@ -37,91 +37,48 @@ Unity Hubから `Invader/` を指定して、上記バージョンのEditorで�
 
 Unityのバージョンは更新後の `Invader/ProjectSettings/ProjectVersion.txt` から読み、標準の `C:\Program Files\Unity\Hub\Editor\<version>\Editor\Unity.exe` を使用します。カスタム配置では、環境変数 `UNITY_EDITOR_PATH` に対応バージョンのUnity.exeのフルパスを設定してください（値自体に引用符は含めません）。例: `D:\Unity Editors\6000.6.4f1\Editor\Unity.exe`。バッチ冒頭の設定例でも指定できますが、追跡ファイルの編集は未コミット変更として検出されるため、環境変数の使用を推奨します。
 
-## 操作方法
+## Component版Playingへの移行（Issue #57）
 
-Player移動の確認はBootstrapからPlayし、Gameビューにフォーカスして左右矢印キーを押してください。
-射撃はSpaceです。押しっぱなしで再発射しないため、離してから再押下してください。
-ArcadeのGameplayにある `GameplayDriver` の `Development Start Playing` が、開発確認用にGameStateをPlayingへ変更します。
-本来のAttract / Credit / PlayerReady遷移ではありません。このフラグを無効にすればAttractのまま開始します。
-ゲーム全体の実行制御とState・Simulation・表示Controllerの所有は `GameplayDriver`、Unity非依存のゲームルールは `GameplaySimulation`、プレイヤー側のまとまりは `PlayerUnit`、自機本体の状態は `PlayerBody`、自機弾は `PlayerShot` が扱います。
-現在の責務境界、State、論理座標、時間・入力の流れは [Architecture](docs/ARCHITECTURE.md) を参照してください。
+**この変更の作業環境ではUnityライセンスを利用できず、Arcadeの移行・Prefab生成・Unity Editorコンパイル・Play Modeは未実施です。追跡中のSceneは旧構成です。** コードだけを取得してそのままPlayしても新Componentへの参照は未設定で、Driverは移行を促すエラーを出して停止します。マージ可能・実プレイ確認済みとは扱いません。
 
-## 素材・Sceneの設定
+1. Unity **6000.6.4f1**でこのブランチの `Invader/` を開き、スクリプトのコンパイルを待ちます。
+2. Play停止中に **Unity Invader > Migrate Arcade to Components** を実行します。未保存Sceneには保存確認が出ます。既存Arcadeを開き、Player・InvaderFormation・PlayerShotという3つのルートを置き換えて保存します。これらに手作業の調整があれば、実行前に退避してください。
+3. `Assets/Prefabs/Gameplay/` にPlayer・PlayerShot・InvaderのPrefabと白い弾画像をEditor APIで生成します。既存Prefabは上書きしないため再実行時も調整を保持します。既存DriverのStateと開発用開始フラグは保持し、Score=0・Wave=1へ設定します。Spriteのimport/slicing設定やPackage、ProjectSettings、Bootstrap、SampleSceneは変更しません。
+4. Arcadeを開いたまま **Unity Invader > Verify Component Gameplay Setup** を実行し、`COMPONENT_GAMEPLAY_SETUP_PASS` を確認します。接続・Rigidbody/Collider・カメラ倍率・Missing Scriptを確認するだけで、衝突/入力/Waveのテストではありません。
+5. **Assets/Scenes/Bootstrap.unity** を開いてPlayし、Arcadeへ切り替わることを確認します。Gameplayの `Development Start Playing` が有効ならPlaying、無効ならAttractのままです。開始/リトライ・クレジットの実装は含みません。
 
-画像は指定された `Player.png` を加工せず、全体を16×16論理ピクセル相当に縮小表示しています。
-import設定はSprite / Point / 圧縮なし / Mip Mapsなしです。最終的な画面上の見え方はGameビューで確認してください。
+移行メニューは既存の素材 `Assets/Sprites/Player/Player.png` と `Assets/Sprites/Invader/InvaderSprites.png` のTop/Middle/BottomのA/B（6枚）をそのまま使用します。Playerの全体画像を幅16px相当、Invaderの480×241px・PPU30・Center Pivotを約16×8.03px相当で表示する比率を維持します。画像は追加抽出・加工しません。Shot画像はメニューで生成する単色です。Simple描画と子Visualの倍率を使い、9-slice用Borderには依存しません。
 
-`Unity Invader > Configure Player Movement` は既存ArcadeにPlayerとカメラ設定を適用するEditor APIツールです。
-`Unity Invader > Verify Player Movement Logic` で、30/60/120fps相当での60Hz移動、
-非Playing時の停止・蓄積破棄、左右同時押し、左右端の制限を検証できます。
+本編の生成物はPoCの一時生成物とは異なり、Git除外しません。ローカルで生成・確認したArcade、Prefab、画像と対応する `.meta` は、差分をレビューして同じ作業ブランチへ追加する必要があります。Scene/PrefabのYAMLは直接編集しないでください。作業ツリーが変更されるため、生成後は未コミットのまま `LaunchDevelopUnity.bat` を使わず、まず差分を確認してください。
 
-指定素材 `Assets/Sprites/Invader/InvaderSprites.png` は画像を変更せず、最下部1pxを除く範囲から切り出します。
-全6枚のSprite Rectは480×241px、Center Pivot・Full Rectで統一します。
-A列のX=540、B列のX=1150、YはTop=483、Middle=242、Bottom=1です。
-白い絵の外接矩形による個別トリミングは行いません。PPU=30、共通表示スケール=(1,1)で
-アスペクト比を維持し、Sprite全体は論理16×約8.03pxになります。Formationの間隔・端判定は従来どおりです。
-importはSprite Multiple / Point / 圧縮なし / Mip Mapsなし / NPOTリサイズなし / 最大4096です。
-`Unity Invader > Configure Invader Formation` はUnity Editor APIでimport・slicing・Arcade接続を再適用します。
-既存のSprite IDは名前ごとに保持するため、再実行時も参照が維持されます。
-`Unity Invader > Verify Invader Formation Logic` は55体の構成、A/B同期、両端の下降反転、停止再開と
-30/60/120fps相当の20秒間の同一結果を検証し、既存Playerのロジック検証も実行します。
-batchでは `-executeMethod UnityInvader.Editor.InvaderFormationPlayVerification.Verify` で
-Bootstrap起動、表示参照、480×241px矩形・Center Pivot・PPU 30・等倍表示、A/Bのみの交換での
-論理位置・表示位置の不変、Playerの存在・表示、全非Playing Stateの停止・非表示を検証できます。
-このPlay Mode検証は自らEditorを終了するため、`-quit`を付けず専用のbatchプロセスで実行してください。
-GUIではBootstrapからPlayし、3種類の行配置、A/Bの見た目、端での下降反転とPlayer左右移動を確認してください。
-縦長の歪みとA/B時の左右ぶれが解消した見た目・表示サイズの妥当性はGameビューでの確認事項です。
+## 操作と責務
 
-Sceneは `Assets/Editor/ArcadeSceneSetup.cs` のUnity Editor APIで生成しています。
-`Unity Invader > Create Initial Scenes` はSceneが未作成の場合のみ使用できます。
-既存Sceneの上書きを防ぐため、作成済みのプロジェクトで再実行するとエラーになります。
+Gameビューで左右矢印キーを押すと移動し、Spaceで射撃します。同時発射は1発で、押しっぱなしでは再発射せず、離して再押下が必要です。発射中の押下も消費します。ShotはPlayerの子ではなく、Player移動後もShotのXは一定です。画面上端と命中時に非アクティブ化し、同じShotを次の発射に再利用します。
 
-開発はIssueを起点に、`develop` から `codex/` ブランチを作成し、検証後に `develop` 向けDraft PRでレビューします。作業ルールは [AGENTS.md](AGENTS.md) と [Invader/AGENTS.md](Invader/AGENTS.md) を参照してください。
+DriverがState・Score・Wave待機/進行、Playerが入力・移動・射撃受付、Shotが自身のTriggerと消費、Invaderが自身の撃破/表示、Formationが55体の一斉移動・A/B・生存集計を担当します。GameplaySimulationと旧表示Controller/モデル/スナップショットは廃止しました。[Architecture](docs/ARCHITECTURE.md) と [ADR-0008](docs/adr/0008-component-gameplay.md) が現在の責務の正本です。
 
-## Shotの検証
+1px＝0.01 Unity単位、224×256の画面比率です。速度はPlayer=60px/秒、Shot=240px/秒、Formationは20/60秒ごとに2px、端で8px下降します。既存Fixed Timestep 0.02秒を使い、ProjectSettingsを変更しません。旧60Hz時計・tick順序は維持せず、Triggerの境界・命中タイミングには差があります。同時接触で1発が倒すのは最大1体ですが、左右どちらが先かは保証しません。
 
-`Unity Invader > Verify Player Shot Logic` またはbatchの
-`-executeMethod UnityInvader.Editor.PlayerShotVerification.Verify` で単一スロット、
-release待ち、固定X、4px/tick、上端消滅、非Playing停止、30/60/120fps相当の一致と
-既存Player/Formationの回帰検証を実行できます。
-`-executeMethod UnityInvader.Editor.PlayerShotPlayVerification.Verify` はInput Systemの仮想Keyboardによる
-左右キー・Spaceの押下／release、Bootstrap起動、単一Shot表示と座標変換、全非Playing Stateでの
-非表示・停止・状態保持と再開を検証します。自身でEditorを終了するため`-quit`を付けず、専用batchで実行します。
-GUIではBootstrapからPlayし、Gameビューで左右キーとSpaceを操作してください。
-押しっぱなしで再発射しないこと、離して再押下で発射すること、Player移動中もShotのXが
-固定されること、非Playing時の非表示・停止と、Player/Formationの従来動作を確認してください。
+## ローカルで必要な最小限の確認
 
-## 命中・Scoreの検証
+以下は**未実行の確認手順・期待結果**です。全旧モデルテストの移植や反復実行は行いません。
 
-`Unity Invader > Verify Invader Hit Logic` またはbatchの
-`-executeMethod UnityInvader.Editor.InvaderHitVerification.Verify` でAliveCount、Dead除外、種類別/累積Score、
-1 Shot=1体、命中時Shot非Active・release待ち、tick順、2tick中の一時的な命中、HitBox境界、
-複数撃破後の移動、55体撃破、非Playing停止、30/60/120fpsと既存回帰検証を実行します。
-`-executeMethod UnityInvader.Editor.InvaderHitPlayVerification.Verify` はBootstrapから起動し、
-仮想KeyboardのSpace/左右キーを実際のControllerへ渡して命中・表示・release待ち・再発射、
-非Playing停止/非表示・再開と、生存個体が残る間のPlaying維持を検証します。
-Play検証では単一GameplayDriverを確認し、Player表示を無効にした20描画フレームの各フレームで実測deltaTimeの1回分だけ進むことと、
-GameplayDriverを無効にすると表示側だけでは進まないことも検証します。
-`Unity Invader > Configure Gameplay Driver` はUnity Editor APIでArcadeのGameplayに実行制御を設定します。
-Play検証は自身でEditorを終了するため、専用batchで`-quit`を付けず実行してください。
-GUIでは狙ったInvaderとShotだけが消えること、残った編隊の移動・A/B同期・下降反転、
-左右移動と押しっぱなし禁止・release後再発射を確認してください。Score等の検証値はEditor専用の `GameplayDriver.EditorCapture()` が返す不変スナップショットで確認します。通常ランタイムへSimulationやState操作APIは公開しません。
+| 確認 | 期待結果 |
+| --- | --- |
+| BootstrapからPlay、左右移動・左右同時押し・端 | Arcadeへ遷移し、Playerが動く。右優先、左右端で停止 |
+| Space押しっぱなし→離す→再押下 | 同時1発。押しっぱなしでは再発射しない。飛行中の押下は後から発射されない |
+| Shotが画面上端を越える | 消費され、release後に同じ弾を再発射できる |
+| 5×11個体と移動・A/B・端の下降反転 | Hierarchyに55個のInvader。全体が同期し、画像の比率・位置ぶれが退行しない |
+| Top/Middle/Bottomへ命中 | 命中した1体と弾だけが消える。DriverのScoreが30/20/10増える |
+| 隣接個体の境界へ1発、撃破済み個体へ再発射 | 1発で多重撃破・多重加点しない。対象の優先順位は未保証 |
+| 全55体を撃破 | 累計Score=990、WaveClearで約1秒停止、その後Wave=2・55体復帰。同じ個体/Renderer/Shotを使用し、Player位置とScoreを保持 |
+| 弾の飛行中にPause (Attract)→Resume (Playing) | メニュー **Unity Invader > Component Gameplay** を使用。表示・移動・射撃・物理接触が停止し、位置・弾占有・生死を保持して再開。releaseはPlaying中に確認する |
+| Driverのチェックボックスを無効→有効 | 他Componentだけで進行しない。再有効化で現在Stateに応じて再開 |
+| Player/Formation単体のDisable→Enable | 自身と配下の表示/物理が停止し、復帰時に二重生成しない |
+| 30/60/120fpsなどで短く操作 | 実時間あたりの速度に大きな差がないこと。接触frameや左右優先の厳密一致は保証対象外 |
 
-## Waveループの検証
+ScoreとWave番号はDriver、生存数はFormationのInspectorで確認できます。Play中の `Verify Component Gameplay Setup` は55体と有効状態/生存集計の一致を確認し、Score・Wave・生存数をConsoleへ出します。観測はEditor側のSerializedObjectを使用し、ゲーム操作・接触の成功を自動検証するものではありません。
 
-`Unity Invader > Verify Wave Loop Logic` またはbatchの
-`-executeMethod UnityInvader.Editor.WaveLoopVerification.Verify` は
-30/60/120fps相当で55体を実命中により2Wave撃破し、Wave 1→2→3、累積Score=1980、
-初期化・保持・停止・Fire gateと既存Player/Shot/Formation/Collision回帰を検証します。
-`-executeMethod UnityInvader.Editor.WaveLoopPlayVerification.Verify` は
-Bootstrapから実ControllerでWaveClearへ遷移し、約1秒の停止、Wave 2での撃破とWave 3到達、
-仮想Keyboardの押しっぱなし/release/再押下、同じ55 Rendererの再利用を検証します。
-専用batchで実行し、このPlay検証には `-quit` を付けないでください。
-GUIでは最後の撃破後の停止、55体の再表示、次Waveの操作・射撃・撃破、
-表示重複・位置飛びの有無を確認してください。Score/WaveNumberはEditor専用スナップショットで確認できます。
+旧GameplaySimulation・表示Push・論理モデル専用のEditor検証/設定メニューは削除しました。新メニューは `ComponentGameplayMigration` と `ComponentGameplayVerification` です。移行のバッチ入口は `-executeMethod UnityInvader.Editor.ComponentGameplayMigration.Migrate`（`-batchmode -quit`）、ログはリポジトリの `Logs/` へ指定します。
 
-## 表示の依存方向と検証
-
-GameplayDriverがStart / LateUpdateから不変の表示値を両ControllerへPushします。表示ControllerはDriverやゲームモデルを参照・検索せず、受信値の反映とRendererの保持・非表示・再Enable時の復帰だけを担当します。55体分の表示バッファとRendererは再利用します。
-
-専用batchの `-executeMethod UnityInvader.Editor.PushDisplayVerification.Verify` は参照方向、SceneのDriver→表示Controller接続、初期化後200回の表示データ生成・Pushでの管理ヒープ割り当て0バイトを確認します。WaveLoop Play検証からも実行します。各Verificationのモデル観測・Fixture操作はEditor専用APIを利用し、可変な内部モデルのGetterは使用しません。Formation Play検証ではDisable / 再Enable時の非表示・復帰・Renderer再利用も確認します。
+独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。敵弾・Player死亡/残機・Shield・UFOは追加していません。

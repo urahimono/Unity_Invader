@@ -1,132 +1,83 @@
 # Architecture
 
-本書は現在の実装構造の正本です。Architectureを変更するときは、実コード・Sceneと一致するよう同じPRで本書も更新します。設計の基準は [PROJECT_PRINCIPLES.md](PROJECT_PRINCIPLES.md)、選択理由は [ADR](adr/README.md) に分けます。
+現在のコード構造の正本です。判断基準は [PROJECT_PRINCIPLES](PROJECT_PRINCIPLES.md)、変更理由は [ADR-0008](adr/0008-component-gameplay.md) を参照します。
 
-初回作成時のbaselineはPhase 3完了のdevelop（`c36be6c53df104e9ebf0da0600cd6551c0d42f65`、PR #14マージ後）です。Phase 3の固定資料として保存する文書ではありません。
+## 移行状態と起動
 
-「実装済み」はコード上の構造を示し、原作の厳密な挙動を検証済みという意味ではありません。以下では将来の設計方針と区別します。
+Issue #57でPlayingのコードをComponent/Physics2Dへ移行しました。**作業環境ではUnityライセンスが利用できず、追跡中のArcade Sceneへ移行は未適用、Prefabは未生成、Play Modeは未検証です。** Scene YAMLは編集していません。旧SceneをそのままPlayしても新構造の接続は完成していません。
 
-## Sceneと起動（実装済み）
+ローカルUnityで `Unity Invader > Migrate Arcade to Components` を実行してArcadeとPrefabを保存し、接続確認後にBootstrapから起動します。詳細は [README](../README.md) を参照してください。
 
-Build Settingsの有効Sceneは次の順です。
-
-| Scene | 現在の責務 |
+| Scene | 役割 |
 | --- | --- |
-| [Bootstrap.unity](../Invader/Assets/Scenes/Bootstrap.unity) | [Bootstrap](../Invader/Assets/Scripts/Bootstrap.cs) のStartでArcadeをSingleロードする起点。現状は永続サービスを生成・保持しない |
-| [Arcade.unity](../Invader/Assets/Scenes/Arcade.unity) | GameState、Playingの進行、Player・Shot・Formationの表示、カメラを配置する |
+| Bootstrap | StartでArcadeをSingleロード。今回変更なし |
+| Arcade | Driver、Player、単一Shot、Formation、カメラ。Editorメニューで新構造へ移行する |
+| SampleScene | 既存サンプル。今回変更なし |
 
-Attract〜GameOverをArcade内で扱う設計です。ゲームプレイの対象は1Pのみとし、2P交代・クレジット投入は実装対象外です。[SampleScene](../Invader/Assets/Scenes/SampleScene.unity) は残っていますが、この起動経路には含めません。HighScore保存や設定サービスは未実装です。
+1P専用・クレジットなしです。待機デモ・開始/リトライ・敵弾・Player被弾/残機・Shield・UFO・HighScore保存は未実装です。
 
-## GameState
-
-[GameState](../Invader/Assets/Scripts/GameState.cs) は次の6値です。
-
-| State | 現在の実装範囲 |
-| --- | --- |
-| Attract | 初期値の仮置き。待機デモ・ゲーム開始受付は未実装（Creditは実装対象外） |
-| PlayerReady | 値のみ。開始表示・通常の開始遷移は未実装 |
-| Playing | Player移動、単一Shot、Formation、命中・撃破・Score、全滅検出 |
-| PlayerDead | 値のみ。被弾・死亡・残機は未実装（2P交代は実装対象外） |
-| WaveClear | 全滅後に通常更新を止め、暫定1秒待機して次Waveへ進む |
-| GameOver | 値のみ。終了表示・セッション終了は未実装 |
-
-[GameplayDriver](../Invader/Assets/Scripts/GameplayDriver.cs) が現在StateとGameplaySimulationを非公開で所有します。State変更もDriver内部の責務で、通常ランタイムへGetterやChangeState APIを公開しません。完全な遷移規則の検証や未実装Stateの処理を追加したものではありません。
-
-**今後の仕様方針は1P専用・クレジットなし**です。PlayerSelect・Credit専用Stateや2P用のセッション切替は設けません。ゲーム開始・リトライの具体的な操作とState遷移は未設計・未実装です。
-
-ArcadeのGameplayオブジェクト上のGameplayDriverには開発用 `_developmentStartPlaying` が有効で、Start時にPlayingへ進みます。原作の開始手順ではありません。無効ならAttractのままです。実装済みの通常進行は **Playing → WaveClear → Playing（次Wave）** です。
-
-## Playingの責務と依存
+## Playingの責務
 
 ```mermaid
 flowchart TD
-    Input[Unity Input System] --> Reader[PlayerInputReader]
-    Reader -->|PlayerInputState| Driver[GameplayDriver.Update / LateUpdate]
-    Time[Time.deltaTime] --> Driver
-    Driver -->|Stateを非公開で保持・変更| State[GameState]
-    Driver -->|所有 / Advance / StartNextWave / CopyDisplayState| Sim[GameplaySimulation]
-    Sim --> Unit[PlayerUnit owns PlayerBody / PlayerShot]
-    Sim --> Formation[InvaderFormation owns InvaderSlot]
-    Driver -->|LateUpdate: PlayerDisplayStateをPush| PlayerView[PlayerController]
-    Driver -->|LateUpdate: 55個のInvaderDisplayStateをPush| FormationView[InvaderFormationController]
-    PlayerView --> Output[Transform / SpriteRenderer]
-    FormationView --> Output
+    Input[Input System] --> Reader[PlayerInputReader]
+    Reader --> Player[Player: 入力・移動・射撃受付]
+    Driver[GameplayDriver: State / Score / Wave] -->|SetPlaying| Player
+    Driver -->|SetPlaying / BeginWave| Formation[InvaderFormation: 集団移動・集計]
+    Player -->|TryLaunch / SetPlaying| Shot[PlayerShot: Rigidbody2D / Trigger / 消費]
+    Physics[Unity Physics2D] -->|OnTriggerEnter2D| Shot
+    Shot -->|TryReceiveHit| Invader[Invader: 個体の被弾・撃破・表示]
+    Invader -->|NotifyDefeated| Formation
+    Formation -->|得点・全滅通知| Driver
+    Formation -->|配置・アニメ・再開| Invader
 ```
 
-| 要素 | 現在の責務 |
+| Component | 所有する責務・状態 |
 | --- | --- |
-| [GameplayDriver](../Invader/Assets/Scripts/GameplayDriver.cs) | Unity側のゲーム全体の実行制御を担う唯一のドライバ。現在State・GameplaySimulation・両表示Controllerを非公開で保持し、Stateを内部で変更する。PlayerInputReaderを所有し、Updateで1描画フレームに1回Advanceする。全滅通知を受けてState変更とWaveClear待機を行う。LateUpdateで値の表示データをPushする |
-| [GameplaySimulation](../Invader/Assets/Scripts/GameplaySimulation.cs) | Unity非依存。経過時間を60Hz tickへ分解し、Player・Shot・Formation・Collision・Score・Wave番号と次Wave初期化を管理する。可変モデルは返さず、表示バッファへ不変の値を書き出す |
-| [PlayerUnit](../Invader/Assets/Scripts/PlayerUnit.cs) / [PlayerBody](../Invader/Assets/Scripts/PlayerBody.cs) / [PlayerShot](../Invader/Assets/Scripts/PlayerShot.cs) | Player移動と単一Shotのルール。GameplaySimulationはPlayerUnit.Tickを使う |
-| [InvaderFormation](../Invader/Assets/Scripts/InvaderFormation.cs) / InvaderSlot | 5×11の55slot、Alive、共通位置・方向・移動step・A/Bアニメを保持する。個体ごとに独立移動しない |
-| [PlayerController](../Invader/Assets/Scripts/PlayerController.cs) | PlayerDisplayStateを受信してPlayerとShotの表示を同期。Shotの矩形Spriteを初回配信時に生成する。Driver・Simulation・モデルを保持も検索もしない |
-| [InvaderFormationController](../Invader/Assets/Scripts/InvaderFormationController.cs) | 初回配信で55個の表示を生成し、InvaderDisplayStateの値だけから位置・Sprite・表示可否を同期。Driver・Simulation・モデルを保持も検索もしない。撃破後・次Wave・再Enableでも同じRendererを再利用する |
-| [ArcadeViewport](../Invader/Assets/Scripts/ArcadeViewport.cs) | カメラ表示領域を224:256に保つ表示側の調整 |
+| GameplayDriver | 現在State、Score、Wave番号、WaveClearの暫定1秒待機。全滅通知から遷移し、次Waveを開始する |
+| Player | InputReader、入力値と発射受付、release/再押下ゲート。Transformを移動し、Scene内の単一Shotへ発射を依頼 |
+| PlayerShot | 動的Rigidbody2DとTrigger。自身の接触をInvaderへ渡し、命中成立後に非アクティブ化して消費。画面上端でも消費 |
+| Invader | GameObjectの有効状態による生死、Spriteの2コマ、被弾反応、所属Formationへの一度だけの通知 |
+| InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、集団移動の方向/周期/アニメ位相、生存数の集計。通知からDriverへ得点・全滅を伝える |
+| ArcadeViewport | 224:256の表示領域と論理px→Unity単位の倍率 |
 
-PlayerUnit.Advanceと [InvaderFormationSimulation.Advance](../Invader/Assets/Scripts/InvaderFormationSimulation.cs) は単独モデルの回帰検証用です。実際のPlayingではそれぞれの独立時計を回しません。
+`GameplaySimulation`、`PlayerUnit`、`PlayerBody`、`InvaderSlot`、`InvaderFormationSimulation`、旧表示Controller2種、表示/検証スナップショットは削除しました。互換モデルや旧AABB判定は残しません。管理Componentや配列を返すGetterもありません。
 
-### 表示とカプセル化
+## 状態の正とPrefab
 
-Driver.Updateで入力・tick・State遷移を進め、Driver.LateUpdateで表示値を生成して両ControllerのApplyDisplayへPushします。初期表示はStartでも配信します。PlayerDisplayStateとInvaderDisplayStateは可変モデル参照を含まないreadonly structです。Driverの55要素バッファとFormation表示側のキャッシュ配列は再利用し、毎フレーム新しい配列・List・InvaderSlotを渡しません。Formationへの配信はReadOnlySpanで同期的に渡し、表示側が自分のバッファへ値コピーします。
+位置はPlayerのTransform、ShotとFormationのRigidbody2Dにあります。InvaderはFormation配下のTransformとGameObject有効状態を正とし、別のX/Y・Aliveモデルを持ちません。Formationの `_aliveCount` は個体からの通知で更新する集計値です。Score・Wave番号・生存数のEditor観測にはSerializedObjectを使い、検証用のランタイムGetterは追加しません。
 
-表示Controllerは受信値だけをキャッシュし、独自のUpdate / LateUpdateやDriver検索を持ちません。DisableでRendererを隠し、再Enableで最新のキャッシュから表示を復帰します。DriverはDisable時に蓄積時間を破棄して最終表示値を配信し、以後Simulationを進めません。非Playingの表示可否もDriverが渡す値に含めます。
+Player、Shot、InvaderのPrefabを `Assets/Prefabs/Gameplay/` にEditor APIで生成します。PlayerのShot参照はArcadeのPrefab instance overrideです。ShotはPlayerの子にせず、発射後のXがPlayerの移動へ追従しないようにします。
 
-PlayerUnitのBody・Shot、GameplaySimulationのPlayerUnit・Formation、InvaderFormationのSlot配列は非公開です。PlayerUnit.CaptureStateやInvaderFormation.CaptureInvaderは不変の値だけを返し、所有者内部の更新・Collisionと表示生成に使います。単独検証用InvaderFormationSimulationもFormation実体を公開しません。
+Invaderは5×11個を一度生成し、次Waveでも同じ個体・Rendererを再利用します。行ごとのSpriteは既存のTop/Middle/Bottom A/Bを渡し、画像全体の比率を維持します。表示用の子Visualだけを縮小し、親Colliderの寸法を変えません。ShotもBorder不要のSimple表示です。
 
-Editor検証はAssets/Editorから、必要な箇所だけ#if UNITY_EDITORのEditorCapture / EditorSetState / EditorPrepareShot / EditorDeactivateShot / EditorAdvanceFixture等を利用します。観測は値スナップショット（Slotもreadonly structの要素を複製）で、Simulation・Body・Shot・Formationの実体は返しません。通常ランタイム処理はEditor専用APIを呼びません。境界と判断理由は [ADR-0007](adr/0007-push-display-and-encapsulation.md) を参照してください。
+## 入力・更新・停止
 
-### 時間と入力
+- Player.Update：左右矢印・Spaceを読む。押しっぱなしでは再発射せず、飛行中の押下も消費する。短い押下は次のFixedUpdateまで保持する。
+- Player.FixedUpdate：60px/秒相当で左右移動し、端でclamp。受付済みの発射を行う。左右同時押しは従来どおり右優先。
+- Formation.FixedUpdate：20/60秒ごとに2px横移動。端では8px下降・方向反転し、全個体のA/Bを交換する。
+- Shot：Rigidbody2Dが240px/秒相当で上昇。FixedUpdateで画面上端を確認し、OnTriggerEnter2Dで接触対象を処理する。
+- Driver.Update：WaveClear待機のみ。次Wave開始時にScore、Player位置、Shotの占有状態、releaseゲートを保持し、編隊の位置・方向・生存数・アニメを初期化する。
 
-[PlayerInputReader](../Invader/Assets/Scripts/PlayerInputReader.cs) はInput Systemの左右矢印・Spaceを、Space Invaders専用の [PlayerInputState](../Invader/Assets/Scripts/PlayerInputState.cs)（Left / Right / Fireのbool）へ変換します。ゲーム開始用の入力とGamepad入力は未実装です。クレジット入力は実装対象外です。
+Unityの既存Fixed Timestep（0.02秒）を使い、ProjectSettingsは変更しません。独自60Hz時計や「Player→Shot→Formation→Collision」の旧tick順序は廃止しました。速度・周期は従来相当に換算しますが、接触タイミング・境界・端の到達frameは厳密一致を保証せず、描画FPS別の実測も未確認です。
 
-GameplaySimulationは1/60秒ごとに以下を実行します。1描画フレームで複数tick進む場合も、この順序をtickごとに守ります。
+非Playing・Driver無効時はPlayer移動/射撃とFormation更新を止め、表示とCollider/物理シミュレーションを停止します。既存Shotの位置・占有と個体の生死は保持します。停止時は未実行入力とFormationの経過時間を破棄し、再開時に停止時間を取り戻しません。Player単体のDisableでも自身とShotを、Formation単体のDisableでも配下の表示・物理を停止します。
 
-1. Player移動
-2. Shot発射・移動・画面外処理
-3. Formation移動・A/B更新
-4. 論理Collision・撃破・Score加算・全滅検出
+## 座標・命中・進行
 
-Fireはtick間の入力変化も保持できるよう描画フレームごとに取り込み、発射はtickで処理します。単一ShotがActive中の押下も消費し、再発射にはreleaseと再押下が必要です。
+論理画面は従来どおり224×256です。**1論理px＝0.01 Unity単位**、画面中心がUnity原点です。論理座標との対応は `((x - 112) * 0.01, (y - 128) * 0.01)`。物理速度を小さなUnity単位で扱い、ProjectSettingsの速度制限を変更しません。カメラのOrthographic Sizeは1.28です。
 
-非Playingでは入力取り込みと通常モデル更新を止め、蓄積時間を破棄します。モデルは保持し、Player・Shot・Formationの表示は隠します。WaveClearRequiredが立った場合も残りtickを進めません。
+- Player初期位置：(112,24)、移動範囲x=8〜216、Sprite幅16px。
+- Shot：幅1×高さ4px。位置は下端中央、発射位置はPlayerの8px上、Collider中心は下端から2px上。
+- Formation左上初期位置：(32,208)、間隔16px、Colliderは16×8px。Spriteは既存480×241/PPU30の約16×8.03pxの比率を維持。
+- Score：Top=30、Middle=20、Bottom=10。55体の合計は990。Driverが通知の受理時に加算する。HUDは未実装。
 
-WaveClearの暫定1秒待機とGameState変更はGameplayDriverにあります。Waveのルールすべてが通常C#側に移っているわけではありません。待機終了時にStartNextWaveを呼び、Playingへ戻します。そのフレームは新Formationを初期状態で表示し、進めません。
+Shotが処理中ガードを立ててInvaderに命中を依頼し、Invaderは受理時に直ちにGameObjectを無効化して通知します。Shotも命中成立後に無効化するため、同じ弾の後続通知や同じ個体への別弾は再撃破・再加点しません。最終撃破の通知でDriverは即座に全Componentを停止します。
 
-### 座標・命中・表示
+隣接2体への同時接触は最大1体だけを撃破しますが、どちらが選ばれるかは保証しません。旧独自判定の下段→上段・左→右の優先順位は再現しません。Discrete Triggerと固定物理stepを使うため、高速化時のすり抜け・接触境界の差はローカルで確認が必要です。移動速度・初期位置・WaveClearの1秒等は既存の暫定値を継承しています。
 
-論理画面は **224×256、左下原点**。モデルの論理ピクセル座標が正で、表示時に `(X - 112, Y - 128)` へ変換します。Transformは表示出力であり、ゲームルールへ読み戻しません。PPUやSpriteの表示倍率は表示側の設定です。
+## 検証の範囲
 
-CollisionはGameplaySimulationの論理矩形判定です。Transform、SpriteRenderer.bounds、Unity Physicsは使いません。Aliveだけを下段→上段、各行左→右で判定し、1 Shotは最初の1体だけを撃破します。ScoreはTop=30 / Middle=20 / Bottom=10の整数論理値で、HUDは未実装です。
+旧モデル・旧Push専用のEditor検証と旧設定ツールは削除しました。代わりに接続・物理設定・Missing Script・Play中の55体と生存集計を確認する `Verify Component Gameplay Setup`、Editor限定の一時停止/再開メニュー、READMEの最小限の操作確認を用意しています。接続チェックは衝突やWave進行の成功を意味しません。
 
-移動速度、初期配置、左右端、HitBox、WaveClearの1秒は暫定です。60Hzという更新基盤の採用は、これらの数値や原作の厳密なタイミングを確認したことを意味しません。
-
-## 次の設計見直し候補（未決定・未実装）
-
-本プロジェクトではゲームエンジンの機能を実践的に学ぶことも重視し、現在のUnity非依存モデル・60Hz論理tick・表示ControllerへのPush方式を唯一の正解とは扱いません。一方、**現在の実装がこれらの方式で動いている事実は変わりません**。
-
-今後、`Invader`個体のGameObject/Component化、Prefabによる管理、Physics2Dと独自当たり判定の比較、`GameplaySimulation`・`InvaderFormation`の責務再配置などを段階的に検討します。採用方式・移行範囲・更新方式はまだ確定していません。現行の[ADR-0007](adr/0007-push-display-and-encapsulation.md)やコード規約を変更する場合は、実装・設計資料とあわせて明示的に更新します。
-
-## データ寿命：設計方針と実装の対応
-
-以下の層は所有範囲を考える方針で、同名のクラス群が実装されているわけではありません。
-
-| 層 | 設計方針 | 現在の実装状況 |
-| --- | --- | --- |
-| Application | HighScore・設定・共通サービスをSceneを跨いで保持し、必要なら永続保存 | 未実装。BootstrapはArcadeロードのみ |
-| Game Session（1P） | ゲーム開始からGameOverまでのScore・残機・Wave等の保持と進行 | 専用Sessionクラスは未実装。現在はGameplayDriverが1つのGameplaySimulationを保持し、ScoreとWaveNumberはGameplaySimulationが保持。残機は未実装 |
-| Active Wave / Playfield | 現在プレイ中のPlayer・Formation・Shield・UFO等の実行状態 | Player・Formationは実装済み。次WaveではFormationだけを交換。Shield・UFOは未実装 |
-| Transient | Shot・爆発・得点表示等の短命な状態。原則永続化しない | 単一PlayerShotのみ実装。オブジェクトは再利用し、Activeで弾の寿命を表す。爆発・得点表示は未実装 |
-
-現在の次Wave初期化は、Formationを55体Aliveの初期状態に置き換え、WaveNumberを増やし、全滅通知と蓄積時間をリセットします。Score、Player（Xを含む）、単一PlayerShot（FireReady / release待ちを含む）は保持します。WaveClear中は入力を消費しないため、その間のreleaseだけでは再発射可能になりません。
-
-これは現在の単一モデルによるWaveループで、残機や開始・終了を含む1Pセッションの寿命管理全体を実装したものではありません。
-
-## 独立したPhysics2D比較試作
-
-[Physics2DProbe](../Invader/Assets/Prototypes/Physics2DProbe/README.md) は、本編と接続しないGameObject・Prefab・Trigger接触の小規模試作です。専用namespaceとEditor生成メニューを用意しています。作業環境のライセンス制約によりScene・Prefabは未生成、Play Modeは未検証です。本編の構造・起動Scene・独自判定方式や既存ADRを変更・置換するものではありません。生成・操作・検証手順は試作のREADMEを参照してください。
-
-## 検証と更新
-
-既存のロジック・Play Mode検証は [Assets/Editor](../Invader/Assets/Editor) にあり、実行方法と操作確認は [README](../README.md) を参照してください。文書のコード照合とUnityでの実行確認は分けて報告します。
-
-責務境界を変更するときは本書を更新し、新しい重要判断があれば [ADR運用](adr/README.md) に従います。未実装の設計方針は、実装された時点で対応関係を更新します。
+Scene/Prefab移行・Unityコンパイル・Play動作の実行状況はPR本文を参照してください。独立PoC [Physics2DProbe](../Invader/Assets/Prototypes/Physics2DProbe/README.md) は今回変更せず、本編から参照しません。

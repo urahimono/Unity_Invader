@@ -3,24 +3,23 @@ using UnityEngine.Serialization;
 
 namespace UnityInvader
 {
-    // Unity-side state, input and clock for this game's shared simulation.
     [DisallowMultipleComponent]
     public sealed class GameplayDriver : MonoBehaviour
     {
         [FormerlySerializedAs("currentState")]
         [SerializeField]
-        private GameState                  _currentState        = GameState.Attract;
+        private GameState        _currentState = GameState.Attract;
         [SerializeField]
-        private PlayerController           _playerController;
+        private Player           _player;
         [SerializeField]
-        private InvaderFormationController _formationController;
+        private InvaderFormation _formation;
+        [SerializeField]
+        private int              _score;
+        [SerializeField]
+        private int              _waveNumber   = 1;
 
-        private PlayerInputReader _input;
-        private double            _waveClearElapsed;
-        private bool              _waitingForNextWave;
-
-        private readonly GameplaySimulation    _simulation           = new GameplaySimulation();
-        private readonly InvaderDisplayState[] _invaderDisplayStates = new InvaderDisplayState[InvaderFormation.Rows * InvaderFormation.Columns];
+        private float _waveClearElapsed;
+        private bool  _initialized;
 
         [Tooltip("Temporary development start path; real game-start transitions are not implemented.")]
         [FormerlySerializedAs("developmentStartPlaying")]
@@ -29,103 +28,94 @@ namespace UnityInvader
 
         private void OnEnable()
         {
-            _input = new PlayerInputReader();
+            if (_initialized)
+            {
+                ApplyPlayingState();
+            }
         }
 
         private void Start()
         {
-            if (_developmentStartPlaying)
-            {
-                ChangeState(GameState.Playing);
-            }
-            PublishDisplay();
+            InitializeGameplay();
         }
 
         private void Update()
         {
-            UpdateGameplay();
-        }
-
-        private void LateUpdate()
-        {
-            PublishDisplay();
+            UpdateWaveClear();
         }
 
         private void OnDisable()
         {
-            _simulation.Advance(0, false, default);
-            _input?.Dispose();
-            _input = null;
-            PublishDisplay();
+            if (_initialized)
+            {
+                _player.SetPlaying(false);
+                _formation.SetPlaying(false);
+            }
+        }
+
+        internal void NotifyInvaderDefeated(int inScore, bool inWaveCleared)
+        {
+            if (isActiveAndEnabled == false || _currentState != GameState.Playing)
+            {
+                return;
+            }
+            _score += inScore;
+            if (inWaveCleared)
+            {
+                _waveClearElapsed = 0f;
+                ChangeState(GameState.WaveClear);
+            }
+        }
+
+        private void InitializeGameplay()
+        {
+            if (_player == null || _formation == null)
+            {
+                Debug.LogError("Arcade requires migration: Unity Invader > Migrate Arcade to Components.", this);
+                enabled = false;
+                return;
+            }
+            _player.Initialize();
+            _formation.Initialize(this);
+            _initialized = true;
+            ChangeState(_developmentStartPlaying ? GameState.Playing : _currentState);
+        }
+
+        private void UpdateWaveClear()
+        {
+            if (_initialized == false || _currentState != GameState.WaveClear)
+            {
+                return;
+            }
+            _waveClearElapsed += Time.deltaTime;
+            if (_waveClearElapsed + 1e-7f >= 1f)
+            {
+                _formation.BeginWave();
+                _waveNumber++;
+                ChangeState(GameState.Playing);
+            }
         }
 
         private void ChangeState(GameState inNextState)
         {
             _currentState = inNextState;
+            ApplyPlayingState();
         }
 
-        private void UpdateGameplay()
+        private void ApplyPlayingState()
         {
-            if (_waitingForNextWave && _currentState == GameState.WaveClear)
-            {
-                _waveClearElapsed += Time.deltaTime;
-                if (_waveClearElapsed + 1e-7 >= 1.0)
-                {
-                    _simulation.StartNextWave();
-                    _waitingForNextWave = false;
-                    ChangeState(GameState.Playing);
-                }
-                return; // New Formation remains at its initial state for this frame.
-            }
-            _waitingForNextWave = false;
-            bool playing        = _currentState == GameState.Playing;
-            // The only runtime driver; both views synchronize afterward in LateUpdate.
-            _simulation.Advance(Time.deltaTime, playing, playing ? _input.Read() : default);
-            if (playing && _simulation.WaveClearRequired)
-            {
-                _waveClearElapsed   = 0;
-                _waitingForNextWave = true;
-                ChangeState(GameState.WaveClear);
-            }
-        }
-
-        private void PublishDisplay()
-        {
-            _simulation.CopyDisplayState(_currentState == GameState.Playing, out var player, _invaderDisplayStates);
-            if (_playerController != null)
-            {
-                _playerController.ApplyDisplay(player);
-            }
-            if (_formationController != null)
-            {
-                _formationController.ApplyDisplay(_invaderDisplayStates);
-            }
+            bool playing = isActiveAndEnabled && _currentState == GameState.Playing;
+            _player.SetPlaying(playing);
+            _formation.SetPlaying(playing);
         }
 
 #if UNITY_EDITOR
-        public DriverVerificationState EditorCapture()
-        {
-            return new DriverVerificationState(_currentState, _simulation.EditorCapture());
-        }
-
         public void EditorSetState(GameState inNextState)
         {
-            ChangeState(inNextState);
-        }
-
-        public void EditorPrepareShot(int inX, int inY)
-        {
-            _simulation.EditorPrepareShot(inX, inY);
-        }
-
-        public void EditorDeactivateShot()
-        {
-            _simulation.EditorDeactivateShot();
-        }
-
-        public void EditorAdvanceFixture(double inElapsed, bool inPlaying, PlayerInputState inInput)
-        {
-            _simulation.Advance(inElapsed, inPlaying, inInput);
+            if (_initialized)
+            {
+                ChangeState(inNextState);
+            }
         }
 #endif
     }

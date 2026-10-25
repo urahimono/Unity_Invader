@@ -1,118 +1,165 @@
 using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace UnityInvader
 {
-    public enum InvaderType { Top, Middle, Bottom }
-
-    public sealed class InvaderSlot
+    [DisallowMultipleComponent]
+    [RequireComponent(typeof(Rigidbody2D))]
+    public sealed class InvaderFormation : MonoBehaviour
     {
-        public int Row    { get; }
-        public int Column { get; }
+        [SerializeField]
+        private Invader  _invaderPrefab;
+        [SerializeField]
+        private Sprite[] _frames = new Sprite[6];
+        [SerializeField]
+        private int      _aliveCount;
 
-        public int Id => Row * InvaderFormation.Columns + Column;
+        private GameplayDriver _driver;
+        private Rigidbody2D    _body;
+        private float          _elapsed;
+        private int            _direction = 1;
+        private bool           _frameB;
+        private bool           _playing;
 
-        public InvaderType Type => Row == 0 ? InvaderType.Top :
-            Row < 3 ? InvaderType.Middle : InvaderType.Bottom;
+        public  const    int           Rows       = 5;
+        public  const    int           Columns    = 11;
+        public  const    int           Spacing    = 16;
+        public  const    int           CellSize   = 16;
+        private const    float         StepPeriod = 20f / 60f;
+        private const    float         MinimumX   = (-ArcadeViewport.ScreenWidth / 2f + CellSize / 2f) * ArcadeViewport.UnitsPerPixel;
+        private const    float         MaximumX   = (ArcadeViewport.ScreenWidth / 2f - CellSize / 2f - (Columns - 1) * Spacing) * ArcadeViewport.UnitsPerPixel;
+        private readonly List<Invader> _invaders  = new List<Invader>();
 
-        public bool Alive { get; private set; } = true;
-
-        public InvaderSlot(int inRow, int inColumn)
+        private void OnEnable()
         {
-            Row    = inRow;
-            Column = inColumn;
-        }
-
-        internal bool TryKill()
-        {
-            if (Alive == false)
+            if (_body != null)
             {
-                return false;
+                ApplyPlayingState();
             }
-            Alive = false;
-            return true;
         }
-    }
 
-    // Logical pixels with a bottom-left origin. Placement and timing are provisional.
-    public sealed class InvaderFormation
-    {
-        private int _ticksUntilStep = TicksPerStep;
+        private void FixedUpdate()
+        {
+            UpdateFormation();
+        }
 
-        // X/Y are the center of the top-left slot, not a Unity Transform.
-        public int X          { get; private set; } = 32;
-        public int Y          { get; private set; } = 208;
-        public int Direction  { get; private set; } = 1;
-        public int StepCount  { get; private set; }
-        public int AliveCount { get; private set; } = Rows * Columns;
+        private void OnDisable()
+        {
+            if (_body != null)
+            {
+                ApplyPlayingState();
+            }
+        }
 
-        public int AnimationFrame => StepCount % 2;
+        internal void Initialize(GameplayDriver inDriver)
+        {
+            if (_invaderPrefab == null || _frames.Length != 6 || Array.Exists(_frames, inFrame => inFrame == null))
+            {
+                throw new InvalidOperationException("Formation requires its prefab and six frames. Migrate Arcade first.");
+            }
+            _driver = inDriver;
+            _body   = GetComponent<Rigidbody2D>();
+            CreateInvaders();
+            BeginWave();
+        }
 
-        public  const    int           Rows           = 5;
-        public  const    int           Columns        = 11;
-        public  const    int           Spacing        = 16;
-        public  const    int           CellSize       = 16;
-        public  const    int           HorizontalStep = 2;
-        public  const    int           Descent        = 8;
-        public  const    int           TicksPerStep   = 20;
-        public  const    int           MinimumX       = CellSize / 2;
-        public  const    int           MaximumX       = PlayerBody.ScreenWidth - CellSize / 2 - (Columns - 1) * Spacing;
-        private readonly InvaderSlot[] _invaders      = new InvaderSlot[Rows * Columns];
+        internal void BeginWave()
+        {
+            _elapsed   = 0f;
+            _direction = 1;
+            _frameB    = false;
 
-        public InvaderFormation()
+            var initialPosition = new Vector2(32f - ArcadeViewport.ScreenWidth / 2f,
+                208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
+            // Keep both poses aligned while simulation is disabled, before enabling it again.
+            transform.position = new Vector3(initialPosition.x, initialPosition.y, transform.position.z);
+            _body.position     = initialPosition;
+
+            _aliveCount = _invaders.Count;
+            foreach (var invader in _invaders)
+            {
+                invader.BeginWave();
+            }
+            ApplyPlayingState();
+        }
+
+        internal void SetPlaying(bool inPlaying)
+        {
+            _playing = inPlaying;
+            if (inPlaying == false)
+            {
+                _elapsed = 0f;
+            }
+            ApplyPlayingState();
+        }
+
+        internal void NotifyDefeated(Invader inInvader, int inScore)
+        {
+            if (_playing == false || isActiveAndEnabled == false || _invaders.Contains(inInvader) == false)
+            {
+                return;
+            }
+            _aliveCount--;
+            _driver.NotifyInvaderDefeated(inScore, _aliveCount == 0);
+        }
+
+        private void CreateInvaders()
         {
             for (int row = 0; row < Rows; row++)
             {
+                int type  = row == 0 ? 0 : row < 3 ? 1 : 2;
+                int score = type == 0 ? 30 : type == 1 ? 20 : 10;
                 for (int column = 0; column < Columns; column++)
                 {
-                    _invaders[row * Columns + column] = new InvaderSlot(row, column);
+                    var invader                     = Instantiate(_invaderPrefab, transform);
+                    invader.name                    = $"Invader ({row},{column})";
+                    invader.transform.localPosition = new Vector3(column * Spacing, -row * Spacing, 0f) * ArcadeViewport.UnitsPerPixel;
+                    invader.Initialize(this, _frames[type * 2], _frames[type * 2 + 1], score);
+                    _invaders.Add(invader);
                 }
             }
         }
 
-        public InvaderDisplayState CaptureInvader(int inId, bool inVisible = true)
+        private void ApplyPlayingState()
         {
-            var slot = _invaders[inId];
-            return new InvaderDisplayState(slot.Id, slot.Row, slot.Column,
-                X + slot.Column * Spacing, Y - slot.Row * Spacing,
-                slot.Type, AnimationFrame, slot.Alive, inVisible);
-        }
-
-        public bool TryKill(int inId)
-        {
-            if (_invaders[inId].TryKill() == false)
+            bool playing    = _playing && isActiveAndEnabled;
+            _body.simulated = playing;
+            foreach (var invader in _invaders)
             {
-                return false;
+                invader.SetPlaying(playing);
             }
-            AliveCount--;
-            return true;
         }
 
-        public void Tick()
+        private void UpdateFormation()
         {
-            if (--_ticksUntilStep > 0)
+            if (_playing == false)
             {
                 return;
             }
-            _ticksUntilStep = TicksPerStep;
-            X               = Math.Max(MinimumX, Math.Min(MaximumX, X + Direction * HorizontalStep));
-            if ((Direction > 0 && X == MaximumX) || (Direction < 0 && X == MinimumX))
+            _elapsed += Time.fixedDeltaTime;
+            while (_elapsed + 1e-7f >= StepPeriod)
             {
-                Y -= Descent;
-                Direction = -Direction;
+                _elapsed -= StepPeriod;
+                MoveFormation();
             }
-            StepCount++;
         }
 
-#if UNITY_EDITOR
-        public FormationVerificationState EditorCapture()
+        private void MoveFormation()
         {
-            var invaders = new InvaderDisplayState[_invaders.Length];
-            for (int id = 0; id < invaders.Length; id++)
+            var position = _body.position;
+            position.x   = Mathf.Clamp(position.x + _direction * (2f * ArcadeViewport.UnitsPerPixel), MinimumX, MaximumX);
+            if ((_direction > 0 && position.x >= MaximumX) || (_direction < 0 && position.x <= MinimumX))
             {
-                invaders[id] = CaptureInvader(id);
+                position.y -= 8f * ArcadeViewport.UnitsPerPixel;
+                _direction = -_direction;
             }
-            return new FormationVerificationState(X, Y, Direction, StepCount, AliveCount, AnimationFrame, invaders);
+            _body.position = position;
+            _frameB        = _frameB == false;
+            foreach (var invader in _invaders)
+            {
+                invader.ApplyAnimation(_frameB);
+            }
         }
-#endif
     }
 }

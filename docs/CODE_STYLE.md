@@ -1,99 +1,54 @@
 # コード規約
 
-本書は、このプロジェクトで確定したコード規約を共有するための文書です。規約は今後、合意した項目から段階的に追加します。設計原則・構造・設計判断は既存の PROJECT_PRINCIPLES・ARCHITECTURE・ADR で扱います。
+本書はプロジェクトのコード規約の正本です。設計原則・現在構造・判断理由は PROJECT_PRINCIPLES・ARCHITECTURE・ADR で扱います。
 
-## カプセル化：内部管理オブジェクトの参照公開を禁止する
+## カプセル化とComponent間の操作・通知
 
-**管理・ゲームロジック・表示の責務を守るため、所有している可変オブジェクトの参照をGetter・property・メソッド戻り値で外部へ公開しないこと。** `get;` や `private set;` は、返された参照先の不変性を保証しません。
+**所有する可変な管理オブジェクト・Component・ゲームモデル・コレクションを、Getter・property・メソッド戻り値で外部へ横流ししません。** `get;` や `private set;` は参照先の不変性を保証しません。可変要素を含む配列や `IReadOnlyList<T>` も同様です。
 
-### 禁止する実装
-
-- `GameplayDriver`などの管理クラスが、内部で所有する `GameplaySimulation` や他の可変管理オブジェクトを外部へそのまま返すこと。
-- 他クラスが `_driver.Simulation.Formation.Invaders` のように、複数の内部オブジェクトを辿って状態を取得・変更したり、そのメソッドを呼んだりすること。チェーンをローカル変数や独自Getterに分割しても禁止です。
-- `PlayerController` / `InvaderFormationController` のような表示クラスが、`GameplayDriver`またはゲームモデルを`[SerializeField]`・引数・Interface・検索などを通じて保持し、内部状態を取りに行くこと。**Interfaceに隠しても実体がGameplayDriverなら禁止**します。
-- `IReadOnlyList<T>`や `IReadOnlyCollection<T>`で包んだだけの**可変参照型要素**を、「不変データ」と見なして外部公開すること。
-
-NG（**現状コードに存在する、後続の修正対象となる構造**）:
+禁止例:
 
 ```csharp
-public GameplaySimulation Simulation { get; } = new GameplaySimulation();
-public PlayerBody Player => _player.Player;
-public PlayerShot Shot => _player.Shot;
+public InvaderFormation Formation => _formation;
+public PlayerShot Shot => _shot;
 
-// 別のComponent側から内部オブジェクトを辿る
-var formation = _gameplayDriver.Simulation.Formation;
-formation.TryKill(0);
+// 所有者の内部構造を辿って個体を操作する
+_driver.Formation.Invaders[0].Defeat();
 ```
 
-### 原則とする実装
+禁止される連鎖アクセスをローカル変数や独自Getter、Interfaceに分割しても回避にはなりません。必要な操作は所有者に用途の明確なメソッドで依頼します。
 
-- 何かを**実行**させるときは、所有者が意味のある操作を公開し、その内部で処理を完結させます（Tell, Don't Ask）。
-- 何かを**表示**するときは、所有者・進行担当が必要最小限の値、または可変オブジェクトの参照を含まない不変の表示用データを渡します。表示側は受け取った値をRenderer等へ反映し、ゲーム進行には関与しません。
-- `GameplayDriver`をゲーム進行の唯一の実行入口とし、表示ControllerからDriverやSimulationへの依存を作りません。`GameplayDriver`が表示Controllerを保持し、必要な表示情報をPushします。画面更新の具体的な手段は既存のUnityライフサイクルと同期順序を守り、必要最小限に設計します。
-- `int`、`bool`、`enum`などの値の取得や、不変の値データの公開は、責務・依存方向を壊さない範囲で可能です。**Getter一般やC# propertyそのものの禁止ではありません。**
+### Playingの責務
 
-OK（データを表示側へ渡す方向を示す概念例）:
+Issue #57 / ADR-0008に基づき、PlayingはComponent・Physics2D中心に構成します。
 
-```csharp
-public readonly struct PlayerDisplayState
-{
-    public int  X       { get; }
-    public int  Y       { get; }
-    public bool Visible { get; }
+- GameplayDriverはState・Score・Wave進行を管理し、Player/Formationへ進行可否を伝えます。
+- Playerは入力・移動・単一Shotへの発射依頼を担当します。
+- PlayerShotは自身のOnTriggerEnter2Dで接触を検出し、Invaderへ命中を依頼して成立後に自身を消費します。
+- Invaderは自身の被弾・撃破・表示を担当し、Formationへ一度だけ通知します。
+- Formationは個体の配置・集団移動・生存数を集計し、Driverへ得点・全滅を通知します。Driver/Formationへ独自AABB判定を持ち込みません。
 
-    public PlayerDisplayState(int inX, int inY, bool inVisible)
-    {
-        X       = inX;
-        Y       = inY;
-        Visible = inVisible;
-    }
-}
+Component間で必要な参照をSerializeFieldや初期化引数から保持することは認めます。参照は意味のある操作と通知に使用し、他者の内部状態を直接書き換えたり、管理対象の実体をGetterで取得して操作したりしません。例えば `NotifyInvaderDefeated(int inScore, bool inWaveCleared)` のように、通知には必要最小限の値を渡します。
 
-// GameplayDriverが表示状態を渡す。PlayerControllerはDriverやSimulationを参照しない。
-_playerController.ApplyDisplay(inPlayerDisplayState);
-```
+個体のTransform/Rigidbody2DとGameObject有効状態を正として、位置・生死を旧モデルや表示スナップショットに二重保持しません。Formationの生存数など、責務に必要な集計値は保持できます。描画は個体Component自身で反映でき、Driver→表示専用ControllerへのPushを必須としません。表示を分離する場合は、不変の値をPushする方式も使えます。
 
-上記は**設計の例示**であり、`PlayerDisplayState`や `ApplyDisplay` は現時点の実装APIではありません。既存コードの実装をそのまま表すものではありません。
+`int`・`bool`・enum等の値の取得は、責務に必要な範囲で可能です。公開Getter一般を禁止するものではありません。ゲーム進行を外部へ任意に変更させるpublic APIや、将来用途だけのManager・Interface・イベントバスは追加しません。
 
-### GameplayDriverの公開APIと表示データの受け渡し
+### Editor検証用API
 
-- `GameplayDriver`のランタイム向け公開Getter・状態遷移用publicメソッドは原則不要です。`CurrentState`・`Simulation`・`ChangeState`のような現行の公開APIは、後続の実装修正で必要性を見直し、内部処理に閉じます。
-- 表示ControllerはDriver、Simulation、PlayerBody、Shot、Formation等の可変ゲームモデルの参照を**保持せず、取得もしません**。`GetComponent<GameplayDriver>()`や、Driverを実装元とするInterfaceの注入でも回避できません。
-- `GameplayDriver`側が`PlayerController`と`InvaderFormationController`を保持し、進行後に表示専用の値データを`Apply`等のメソッドへPushする構造を基本とします。Controllerは描画処理と表示用Unityオブジェクトを管理するだけで、更新の主導権やモデルの操作権を持ちません。
-- 変化するデータを継続して扱う必要がある場合も、値・不変スナップショットを優先します。Interface方式を採用するなら、参照先がDriverや可変モデルの実体になっていないか確認します。必要のないInterfaceや共通Managerは作りません。
-- Unityの更新順序、初期表示、非表示・再有効化、Wave切替時の表示と55体のRenderer再利用を壊さない具体的な実装方法は、実装PRで検証します。ここで新しいランタイムAPIやクラスを作成済みとは扱いません。
-
-### Editor検証用APIの分離
-
-- Editor検証でState変更やモデルの観測が必要でも、**検証用という理由だけでランタイム向けの公開APIを追加・維持しません**。
-- Editor専用の検証処理は`Assets/Editor/`などのEditor専用アセンブリに置きます。ランタイムアセンブリ側に検証専用の入口が必要なときだけ、`#if UNITY_EDITOR`で囲んだ最小限のAPIを検討します。製品ビルドに含めないことが条件です。
-- Editor専用APIでも、`GameplaySimulation`など所有する可変オブジェクトの実体を返すGetterを安易に作りません。確認は可能な限り値・不変スナップショット、操作は用途を限定した検証メソッドで行います。
-- `#if UNITY_EDITOR`はUnity EditorのPlay Mode中にも有効です。**Editor環境でのアクセス制御を保証する仕組みではありません**。通常のランタイム処理は検証用APIへ依存せず、表示ControllerへDriver参照を渡さないという原則を維持します。
-
-概念例（既存APIではない）:
-
-```csharp
-#if UNITY_EDITOR
-public void EditorSetState(GameState inNextState)
-{
-    ChangeState(inNextState);
-}
-#endif
-```
-
-Editor検証のために公開範囲を広げるのではなく、まず既存のVerificationが必要とする観測・操作を特定し、必要最小限の入口だけを設けます。
+- 検証の都合だけでランタイム向け公開APIを増やしません。Editor処理は `Assets/Editor/` 等へ置き、必要な最小限の入口だけを `#if UNITY_EDITOR` に分離します。
+- 観測は値またはEditor側のInspector確認を優先し、可変モデルの実体を返すGetterを追加しません。
+- `UNITY_EDITOR` はEditorのPlay Modeでも有効です。通常のランタイム処理から検証APIへ依存しません。
+- 衝突や遅延Destroyの通知順序に頼らず、同じ弾・個体の重複処理を防ぎます。
 
 ### レビュー時の確認
 
-- 公開APIから可変な内部管理オブジェクトを取得できないか。
-- メソッド内部のローカル変数経由を含め、他クラスの内部構造を辿るアクセスがないか。
-- 表示専用クラスがゲームロジックの保持先・実装を知る必要がない構造になっているか。
-- 受け渡すデータが可変の参照（配列・リストの可変要素を含む）を漏らしていないか。
-- 既存テストの都合だけで実装側に可変オブジェクト公開を追加していないか。
-- 表示ControllerがDriverを直接またはInterface越しに参照していないか。情報がDriver側から表示側へPushされているか。
-- GameplayDriverのpublic APIは本当に通常のランタイムから必要とされるか。Editor検証用APIは製品ビルドから分離されているか。
-
-現在の `GameplayDriver` / `GameplaySimulation` / 表示Controllerなどには、この規約に合わない参照公開が残っています。**この規約PRではルールのみを追加し、実装修正は後続PRとして別途実施します。** 実装済みと誤認しないようにしてください。
+- 内部の可変オブジェクトやコレクションを返していないか。
+- 他クラスの内部構造を辿る操作がないか。
+- 検出、個体の反応、集団の集計、全体進行が担当ごとに分かれているか。
+- 同じ位置・生死を独立モデルとComponentに二重保持していないか。
+- 停止StateやDisable時にも入力・物理接触が進まないか。
+- Editor用の操作・観測を通常ランタイムへ公開していないか。
 
 ## private / protected field の命名
 

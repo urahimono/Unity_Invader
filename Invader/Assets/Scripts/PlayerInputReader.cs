@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 namespace UnityInvader
 {
-    // Unity input is converted here; the simulation receives only booleans.
+    // Input System bindings for the Player component.
     public sealed class PlayerInputReader : IDisposable
     {
         private readonly InputAction _left  = new InputAction("Left", InputActionType.Button, "<Keyboard>/leftArrow");
