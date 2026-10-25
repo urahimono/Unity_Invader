@@ -13,6 +13,7 @@ namespace UnityInvader
         private float       _stepElapsed;
         private bool        _playing;
         private bool        _fast;
+        private bool        _resolvingHit;
 
         internal bool InFlight => gameObject.activeSelf;
 
@@ -37,6 +38,14 @@ namespace UnityInvader
             UpdateShot();
         }
 
+        private void OnTriggerEnter2D(Collider2D inOther)
+        {
+            if (inOther.TryGetComponent<Player>(out var player))
+            {
+                ResolveHit(player);
+            }
+        }
+
         private void OnDisable()
         {
             if (_renderer != null)
@@ -59,6 +68,7 @@ namespace UnityInvader
             transform.position = new Vector3(inPosition.x, inPosition.y, transform.position.z);
             _body.position     = inPosition;
             _stepElapsed       = 0f;
+            _resolvingHit      = false;
             gameObject.SetActive(true);
             return true;
         }
@@ -121,6 +131,20 @@ namespace UnityInvader
             }
             // Also hold the current position on non-step ticks, so no movement velocity persists.
             _body.MovePosition(position);
+        }
+
+        private void ResolveHit(Player inPlayer)
+        {
+            if (_playing == false || isActiveAndEnabled == false || _resolvingHit)
+            {
+                return;
+            }
+            _resolvingHit = true;
+            if (inPlayer.TryReceiveHit())
+            {
+                gameObject.SetActive(false);
+            }
+            _resolvingHit = false;
         }
     }
 }
