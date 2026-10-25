@@ -14,7 +14,7 @@ Issue #57でPlayingのコードをComponent/Physics2Dへ移行し、現在はArc
 | Arcade | Driver、Player、単一PlayerShot、Formation、Rolling/Plunger/Squiggly各1個のEnemyShot、単一Ufo、Shield4基、カメラ |
 | SampleScene | 既存サンプル。今回変更なし |
 
-1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食、Issue #79でUFOを追加しています。待機デモ・開始/リトライ・追加残機/Lives HUD・HighScore保存、弾の相殺、Invader侵攻による敗北条件は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md)・[UFO](UFO.md) を参照してください。
+1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食、Issue #79でUFO、Issue #81でInvader侵攻によるGameOverを追加しています。待機デモ・開始/リトライ・追加残機/Lives HUD・HighScore保存、弾の相殺は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md)・[UFO](UFO.md)・[侵攻GameOver](GAME_OVER.md) を参照してください。
 
 ## Playingの責務
 
@@ -30,7 +30,7 @@ flowchart TD
     Shot -->|TryReceiveHit| Ufo[Ufo: 移動・被弾・解除]
     Shot -->|自然終了通知 / UFO得点通知| Driver
     Invader -->|NotifyDefeated| Formation
-    Formation -->|得点・全滅通知| Driver
+    Formation -->|得点・全滅・侵攻通知| Driver
     Formation -->|配置・アニメ・再開| Invader
     Formation -->|種類別phase / TryLaunch / AdvanceStep / SetPlaying| EnemyShot[3種類のEnemyShot: 下降・画面外消滅・再利用]
     Formation -->|Squiggly共有phase / TryLaunch / AdvanceStep / SetPlaying| Ufo
@@ -100,6 +100,12 @@ Shotが処理中ガードを立ててInvaderに命中を依頼し、Invaderは�
 EnemyShotは自身のOnTriggerEnter2Dで接触を検出し、PlayerがPlaying・Collider有効・未受理を確認して被弾を成立させます。DriverはPlaying中の通知だけでLivesを1機減らしてPlayerDeadへ遷移します。Playerの受理ガードは復帰時だけ解除します。EnemyShotは処理中ガードと非アクティブ化で重複接触を抑止します。
 
 PlayerDeadでは既存SetPlaying(false)で入力・射撃・編隊・弾・UFOの物理と表示を止め、Player Colliderも無効化します。暫定0.5秒後、Livesが残ればPlayer自身のRespawnで初期位置(112,24)へ戻し、旧自機弾・入力・受理ガードを初期化してPlayingへ直接戻ります。Formationは3種類の旧敵弾・step count・敵弾時計と残留UFO・開始待ちを解除し、位置・方向・生存個体・アニメとScore/Wave・通常終了履歴は保持します。0機ならGameOverで停止し、Attractへは戻りません。詳細は [Lives・復帰](LIVES.md) と [UFO](UFO.md) を参照してください。
+
+### Invader侵攻（Issue #81）
+
+Formationは通常の移動ステップ後、移動先Rigidbody2D座標と各生存Invaderのローカル位置から最下位置を判定します。論理y=40未満でDriverへ侵攻通知し、Driverは有効・Playing中だけLivesを0にして直ちにGameOverへ遷移します。PlayerDead・復帰経路は使いません。既存ApplyPlayingStateでPlayer・自機弾・編隊・敵弾3種類・UFO・Shieldを停止し、同じFixedUpdateの残りの編隊移動も中断します。Score/Wave・Shield画素・個体の生死は保持します。
+
+接触判定ではなく生存個体アンカーの座標判定です。原作ROMの描画座標とUnityのSprite中心は異なり、40pxは暫定対応です。演出・原作動画との見た目の一致は未確認です。根拠・差分は [侵攻GameOver](GAME_OVER.md) を参照してください。既存の責務と通知方式の拡張に留まり、新規ADRは追加しません。
 
 ### 3種類のEnemyShot（Issue #77）
 

@@ -63,6 +63,8 @@ namespace UnityInvader
 
         private const int   UfoReloadTicks = 0x0600;
         private const float FirstWaveY    = (208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
+        // Provisional sprite-center anchor, not the ROM's rotated drawing coordinate.
+        private const float InvasionY = (40f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
 
         private static readonly int[] _reloadScoreMsb = { 0x02, 0x10, 0x20, 0x30 };
         private static readonly int[] _reloadRates    = { 0x30, 0x10, 0x0B, 0x08, 0x07 };
@@ -221,7 +223,7 @@ namespace UnityInvader
             elapsed *= _debugMovementMultiplier;
 #endif
             _elapsed += elapsed;
-            while (_elapsed + 1e-7f >= StepPeriod)
+            while (_playing && _elapsed + 1e-7f >= StepPeriod)
             {
                 _elapsed -= StepPeriod;
                 MoveFormation();
@@ -247,6 +249,22 @@ namespace UnityInvader
             foreach (var invader in _invaders)
             {
                 invader.ApplyAnimation(_frameB);
+            }
+            CheckInvasion(position);
+        }
+
+        private void CheckInvasion(Vector2 inPosition)
+        {
+            foreach (var invader in _invaders)
+            {
+                // Use the destination body pose: child world Transforms may still be one step behind.
+                float y = inPosition.y + invader.transform.localPosition.y;
+                // Ignore subpixel float residue from repeated 8px descents at exactly 40px.
+                if (invader.gameObject.activeSelf && y < InvasionY - 1e-6f)
+                {
+                    _driver.NotifyInvaded();
+                    return;
+                }
             }
         }
 
