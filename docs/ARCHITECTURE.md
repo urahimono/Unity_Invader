@@ -14,7 +14,7 @@ Issue #57でPlayingのコードをComponent/Physics2Dへ移行し、現在はArc
 | Arcade | Driver、Player、単一PlayerShot、Formation、単一Rolling EnemyShot、カメラ |
 | SampleScene | 既存サンプル。今回変更なし |
 
-1P専用・クレジットなしです。待機デモ・開始/リトライ・残機/復帰・Shield・UFO・HighScore保存、Rolling以外の敵弾と弾の相殺は未実装です。Issue #61でPlayer被弾とPlayerDead遷移を追加し、Prefab/Scene保存と非表示バッチの実Trigger確認を実施しました。
+1P専用・クレジットなしです。Issue #61のPlayer被弾に加え、Issue #63で初期3機のLives・Player復帰・GameOverを追加しています。待機デモ・開始/リトライ・追加残機/Lives HUD・Shield・UFO・HighScore保存、Rolling以外の敵弾と弾の相殺は未実装です。検証状況は [Lives・復帰](LIVES.md) を参照してください。
 
 ## Playingの責務
 
@@ -22,8 +22,8 @@ Issue #57でPlayingのコードをComponent/Physics2Dへ移行し、現在はArc
 flowchart TD
     Input[Input System] --> Reader[PlayerInputReader]
     Reader --> Player[Player: 入力・移動・射撃受付]
-    Driver[GameplayDriver: State / Score / Wave] -->|SetPlaying| Player
-    Driver -->|SetPlaying / BeginWave| Formation[InvaderFormation: 集団移動・集計]
+    Driver[GameplayDriver: State / Score / Wave / Lives] -->|SetPlaying / Respawn| Player
+    Driver -->|SetPlaying / BeginWave / PreparePlayerRespawn| Formation[InvaderFormation: 集団移動・集計]
     Player -->|TryLaunch / SetPlaying| Shot[PlayerShot: Rigidbody2D / Trigger / 消費]
     Physics[Unity Physics2D] -->|OnTriggerEnter2D| Shot
     Shot -->|TryReceiveHit| Invader[Invader: 個体の被弾・撃破・表示]
@@ -37,8 +37,8 @@ flowchart TD
 
 | Component | 所有する責務・状態 |
 | --- | --- |
-| GameplayDriver | 現在State、Score、Wave番号、WaveClearの暫定1秒待機。全滅通知から遷移し、次Waveを開始する |
-| Player | InputReader、入力値と発射受付、release/再押下ゲート。Transformで移動。Playing中のみ被弾を一度受理し、Driverへ通知 |
+| GameplayDriver | 現在State、Score、Wave番号、Lives。WaveClearの暫定1秒待機とPlayerDeadの暫定0.5秒待機。次Wave・復帰/GameOverを管理 |
+| Player | InputReader、入力値と発射受付、release/再押下ゲート。Transformで移動し被弾をDriverへ通知。復帰時に自身の位置・受理/発射ゲートと自機弾を初期化 |
 | PlayerShot | 動的Rigidbody2DとTrigger。自身の接触をInvaderへ渡し、命中成立後に非アクティブ化して消費。画面上端でも消費 |
 | Invader | GameObjectの有効状態による生死、Spriteの2コマ、被弾反応、所属Formationへの一度だけの通知 |
 | InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、集団移動の方向/周期/アニメ位相、生存数の集計。通知からDriverへ得点・全滅を伝える |
@@ -61,7 +61,7 @@ Invaderは5×11個を一度生成し、次Waveでも同じ個体・Rendererを�
 - Player.FixedUpdate：60px/秒相当で左右移動し、端でclamp。受付済みの発射を行う。左右同時押しは従来どおり右優先。
 - Formation.FixedUpdate：20/60秒ごとに2px横移動。端では8px下降・方向反転し、全個体のA/Bを交換する。
 - Shot：Rigidbody2Dが240px/秒相当で上昇。FixedUpdateで画面上端を確認し、OnTriggerEnter2Dで接触対象を処理する。
-- Driver.Update：WaveClear待機のみ。次Wave開始時にScore、Player位置、Shotの占有状態、releaseゲートを保持し、編隊の位置・方向・生存数・アニメを初期化する。
+- Driver.Update：WaveClear待機とPlayerDead待機。次WaveではLives・Score・Player位置・Shot占有・releaseゲートを保持し、編隊を初期化する。死亡からの復帰では編隊を初期化しない。
 
 Unityの既存Fixed Timestep（0.02秒）を使い、ProjectSettingsは変更しません。独自60Hz時計や「Player→Shot→Formation→Collision」の旧tick順序は廃止しました。速度・周期は従来相当に換算しますが、接触タイミング・境界・端の到達frameは厳密一致を保証せず、描画FPS別の実測も未確認です。
 
@@ -84,9 +84,9 @@ Shotが処理中ガードを立ててInvaderに命中を依頼し、Invaderは�
 
 ### Player被弾（Issue #61）
 
-EnemyShotは自身のOnTriggerEnter2Dで接触を検出し、PlayerがPlaying・Collider有効・未受理を確認して被弾を成立させます。Playerの受理ガードは今回解除せず、DriverはPlaying中の通知だけでPlayerDeadへ遷移します。EnemyShotは処理中ガードと非アクティブ化で重複接触を抑止します。Score/Wave進行には手を加えません。
+EnemyShotは自身のOnTriggerEnter2Dで接触を検出し、PlayerがPlaying・Collider有効・未受理を確認して被弾を成立させます。DriverはPlaying中の通知だけでLivesを1機減らしてPlayerDeadへ遷移します。Playerの受理ガードは復帰時だけ解除します。EnemyShotは処理中ガードと非アクティブ化で重複接触を抑止します。
 
-PlayerDeadでは既存SetPlaying(false)で入力・射撃・編隊・弾の物理と表示を止め、Player Colliderも無効化します。自動復帰やLivesは持ちません。Player ColliderはSprite.boundsの16×16px矩形と既存Transform倍率を使い、Transform移動を維持します。SceneのPlayerからDriverへの参照とPrefab ColliderはEditor APIで保存済みです。実Trigger命中・重複拒否・2.2秒の停止と既存Score/Wave経路を非表示バッチで確認しました。詳細は [Player被弾](PLAYER_HIT.md) を参照してください。
+PlayerDeadでは既存SetPlaying(false)で入力・射撃・編隊・弾の物理と表示を止め、Player Colliderも無効化します。暫定0.5秒後、Livesが残ればPlayer自身のRespawnで初期位置(112,24)へ戻し、旧自機弾・入力・受理ガードを初期化してPlayingへ直接戻ります。Formationは旧Rolling弾と発射タイマーだけを解除し、位置・方向・生存個体・アニメとScore/Waveは保持します。0機ならGameOverで停止し、Attractへは戻りません。詳細は [Lives・復帰](LIVES.md) を参照してください。
 
 ### Rolling EnemyShot（Issue #59）
 

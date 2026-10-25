@@ -318,6 +318,7 @@ MonoBehaviour:
   _formation: {fileID: 805784278}
   _score: 0
   _waveNumber: 1
+  _lives: 3
   _developmentStartPlaying: 1
 --- !u!1 &805784277
 GameObject:

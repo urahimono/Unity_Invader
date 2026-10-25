@@ -85,7 +85,7 @@ namespace UnityInvader
             _direction          = 1;
             _frameB             = false;
             _rollingFireElapsed = 0f;
-            _rollingShot.ResetForWave();
+            _rollingShot.ResetFlight();
 
             var initialPosition = new Vector2(32f - ArcadeViewport.ScreenWidth / 2f,
                 208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
@@ -122,6 +122,13 @@ namespace UnityInvader
             _aliveCount--;
             _rollingShot.SetFast(_aliveCount <= 8);
             _driver.NotifyInvaderDefeated(inScore, _aliveCount == 0);
+        }
+
+        internal void PreparePlayerRespawn()
+        {
+            // Clear the single Rolling slot without resetting the current rack or movement state.
+            _rollingShot.ResetFlight();
+            _rollingFireElapsed = 0f;
         }
 
         private void CreateInvaders()
