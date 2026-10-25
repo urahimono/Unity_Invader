@@ -109,3 +109,7 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Temporary Physics2D probe assets generated from the Editor menu.
+/Invader/Assets/Prototypes/Physics2DProbe/Generated/
+/Invader/Assets/Prototypes/Physics2DProbe/Generated.meta
