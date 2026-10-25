@@ -21,6 +21,8 @@ Unity Hubから `Invader/` を指定して、上記バージョンのEditorで�
 
 `Assets/Scenes/Bootstrap.unity` を開いてPlayすると、`Arcade.unity` に切り替わります。
 
+EditorとDevelopment Buildでは、Gameビュー左上の黒背景に開発用の`DEBUG`表示（State・Lives・Wave）が出ます。GameplayDriverの現在値を直接読み、PlayerDead・GameOver中も表示します。通常の製品ビルドでは描画しません。原作HUDとは別の確認用表示です。保存済みArcadeに設定済みで、再設定は **Unity Invader > Configure Debug Status Overlay** を使います。
+
 ## Windowsでdevelopを更新してUnityを起動する
 
 ルートの `LaunchDevelopUnity.bat` をダブルクリックすると、作業ツリーを確認し、`develop` へ切り替えて `git pull --ff-only origin develop` を実行した後、`Invader/` をUnity Editorで開きます。GitがPATH上で使用でき、originへアクセスできる必要があります。
