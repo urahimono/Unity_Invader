@@ -104,6 +104,16 @@ namespace UnityInvader
             ChangeState(GameState.PlayerDead);
         }
 
+        internal void NotifyInvaded()
+        {
+            if (_initialized == false || isActiveAndEnabled == false || _currentState != GameState.Playing)
+            {
+                return;
+            }
+            _lives = 0;
+            ChangeState(GameState.GameOver);
+        }
+
         internal void NotifyNormalPlayerShotEnded()
         {
             // A final Invader hit may already have changed State to WaveClear.
