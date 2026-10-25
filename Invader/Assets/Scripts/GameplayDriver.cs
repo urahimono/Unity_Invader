@@ -14,6 +14,8 @@ namespace UnityInvader
         [SerializeField]
         private InvaderFormation _formation;
         [SerializeField]
+        private Shield[]         _shields      = new Shield[4];
+        [SerializeField]
         private int              _score;
         [SerializeField]
         private int              _waveNumber   = 1;
@@ -64,6 +66,7 @@ namespace UnityInvader
             {
                 _player.SetPlaying(false);
                 _formation.SetPlaying(false);
+                SetShieldsPlaying(false);
             }
         }
 
@@ -94,9 +97,10 @@ namespace UnityInvader
 
         private void InitializeGameplay()
         {
-            if (_player == null || _formation == null)
+            if (_player == null || _formation == null || _shields == null || _shields.Length != 4 ||
+                System.Array.Exists(_shields, inShield => inShield == null))
             {
-                Debug.LogError("Arcade requires migration: Unity Invader > Migrate Arcade to Components.", this);
+                Debug.LogError("Arcade requires Component Gameplay and Configure Shields references.", this);
                 enabled = false;
                 return;
             }
@@ -116,6 +120,10 @@ namespace UnityInvader
             if (_waveClearElapsed + 1e-7f >= 1f)
             {
                 _formation.BeginWave();
+                foreach (var shield in _shields)
+                {
+                    shield.BeginWave();
+                }
                 _waveNumber++;
                 ChangeState(GameState.Playing);
             }
@@ -153,6 +161,18 @@ namespace UnityInvader
             bool playing = isActiveAndEnabled && _currentState == GameState.Playing;
             _player.SetPlaying(playing);
             _formation.SetPlaying(playing);
+            SetShieldsPlaying(playing);
+        }
+
+        private void SetShieldsPlaying(bool inPlaying)
+        {
+            foreach (var shield in _shields)
+            {
+                if (shield != null)
+                {
+                    shield.SetPlaying(inPlaying);
+                }
+            }
         }
 
 #if UNITY_EDITOR
