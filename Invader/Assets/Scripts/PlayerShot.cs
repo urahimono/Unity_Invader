@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace UnityInvader
@@ -8,23 +9,21 @@ namespace UnityInvader
     {
         [SerializeField]
         private SpriteRenderer _renderer;
-
+        [SerializeField]
         private Rigidbody2D    _body;
-        private bool           _playing;
-        private bool           _resolvingHit;
-        private GameplayDriver _driver;
-        private bool           _countsNormalEnds;
 
-        public bool InFlight => gameObject.activeSelf;
+        private bool _playing = true;
+        private bool _inFlight;
+        private bool _resolvingHit;
+
+        public event Action FlightEnded;
+        public event Action UfoDefeated;
+
+        public bool InFlight => _inFlight;
 
         public  const float Width  = 1f;
         public  const float Height = 4f;
         private const float Speed  = 240f * ArcadeViewport.UnitsPerPixel;
-
-        private void Awake()
-        {
-            CacheComponents();
-        }
 
         private void OnEnable()
         {
@@ -47,57 +46,39 @@ namespace UnityInvader
 
         private void OnDisable()
         {
-            if (_body != null)
-            {
-                _body.simulated = false;
-            }
+            ApplyPlayingState();
         }
 
         public bool TryLaunch(Vector2 inPosition)
         {
-            if (_playing == false || InFlight)
+            if (_playing == false || isActiveAndEnabled == false || InFlight)
             {
                 return false;
             }
-            CacheComponents();
             _body.position     = inPosition;
             transform.position = inPosition;
             _resolvingHit      = false;
-            gameObject.SetActive(true);
+            _inFlight          = true;
+            ApplyPlayingState();
             return true;
         }
 
         internal void SetPlaying(bool inPlaying)
         {
             _playing = inPlaying;
-            CacheComponents();
             ApplyPlayingState();
-        }
-
-        internal void Initialize(GameplayDriver inDriver, bool inCountsNormalEnds)
-        {
-            _driver           = inDriver;
-            _countsNormalEnds = inCountsNormalEnds;
         }
 
         internal void ResetFlight()
         {
             _resolvingHit = false;
-            gameObject.SetActive(false);
-        }
-
-        private void CacheComponents()
-        {
-            if (_body == null)
-            {
-                _body = GetComponent<Rigidbody2D>();
-            }
+            _inFlight     = false;
+            ApplyPlayingState();
         }
 
         private void ApplyPlayingState()
         {
-            CacheComponents();
-            bool playing         = _playing && isActiveAndEnabled;
+            bool playing         = _playing && isActiveAndEnabled && InFlight;
             _renderer.enabled    = playing;
             _body.simulated      = playing;
             _body.linearVelocity = playing ? Vector2.up * Speed : Vector2.zero;
@@ -105,7 +86,7 @@ namespace UnityInvader
 
         private void CheckScreenExit()
         {
-            if (_playing && _body.position.y >= ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel)
+            if (_playing && InFlight && _body.position.y >= ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel)
             {
                 FinishFlight();
             }
@@ -113,7 +94,7 @@ namespace UnityInvader
 
         private bool TryHitShield()
         {
-            if (_playing == false || isActiveAndEnabled == false || _resolvingHit)
+            if (_playing == false || InFlight == false || isActiveAndEnabled == false || _resolvingHit)
             {
                 return false;
             }
@@ -133,16 +114,13 @@ namespace UnityInvader
             {
                 return;
             }
-            gameObject.SetActive(false);
-            if (_countsNormalEnds)
-            {
-                _driver.NotifyNormalPlayerShotEnded();
-            }
+            ResetFlight();
+            FlightEnded?.Invoke();
         }
 
         private void ResolveHit(Collider2D inOther)
         {
-            if (_playing == false || isActiveAndEnabled == false || _resolvingHit)
+            if (_playing == false || InFlight == false || isActiveAndEnabled == false || _resolvingHit)
             {
                 return;
             }
@@ -154,7 +132,7 @@ namespace UnityInvader
             else if (inOther.TryGetComponent<Ufo>(out var ufo) && ufo.TryReceiveHit())
             {
                 FinishFlight();
-                _driver.NotifyUfoDefeated();
+                UfoDefeated?.Invoke();
             }
             _resolvingHit = false;
         }
