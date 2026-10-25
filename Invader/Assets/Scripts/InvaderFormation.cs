@@ -185,6 +185,11 @@ namespace UnityInvader
                 position.y -= 8f * ArcadeViewport.UnitsPerPixel;
                 _direction = -_direction;
             }
+            var movement = position - _body.position;
+            foreach (var invader in _invaders)
+            {
+                invader.ErodeShields(movement);
+            }
             _body.position = position;
             _frameB        = _frameB == false;
             foreach (var invader in _invaders)

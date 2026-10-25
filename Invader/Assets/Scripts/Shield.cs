@@ -116,6 +116,24 @@ namespace UnityInvader
             return true;
         }
 
+        internal static void ErodeByInvader(Bounds inStartBounds, Vector2 inMovement)
+        {
+            // Approximate the collider's whole path, including the 8px downward step.
+            var swept     = inStartBounds;
+            swept.center += (Vector3)inMovement * 0.5f;
+            swept.size   += new Vector3(Mathf.Abs(inMovement.x), Mathf.Abs(inMovement.y), 0f);
+            var filter    = new ContactFilter2D { useTriggers = true };
+            int count     = Physics2D.OverlapBox(swept.center, swept.size, 0f, filter, _candidates);
+            for (int index = 0; index < count; index++)
+            {
+                if (_candidates[index].TryGetComponent<Shield>(out var shield))
+                {
+                    shield.EraseOverlappingPixels(swept);
+                }
+            }
+            _candidates.Clear();
+        }
+
         private void InitializePixels()
         {
             _renderer      = GetComponent<SpriteRenderer>();
@@ -175,6 +193,33 @@ namespace UnityInvader
                 }
             }
             return false;
+        }
+
+        private void EraseOverlappingPixels(Bounds inBounds)
+        {
+            if (_playing == false || isActiveAndEnabled == false || _solid == null)
+            {
+                return;
+            }
+            var origin = (Vector2)transform.position;
+            var low    = ((Vector2)inBounds.min - origin) / ArcadeViewport.UnitsPerPixel;
+            var high   = ((Vector2)inBounds.max - origin) / ArcadeViewport.UnitsPerPixel;
+            int minX   = Mathf.Max(0, Mathf.FloorToInt(low.x + 0.0001f));
+            int maxX   = Mathf.Min(Width - 1, Mathf.CeilToInt(high.x - 0.0001f) - 1);
+            int minY   = Mathf.Max(0, Mathf.FloorToInt(low.y + 0.0001f));
+            int maxY   = Mathf.Min(Height - 1, Mathf.CeilToInt(high.y - 0.0001f) - 1);
+            for (int y = minY; y <= maxY; y++)
+            {
+                for (int x = minX; x <= maxX; x++)
+                {
+                    int index = y * Width + x;
+                    if (_solid[index])
+                    {
+                        _solid[index] = false;
+                        _dirty        = true;
+                    }
+                }
+            }
         }
 
         private void Carve(Vector2Int inImpact, bool inFromBelow)
