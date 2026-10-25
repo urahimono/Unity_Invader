@@ -1,6 +1,6 @@
 # ADR-0007: 表示データをDriverからPushし、可変モデルを所有者内部に閉じる
 
-- Status: Accepted
+- Status: Superseded by [ADR-0008](0008-component-gameplay.md)
 - Date: 2026-10-25
 - Supersedes: [ADR-0006](0006-gameplay-driver-owns-execution-state.md)
 

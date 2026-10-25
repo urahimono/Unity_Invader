@@ -1,6 +1,6 @@
 # ADR-0002: 224×256の論理座標を基準とする
 
-- Status: Accepted
+- Status: Superseded by [ADR-0008](0008-component-gameplay.md)（論理画面寸法は維持、位置の正とUnity倍率を更新）
 - Date: 2026-10-23
 
 ## Context

@@ -1,6 +1,6 @@
 # ADR-0005: PlayingController（現 GameplayDriver）が入力と共通時計を所有する
 
-- Status: Accepted
+- Status: Superseded by [ADR-0008](0008-component-gameplay.md)
 - Date: 2026-10-23
 
 ## Context

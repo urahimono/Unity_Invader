@@ -1,6 +1,6 @@
 # ADR-0003: 描画と分離した60Hz論理tick
 
-- Status: Accepted
+- Status: Superseded by [ADR-0008](0008-component-gameplay.md)
 - Date: 2026-10-23
 
 ## Context
