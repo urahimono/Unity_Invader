@@ -10,7 +10,7 @@ Issue #83でPlayerShotは管理者を知らずに動作するようになりま�
 
 ## Decision
 
-DriverがPlayerInputReaderをOnEnableで生成しOnDisableでDisposeします。UpdateでPlayerInputStateの値だけをPlayer.SetInputへ渡し、移動・同時1発・入力ゲートはPlayerに残します。停止・無効化では入力を捨て、Playing中のrelease後に次の押下を受け付けます。
+DriverがPlayerInputReaderをOnEnableで生成しOnDisableでDisposeします。UpdateでPlayerInputStateの値だけをPlayer.SetInputへ渡し、移動・同時1発・入力ゲートはPlayerに残します。停止・無効化では未処理の入力値・発射予約を捨て、射撃受付状態（_fireReady）は従来どおり保持します。WaveClear・Pauseで受付状態をリセットしません。Respawn時だけ_fireReady=falseとし、Playing中のrelease→再押下を必要とします。
 
 Playerは被弾受理をHitAcceptedイベントで通知します。Driverは通常PlayerShotをSceneで明示的に参照し、StartでPlayerと通常弾のイベントを直接購読し、OnDestroyで解除します。Pause/Disableでは解除せず、FlightEnded→UfoDefeatedの履歴・得点順を保ちます。B弾の購読は従来どおり別扱いです。
 

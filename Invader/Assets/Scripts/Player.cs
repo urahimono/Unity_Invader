@@ -49,7 +49,6 @@ namespace UnityInvader
         {
             _inputState  = default;
             _pendingFire = false;
-            _fireReady   = false;
             if (_playing)
             {
                 ApplyPlayingState();
@@ -75,7 +74,6 @@ namespace UnityInvader
             {
                 _inputState  = default;
                 _pendingFire = false;
-                _fireReady   = false;
             }
             ApplyPlayingState();
         }
