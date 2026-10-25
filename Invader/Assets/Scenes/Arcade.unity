@@ -280,6 +280,7 @@ GameObject:
   - component: {fileID: 788391820}
   - component: {fileID: 788391821}
   - component: {fileID: 788391822}
+  - component: {fileID: 788391823}
   m_Layer: 0
   m_Name: Gameplay
   m_TagString: Untagged
@@ -333,6 +334,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 403b52c322b700e44bb0f9aba2fd8955, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.DebugStatusOverlay
+--- !u!114 &788391823
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 788391818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eece3b38a1124e84db3b076879b881f8, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.DebugCarpetBomb
+  _shotPrefab: {fileID: 7546425321980242310, guid: 72ca363032cdb7e499e595d43a891dd1, type: 3}
 --- !u!1 &805784277
 GameObject:
   m_ObjectHideFlags: 0

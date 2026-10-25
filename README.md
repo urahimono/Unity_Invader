@@ -55,6 +55,8 @@ Unityのバージョンは更新後の `Invader/ProjectSettings/ProjectVersion.t
 
 ## 操作と責務
 
+Editor / Development Buildでは、Gameビューで **Bキーを長押しすると絨毯爆撃**します。下部の23レーン（10論理px間隔）をシャッフルし、3発ずつ約0.04〜0.08秒間隔で発射します。専用PlayerShotは最大96発を再利用し、通常のSpace射撃とは独立しています。Bを離すと追加発射を止め、非Playing時には専用弾を回収します。次Waveでも押し続けていれば再開します。原作仕様ではない開発用操作で、通常の製品ビルドでは動作しません。保存済みArcadeに設定済みで、再設定は **Unity Invader > Configure Debug Carpet Bomb** を使います。
+
 Playerの16×16px Triggerへ敵弾が命中すると、DriverがLivesを1機減らしてPlayerDeadへ遷移します。初期3機は操作中の1機を含み、暫定0.5秒後、残機があれば初期位置へ戻ってPlayingへ直接復帰し、0機ならGameOverで停止します。編隊の進捗・Score・Waveは保持します。LivesはDriver Inspectorで確認できます。詳細と検証状況は [Lives・復帰](docs/LIVES.md)、被弾の基礎実装は [Player被弾](docs/PLAYER_HIT.md) を参照してください。
 
 Gameビューで左右矢印キーを押すと移動し、Spaceで射撃します。同時発射は1発で、押しっぱなしでは再発射せず、離して再押下が必要です。発射中の押下も消費します。ShotはPlayerの子ではなく、Player移動後もShotのXは一定です。画面上端と命中時に非アクティブ化し、同じShotを次の発射に再利用します。
