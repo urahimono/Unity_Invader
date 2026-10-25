@@ -11,10 +11,10 @@ Issue #57でPlayingのコードをComponent/Physics2Dへ移行し、現在はArc
 | Scene | 役割 |
 | --- | --- |
 | Bootstrap | StartでArcadeをSingleロード。今回変更なし |
-| Arcade | Driver、Player、単一PlayerShot、Formation、単一Rolling EnemyShot、カメラ |
+| Arcade | Driver、Player、単一PlayerShot、Formation、単一Rolling EnemyShot、Shield4基、カメラ |
 | SampleScene | 既存サンプル。今回変更なし |
 
-1P専用・クレジットなしです。Issue #61のPlayer被弾に加え、Issue #63で初期3機のLives・Player復帰・GameOverを追加しています。待機デモ・開始/リトライ・追加残機/Lives HUD・Shield・UFO・HighScore保存、Rolling以外の敵弾と弾の相殺は未実装です。検証状況は [Lives・復帰](LIVES.md) を参照してください。
+1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元を追加しています。待機デモ・開始/リトライ・追加残機/Lives HUD・UFO・HighScore保存、Rolling以外の敵弾と弾の相殺、InvaderによるShield侵食は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md) を参照してください。
 
 ## Playingの責務
 
@@ -33,11 +33,15 @@ flowchart TD
     Formation -->|発射元選択 / TryLaunch / SetPlaying| EnemyShot[Rolling EnemyShot: 下降・画面外消滅・再利用]
     EnemyShot -->|Trigger / TryReceiveHit| Player
     Player -->|NotifyPlayerHit| Driver
+    Shot -->|Physics2D領域検索 / 移動区間の画素判定| Shield[Shield: 残存画素・局所破壊・描画]
+    EnemyShot -->|Physics2D領域検索 / 移動区間の画素判定| Shield
+    Driver -->|SetPlaying / 次WaveのBeginWave| Shield
 ```
 
 | Component | 所有する責務・状態 |
 | --- | --- |
 | GameplayDriver | 現在State、Score、Wave番号、Lives。WaveClearの暫定1秒待機とPlayerDeadの暫定0.5秒待機。次Wave・復帰/GameOverを管理 |
+| Shield | 各基の画素占有を所有し、描画・穴通過・方向別局所破壊を担当。少数の固定TriggerをPhysics2Dで検索し、弾の移動区間と幅・高さに残る画素だけを判定。死亡・停止時は保持、次Waveで初期画像から復元 |
 | DebugCarpetBomb | Editor/Development Build限定のB長押し入力、専用PlayerShot 96発の遅延生成・再利用、23レーンの一巡シャッフル。DriverのState/Waveを読み、非Playing・Driver無効・Wave変更・自身の無効化で専用弾を回収。通常自機弾と独立し、命中・Score・全滅・Wave進行は既存Componentへ任せる。製品ビルドにも型とScene参照は残すが入力・生成処理は含めない |
 | DebugStatusOverlay | ArcadeのDriverと同じGameObjectで、State・Lives・Waveの読み取り専用enum/intを描画時に取得。状態の複製や進行操作を行わず、非Playingでも表示。OnGUIによる開発用表示はEditor/Development Buildのみ有効で、Componentの型は製品ビルドにも残す |
 | Player | InputReader、入力値と発射受付、release/再押下ゲート。Transformで移動し被弾をDriverへ通知。復帰時に自身の位置・受理/発射ゲートと自機弾を初期化 |

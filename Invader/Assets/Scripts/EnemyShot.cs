@@ -124,6 +124,12 @@ namespace UnityInvader
                 _stepElapsed -= StepPeriod;
                 position.y -= (_fast ? 5f : 4f) * ArcadeViewport.UnitsPerPixel;
             }
+            if (Shield.TryAbsorbShot(_body.position, position,
+                new Vector2(Width, Height) * ArcadeViewport.UnitsPerPixel, false))
+            {
+                ResetFlight();
+                return;
+            }
             if (position.y + Height / 2f * ArcadeViewport.UnitsPerPixel <= -ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel)
             {
                 gameObject.SetActive(false);

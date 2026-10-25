@@ -31,6 +31,10 @@ namespace UnityInvader
 
         private void FixedUpdate()
         {
+            if (TryHitShield())
+            {
+                return;
+            }
             CheckScreenExit();
         }
 
@@ -100,6 +104,22 @@ namespace UnityInvader
             {
                 gameObject.SetActive(false);
             }
+        }
+
+        private bool TryHitShield()
+        {
+            if (_playing == false || isActiveAndEnabled == false || _resolvingHit)
+            {
+                return false;
+            }
+            var center = _body.position + Vector2.up * (Height * 0.5f * ArcadeViewport.UnitsPerPixel);
+            var size   = new Vector2(Width, Height) * ArcadeViewport.UnitsPerPixel;
+            if (Shield.TryAbsorbShot(center, center + _body.linearVelocity * Time.fixedDeltaTime, size, true))
+            {
+                ResetFlight();
+                return true;
+            }
+            return false;
         }
 
         private void ResolveHit(Invader inInvader)
