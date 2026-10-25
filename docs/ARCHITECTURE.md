@@ -77,6 +77,8 @@ shot.TryLaunch(position);
 
 この利用例に購読者・Driverや準備呼出順は不要です。通常ゲームのPlayerは進行に応じてSetPlayingで明示的に停止/再開します。B弾はTryLaunchで発射しResetFlightで回収するだけです。PlayerとDebugCarpetBombは所有期間中購読を保持するため、一時停止やWaveClearへ遷移した命中処理の途中でも自然終了通知を取りこぼしません。詳しい判断と残る依存は [ADR-0010](adr/0010-player-shot-lifecycle-and-events.md) を参照してください。
 
+PlayerがGameplayDriverを直接参照し、PlayerShotのイベントとDriverの通知メソッドを接続する現構造は、Issue #83の変更をPlayerShot周辺に限定するための暫定対応です。推奨する完成形ではありません。被弾通知を含むPlayerの依存関係は、次のIssueで改めて設計・修正します。
+
 Invaderは5×11個を一度生成し、次Waveでも同じ個体・Rendererを再利用します。行ごとのSpriteは既存のTop/Middle/Bottom A/Bを渡し、画像全体の比率を維持します。表示用の子Visualだけを縮小し、親Colliderの寸法を変えません。ShotもBorder不要のSimple表示です。
 
 ## 入力・更新・停止
