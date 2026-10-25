@@ -279,6 +279,7 @@ GameObject:
   m_Component:
   - component: {fileID: 788391820}
   - component: {fileID: 788391821}
+  - component: {fileID: 788391822}
   m_Layer: 0
   m_Name: Gameplay
   m_TagString: Untagged
@@ -320,6 +321,18 @@ MonoBehaviour:
   _waveNumber: 1
   _lives: 3
   _developmentStartPlaying: 1
+--- !u!114 &788391822
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 788391818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 403b52c322b700e44bb0f9aba2fd8955, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.DebugStatusOverlay
 --- !u!1 &805784277
 GameObject:
   m_ObjectHideFlags: 0

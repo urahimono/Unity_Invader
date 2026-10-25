@@ -34,6 +34,11 @@ namespace UnityInvader
         [SerializeField]
         private bool _developmentStartPlaying;
 
+        public GameState CurrentState => _currentState;
+
+        public int Lives      => _lives;
+        public int WaveNumber => _waveNumber;
+
         private void OnEnable()
         {
             if (_initialized)
