@@ -46,17 +46,24 @@ namespace UnityInvader.Editor
             {
                 throw new InvalidOperationException("Arcade must contain exactly one GameplayDriver.");
             }
-            // Only replace the three gameplay roots; leave Bootstrap, camera assets and other scenes alone.
-            foreach (var root in scene.GetRootGameObjects())
+            var camera = Camera.main;
+            if (camera == null)
             {
-                if (root.name == "Player" || root.name == "InvaderFormation" || root.name == "PlayerShot")
-                {
-                    UnityEngine.Object.DestroyImmediate(root);
-                }
+                throw new InvalidOperationException("Arcade Main Camera is missing.");
             }
+            // Capture only existing roots before creating replacements with the same names.
+            var oldRoots = scene.GetRootGameObjects().Where(inRoot =>
+                inRoot.name == "Player" || inRoot.name == "InvaderFormation" || inRoot.name == "PlayerShot").ToArray();
+
             var invaderPrefab = CreateInvaderPrefab(ordered[0], material);
             var shotPrefab    = CreateShotPrefab(CreateShotSprite(), material);
             var playerPrefab  = CreatePlayerPrefab(playerSprite, material);
+            if (invaderPrefab == null || invaderPrefab.GetComponent<Invader>() == null ||
+                shotPrefab == null || shotPrefab.GetComponent<PlayerShot>() == null ||
+                playerPrefab == null || playerPrefab.GetComponent<Player>() == null)
+            {
+                throw new InvalidOperationException("Gameplay prefabs must be saved and contain their required components.");
+            }
             var shotObject    = (GameObject)PrefabUtility.InstantiatePrefab(shotPrefab, scene);
             var playerObject  = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab, scene);
 
@@ -92,15 +99,15 @@ namespace UnityInvader.Editor
             driverData.FindProperty("_score").intValue                 = 0;
             driverData.FindProperty("_waveNumber").intValue            = 1;
             driverData.ApplyModifiedPropertiesWithoutUndo();
-            var camera = Camera.main;
-            if (camera == null)
-            {
-                throw new InvalidOperationException("Arcade Main Camera is missing.");
-            }
             camera.orthographicSize = ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel;
             if (camera.GetComponent<ArcadeViewport>() == null)
             {
                 camera.gameObject.AddComponent<ArcadeViewport>();
+            }
+            // Finish preparation and reference wiring before destroying any existing gameplay object.
+            foreach (var root in oldRoots)
+            {
+                UnityEngine.Object.DestroyImmediate(root);
             }
             if (EditorSceneManager.SaveScene(scene) == false)
             {
