@@ -1,0 +1,23 @@
+# ADR-0010: PlayerShotの構成済み参照と結果イベント
+
+- Status: Accepted
+- Date: 2026-10-25
+- Supersedes: [ADR-0008](0008-component-gameplay.md)のPlayerShotの飛行状態・結果通知に関する部分のみ
+
+## Context
+
+Issue #83では、構成済みPrefabからTryLaunchだけで使えるAPIと管理者を知らない個体をPlayerShotで試します。従来は非アクティブPrefabのAwakeが遅延し、複数箇所の参照取得とInitialize/SetPlayingが必要でした。通常弾かどうかとDriver参照も弾が保持していました。
+
+## Decision
+
+PlayerShotのRigidbody2DとRenderer参照はPrefab保存時に設定します。実行時の参照取得・Initializeは持ちません。PrefabとScene instanceは有効なまま、非シリアライズの_inFlightを唯一の飛行状態とし、表示・物理は飛行中かつ進行可能な場合だけ有効にします。生成直後は待機し、TryLaunchだけで発射できます。明示的なSetPlayingは停止/再開、ResetFlightは通知なしの中断です。
+
+弾はFlightEnded・UfoDefeatedを順に発行し、通知先を保持しません。通常弾の所有者Playerは既存の一度だけのInitializeでDriverの履歴・得点処理を購読し、OnDestroyで解除します。B弾の所有者DebugCarpetBombはプール生成時にUFO通知だけを購読し、OnDestroyで解除します。Pause時は購読を保持し、進行停止中に完了する最終撃破の通知順も維持します。
+
+PlayerのGameplayDriver直接参照と、PlayerがPlayerShotのイベントをDriverの通知メソッドへ接続する配置は、今回の変更範囲を絞るための暫定対応です。推奨する完成形ではなく、被弾通知を含むPlayerの依存関係は次のIssueで改めて設計・修正します。
+
+## Consequences
+
+弾単体・複数インスタンスを同じPrefabから使用できます。GameObject.activeSelfはPlayerShotの飛行状態ではなくなり、利用側・検証側はInFlightを使います。待機中もComponentは存在しますが表示と物理は停止します。必須参照がない未構成GameObjectや非アクティブ階層は通常利用の構成ではありません。設定不備をランタイムの反復初期化で隠しません。
+
+Playerの入力・初期化手順・被弾時Driver依存、Formation/EnemyShot等の設計は今回変更しません。同時1発・Space再押下はPlayer側、Bのレーンとプールは既存の所有側へ残します。

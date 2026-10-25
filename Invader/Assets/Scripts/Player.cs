@@ -60,13 +60,23 @@ namespace UnityInvader
             ApplyPlayingState();
         }
 
+        private void OnDestroy()
+        {
+            if (_shot != null && _driver != null)
+            {
+                _shot.FlightEnded -= _driver.NotifyNormalPlayerShotEnded;
+                _shot.UfoDefeated -= _driver.NotifyUfoDefeated;
+            }
+        }
+
         internal void Initialize()
         {
             if (_shot == null || _driver == null || _hitCollider == null)
             {
                 throw new InvalidOperationException("Player requires a hit collider, PlayerShot and GameplayDriver references. Configure Player Hit first.");
             }
-            _shot.Initialize(_driver, true);
+            _shot.FlightEnded += _driver.NotifyNormalPlayerShotEnded;
+            _shot.UfoDefeated += _driver.NotifyUfoDefeated;
         }
 
         internal void SetPlaying(bool inPlaying)

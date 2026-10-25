@@ -28,11 +28,60 @@ Issue #57 / ADR-0008に基づき、PlayingはComponent・Physics2D中心に構�
 - Invaderは自身の被弾・撃破・表示を担当し、Formationへ一度だけ通知します。
 - Formationは個体の配置・集団移動・生存数を集計し、Driverへ得点・全滅を通知します。Driver/Formationへ独自AABB判定を持ち込みません。
 
-Component間で必要な参照をSerializeFieldや初期化引数から保持することは認めます。参照は意味のある操作と通知に使用し、他者の内部状態を直接書き換えたり、管理対象の実体をGetterで取得して操作したりしません。例えば `NotifyInvaderDefeated(int inScore, bool inWaveCleared)` のように、通知には必要最小限の値を渡します。
+Component間の参照保持は一律に禁止せず、次の依存方向に従います。
 
-個体のTransform/Rigidbody2DとGameObject有効状態を正として、位置・生死を旧モデルや表示スナップショットに二重保持しません。Formationの生存数など、責務に必要な集計値は保持できます。描画は個体Component自身で反映でき、Driver→表示専用ControllerへのPushを必須としません。表示を分離する場合は、不変の値をPushする方式も使えます。
+- 上位の管理者は、自分の管理する下位Componentを参照し、用途の明確な操作を依頼できます。SerializeFieldや初期化引数も、この方向で必要な参照を渡すために使えます。
+- 下位Componentが、通知のために上位管理者を直接保持・検索したり、初期化引数等で注入されたりすることは禁止します。
+- 下位から上位への結果通知はC#のevent/delegateを基本とし、所有・管理側が購読と解除を担当します。通知には必要最小限の事実を渡します。
+- 具体的な命中対象へのTryReceiveHit等の操作は、上位管理者への結果通知と区別します。他者の内部状態の直接書き換えや、管理対象をGetterで辿る操作は認めません。
+- 依存方向を守るためだけに、不必要なInterfaceやManagerを追加しません。
+
+上記のPlayingの責務は現在構造の説明です。PlayerやFormation等に残る上位への直接依存を推奨する規約ではありません。Issue #83の適用範囲と暫定構造は [ARCHITECTURE.md](ARCHITECTURE.md)・[ADR-0010](adr/0010-player-shot-lifecycle-and-events.md) を参照してください。
+
+位置はTransform/Rigidbody2D、Invaderの生死はGameObject有効状態を正として、旧モデルや表示スナップショットに二重保持しません。PlayerShotの飛行状態はInFlightを唯一の正とし、待機中もGameObjectを有効に保ちます。Formationの生存数など、責務に必要な集計値は保持できます。描画は個体Component自身で反映でき、Driver→表示専用ControllerへのPushを必須としません。表示を分離する場合は、不変の値をPushする方式も使えます。
 
 `int`・`bool`・enum等の値の取得は、責務に必要な範囲で可能です。公開Getter一般を禁止するものではありません。ゲーム進行を外部へ任意に変更させるpublic APIや、将来用途だけのManager・Interface・イベントバスは追加しません。
+
+### 自然な操作API・初期化・結果通知
+
+必須参照は構成済みPrefabへ保存するか、実行が保証されるライフサイクルで一度だけ取得します。複数の操作からCacheComponents等を保険で呼びません。非アクティブPrefabのAwake遅延を利用者へ転嫁せず、Prefabの有効状態と待機・飛行の寿命を揃えます。
+
+NG（利用者が内部の準備順を知る必要があり、弾が全体管理者を要求する）:
+
+```csharp
+var shot = Instantiate(shotPrefab);
+shot.Initialize(driver, true);
+shot.SetPlaying(true);
+shot.ResetFlight();
+shot.TryLaunch(position);
+```
+
+OK（Prefabの参照設定が完了していれば、通知先なしでも発射できる）:
+
+```csharp
+var shot = Instantiate(shotPrefab);
+shot.TryLaunch(position);
+```
+
+停止・再開・強制中断は意味のある個別操作として残せますが、初回発射や再利用の準備として必須にしません。PlayerShotのSetPlaying(false)はゲーム進行による明示的な停止で、ResetFlightは通知なしの中断です。
+
+下位Componentは管理者を保持・検索・引数注入しません。終了・命中結果は必要な事実だけをeventで通知し、所有側が生成・接続時に購読して破棄時に解除します。一時停止を購読解除の理由にせず、通知途中で状態が変わる場合の順序も維持します。
+
+```csharp
+// PlayerShot内。強制中断はこの通知を発生させない。
+public event Action FlightEnded;
+public event Action UfoDefeated;
+
+// 上位の所有・管理側で購読し、破棄時に同じdelegateを -= する。
+shot.FlightEnded += driver.NotifyNormalPlayerShotEnded;
+shot.UfoDefeated += driver.NotifyUfoDefeated;
+```
+
+この例は結果イベントの購読を示すもので、PlayerがDriverを参照して接続する配置を推奨するものではありません。現行のPlayerによる接続はIssue #83の暫定対応であり、次のIssueで依存関係を設計・修正します。
+
+UFO命中では弾を消費してFlightEndedを通知してからUfoDefeatedを通知します。通常弾は終了履歴を先に更新し、B弾はUfoDefeatedだけ購読して履歴を変えません。Invader.TryReceiveHit等の具体的な命中操作までイベントへ置き換える必要はありません。
+
+同時1発・入力の再押下条件はPlayer側へ置きます。弾は自身の飛行中の再発射を拒否しますが、複数インスタンスの利用は制限しません。Issue #83ではPlayerShot周辺に限って適用し、既存のPlayer被弾・Formation通知は変更しません。
 
 ### Editor検証用API
 

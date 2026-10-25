@@ -60,6 +60,21 @@ namespace UnityInvader
             ClearShots();
         }
 
+        private void OnDestroy()
+        {
+            if (_shots == null)
+            {
+                return;
+            }
+            foreach (var shot in _shots)
+            {
+                if (shot != null)
+                {
+                    shot.UfoDefeated -= _driver.NotifyUfoDefeated;
+                }
+            }
+        }
+
         private bool IsPlaying()
         {
             return _driver != null && _driver.isActiveAndEnabled && _driver.CurrentState == GameState.Playing;
@@ -110,8 +125,7 @@ namespace UnityInvader
                 var shot      = Instantiate(_shotPrefab, transform);
                 shot.name     = $"Debug PlayerShot {index}";
                 _shots[index] = shot;
-                shot.Initialize(_driver, false);
-                shot.ResetFlight();
+                shot.UfoDefeated += _driver.NotifyUfoDefeated;
             }
             return true;
         }
@@ -131,7 +145,6 @@ namespace UnityInvader
                 }
                 float x      = 2f + _lanes[_laneIndex] * 10f - ArcadeViewport.ScreenWidth / 2f;
                 var position = new Vector2(x, 8f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
-                shot.SetPlaying(true);
                 if (shot.TryLaunch(position))
                 {
                     _laneIndex++;
@@ -172,7 +185,6 @@ namespace UnityInvader
                 if (shot != null && shot.InFlight)
                 {
                     shot.ResetFlight();
-                    shot.SetPlaying(false);
                 }
             }
         }

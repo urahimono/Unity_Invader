@@ -240,7 +240,7 @@ namespace UnityInvader.Editor
                         return;
                     }
                     Require(AliveCount() == 54 && DriverValue("_score") == 1000, "Existing PlayerShot Physics2D hit/score regression.");
-                    Require(_playerShot.gameObject.activeSelf == false, "Existing PlayerShot was not consumed.");
+                    Require(_playerShot.InFlight == false, "Existing PlayerShot was not consumed.");
                     Debug.Log("ROLLING_ENEMY_SHOT_PLAY_PASS: launch/normal/fast/pause/bottom/source/Wave reuse and existing PlayerShot contact.");
                     ArmPlayerDeath();
                     break;

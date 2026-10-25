@@ -11,6 +11,33 @@ namespace UnityInvader.Editor
     {
         public const string PrefabPath = "Assets/Prefabs/Gameplay";
 
+        [MenuItem("Unity Invader/Configure PlayerShot Prefab")]
+        public static void ConfigurePlayerShotPrefab()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                throw new InvalidOperationException("Stop Play Mode before configuring PlayerShot.");
+            }
+            string path  = PrefabPath + "/PlayerShot.prefab";
+            var contents = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                var shot = contents.GetComponent<PlayerShot>();
+                var body = contents.GetComponent<Rigidbody2D>();
+                var data = new SerializedObject(shot);
+                data.FindProperty("_body").objectReferenceValue = body;
+                data.ApplyModifiedPropertiesWithoutUndo();
+                body.simulated = false;
+                ((SpriteRenderer)data.FindProperty("_renderer").objectReferenceValue).enabled = false;
+                contents.SetActive(true);
+                PrefabUtility.SaveAsPrefabAsset(contents, path);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(contents);
+            }
+        }
+
         [MenuItem("Unity Invader/Migrate Arcade to Components")]
         public static void Migrate()
         {
@@ -185,6 +212,7 @@ namespace UnityInvader.Editor
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (existing != null)
             {
+                ConfigurePlayerShotPrefab();
                 return existing;
             }
             var instance = new GameObject("PlayerShot");
@@ -206,8 +234,9 @@ namespace UnityInvader.Editor
                 renderer.transform.localPosition                    = collider.offset;
                 var data                                            = new SerializedObject(shot);
                 data.FindProperty("_renderer").objectReferenceValue = renderer;
+                data.FindProperty("_body").objectReferenceValue     = body;
                 data.ApplyModifiedPropertiesWithoutUndo();
-                instance.SetActive(false);
+                renderer.enabled = false;
                 return PrefabUtility.SaveAsPrefabAsset(instance, path);
             }
             finally
