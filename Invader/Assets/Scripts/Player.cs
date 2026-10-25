@@ -66,6 +66,7 @@ namespace UnityInvader
             {
                 throw new InvalidOperationException("Player requires a hit collider, PlayerShot and GameplayDriver references. Configure Player Hit first.");
             }
+            _shot.Initialize(_driver, true);
         }
 
         internal void SetPlaying(bool inPlaying)

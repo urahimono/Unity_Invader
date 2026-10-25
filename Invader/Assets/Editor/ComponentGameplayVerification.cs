@@ -31,6 +31,11 @@ namespace UnityInvader.Editor
             Require(collider.isTrigger && Vector2.Distance(collider.size, new Vector2(1f, 4f) * ArcadeViewport.UnitsPerPixel) < 1e-6f, "Shot trigger dimensions.");
             Require(formations[0].GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Kinematic, "Formation body must be kinematic.");
             var formationData = new SerializedObject(formations[0]);
+            var ufos          = roots.SelectMany(inRoot => inRoot.GetComponentsInChildren<Ufo>(true)).ToArray();
+            Require(ufos.Length == 1 && formationData.FindProperty("_ufo").objectReferenceValue == ufos[0], "Single UFO and Formation reference.");
+            Require(ufos[0].GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Kinematic &&
+                ufos[0].GetComponent<BoxCollider2D>().isTrigger && ufos[0].GetComponent<SpriteRenderer>().sprite != null,
+                "UFO physics and sprite settings.");
             var rolling       = formationData.FindProperty("_rollingShot").objectReferenceValue as EnemyShot;
             var plunger       = formationData.FindProperty("_plungerShot").objectReferenceValue as EnemyShot;
             var squiggly      = formationData.FindProperty("_squigglyShot").objectReferenceValue as EnemyShot;

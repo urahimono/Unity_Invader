@@ -23,6 +23,8 @@ namespace UnityInvader
         private EnemyShot _plungerShot;
         [SerializeField]
         private EnemyShot _squigglyShot;
+        [SerializeField]
+        private Ufo       _ufo;
 
         private GameplayDriver _driver;
         private Rigidbody2D    _body;
@@ -35,6 +37,8 @@ namespace UnityInvader
         private bool           _rollingAttemptReady;
         private int            _plungerColumnIndex;
         private int            _squigglyColumnIndex;
+        private int            _ufoTicksRemaining;
+        private bool           _ufoPending;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private float _debugMovementMultiplier = 1f;
@@ -52,10 +56,13 @@ namespace UnityInvader
         // ROM ColFireTable 0x1D00, indices 0x00..0x0F; one-based columns.
         private static readonly int[] _plungerColumns = { 1, 7, 1, 1, 1, 4, 11, 1, 6, 3, 1, 1, 11, 9, 2, 8 };
 
-        // ColFireTable indices 0x06..0x14, inclusive. UFO sharing is not implemented.
+        // ColFireTable indices 0x06..0x14, inclusive.
         private static readonly int[] _squigglyColumns = { 11, 1, 6, 3, 1, 1, 11, 9, 2, 8, 2, 11, 4, 7, 10 };
 
         private const double ShotTickPeriod = 1d / 60d;
+
+        private const int   UfoReloadTicks = 0x0600;
+        private const float FirstWaveY    = (208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
 
         private static readonly int[] _reloadScoreMsb = { 0x02, 0x10, 0x20, 0x30 };
         private static readonly int[] _reloadRates    = { 0x30, 0x10, 0x0B, 0x08, 0x07 };
@@ -91,10 +98,10 @@ namespace UnityInvader
             {
                 throw new InvalidOperationException("Formation requires its prefab and six frames. Migrate Arcade first.");
             }
-            if (_player == null || _rollingShot == null || _plungerShot == null || _squigglyShot == null ||
+            if (_player == null || _rollingShot == null || _plungerShot == null || _squigglyShot == null || _ufo == null ||
                 _rollingShot == _plungerShot || _rollingShot == _squigglyShot || _plungerShot == _squigglyShot)
             {
-                throw new InvalidOperationException("Formation requires three independent enemy shots. Run Configure Squiggly EnemyShot.");
+                throw new InvalidOperationException("Formation requires three independent enemy shots and UFO. Run Configure UFO.");
             }
             _driver = inDriver;
             _body   = GetComponent<Rigidbody2D>();
@@ -110,6 +117,7 @@ namespace UnityInvader
             _plungerColumnIndex  = 0; // Provisional: restart each Wave; preserve on death.
             _squigglyColumnIndex = 0;
             ResetEnemyShots();
+            ResetUfo();
 
             var initialPosition = new Vector2(32f - ArcadeViewport.ScreenWidth / 2f,
                 208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
@@ -156,6 +164,7 @@ namespace UnityInvader
         {
             // Clear all slots without resetting the rack, column pointers or movement state.
             ResetEnemyShots();
+            ResetUfo();
         }
 
         private void CreateInvaders()
@@ -190,6 +199,10 @@ namespace UnityInvader
             if (_squigglyShot != null)
             {
                 _squigglyShot.SetPlaying(playing);
+            }
+            if (_ufo != null)
+            {
+                _ufo.SetPlaying(playing);
             }
             foreach (var invader in _invaders)
             {
@@ -262,6 +275,7 @@ namespace UnityInvader
             _rollingShot.PreparePhysicsStep();
             _plungerShot.PreparePhysicsStep();
             _squigglyShot.PreparePhysicsStep();
+            _ufo.PreparePhysicsStep();
             _shotTickElapsed += Time.fixedDeltaTime;
             while (_shotTickElapsed + 1e-7d >= ShotTickPeriod)
             {
@@ -276,12 +290,53 @@ namespace UnityInvader
                         ProcessEnemyShot(_plungerShot, _rollingShot, _squigglyShot, 1);
                         break;
                     case 2:
-                        ProcessEnemyShot(_squigglyShot, _rollingShot, _plungerShot, 2);
+                        ProcessUfoOrSquiggly();
                         break;
                 }
+                TickUfoCountdown(); // ROM 007E: TimeToSaucer follows the object work.
                 // ROM task timer counts down: 0 (Rolling), 2 (Squiggly), 1 (Plunger).
                 _shotPhase = (_shotPhase + 2) % 3;
             }
+        }
+
+        private void ResetUfo()
+        {
+            _ufo.ResetFlight();
+            _ufoTicksRemaining = UfoReloadTicks;
+            _ufoPending        = false;
+        }
+
+        private void TickUfoCountdown()
+        {
+            if (_body.position.y >= FirstWaveY - 1e-6f)
+            {
+                return;
+            }
+            // 0913..092D checks zero before decrementing; reload also consumes one tick.
+            if (_ufoTicksRemaining == 0)
+            {
+                _ufoTicksRemaining = UfoReloadTicks;
+                _ufoPending        = true;
+            }
+            _ufoTicksRemaining--;
+        }
+
+        private void ProcessUfoOrSquiggly()
+        {
+            if (_ufo.InFlight)
+            {
+                _ufo.AdvanceStep();
+                return;
+            }
+            if (_ufoPending && _aliveCount >= 8 && _squigglyShot.InFlight == false)
+            {
+                if (_ufo.TryLaunch(_driver.UfoMovesRight))
+                {
+                    _ufoPending = false;
+                }
+                return;
+            }
+            ProcessEnemyShot(_squigglyShot, _rollingShot, _plungerShot, 2);
         }
 
         private void ProcessEnemyShot(EnemyShot inShot, EnemyShot inOther1, EnemyShot inOther2, int inPhase)

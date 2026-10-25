@@ -255,6 +255,74 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b5b30e87a5da91c448962d6fb8cfa00f, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.Shield
+--- !u!1001 &395602390
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 4426911751358689593, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+      propertyPath: m_Name
+      value: Ufo
+      objectReference: {fileID: 0}
+    - target: {fileID: 8348124980888441517, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8348124980888441517, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8348124980888441517, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8348124980888441517, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8348124980888441517, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8348124980888441517, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8348124980888441517, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8348124980888441517, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8348124980888441517, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8348124980888441517, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+--- !u!114 &395602391 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7960315128376441971, guid: fd050ba1167181c4a838e33390ad7414, type: 3}
+  m_PrefabInstance: {fileID: 395602390}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a196e35fdde0a7141b606305e6537d29, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.Ufo
 --- !u!1 &600648462
 GameObject:
   m_ObjectHideFlags: 0
@@ -462,6 +530,7 @@ MonoBehaviour:
   _score: 0
   _waveNumber: 1
   _lives: 3
+  _normalShotEndCount: 0
   _developmentStartPlaying: 1
 --- !u!114 &788391822
 MonoBehaviour:
@@ -532,6 +601,7 @@ MonoBehaviour:
   _rollingShot: {fileID: 1150688045}
   _plungerShot: {fileID: 1114205932}
   _squigglyShot: {fileID: 1644986078}
+  _ufo: {fileID: 395602391}
 --- !u!50 &805784279
 Rigidbody2D:
   serializedVersion: 5
@@ -1091,3 +1161,4 @@ SceneRoots:
   - {fileID: 171432328}
   - {fileID: 1114205931}
   - {fileID: 1644986077}
+  - {fileID: 395602390}

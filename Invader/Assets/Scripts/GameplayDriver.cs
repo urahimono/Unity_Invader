@@ -24,12 +24,18 @@ namespace UnityInvader
         [Min(0)]
         private int              _lives        = 3;
 
+        [SerializeField]
+        private long _normalShotEndCount;
+
         private float _waveClearElapsed;
         private float _playerDeadElapsed;
         private bool  _initialized;
 
         // Provisional death wait; exact animation/video timing is a later task.
         private const float PlayerDeadDelay = 0.5f;
+
+        // ROM 1D54..1D62; the 16th stored value is skipped by the wrap at 044C.
+        private static readonly int[] _ufoScores = { 100, 50, 50, 100, 150, 100, 100, 50, 300, 100, 100, 100, 50, 150, 100 };
 
         [Tooltip("Temporary development start path; real game-start transitions are not implemented.")]
         [FormerlySerializedAs("developmentStartPlaying")]
@@ -41,6 +47,8 @@ namespace UnityInvader
         public int Lives      => _lives;
         public int Score      => _score;
         public int WaveNumber => _waveNumber;
+
+        internal bool UfoMovesRight => (_normalShotEndCount & 1L) != 0;
 
         private void OnEnable()
         {
@@ -96,6 +104,23 @@ namespace UnityInvader
             ChangeState(GameState.PlayerDead);
         }
 
+        internal void NotifyNormalPlayerShotEnded()
+        {
+            // A final Invader hit may already have changed State to WaveClear.
+            // Only natural completions call here; forced ResetFlight never does.
+            _normalShotEndCount++;
+        }
+
+        internal void NotifyUfoDefeated()
+        {
+            if (isActiveAndEnabled == false || _currentState != GameState.Playing)
+            {
+                return;
+            }
+            // Called after the impacting shot's completion, matching pointer advance before 0711.
+            _score += _ufoScores[(int)(_normalShotEndCount % _ufoScores.Length)];
+        }
+
         private void InitializeGameplay()
         {
             if (_player == null || _formation == null || _shields == null || _shields.Length != 4 ||
@@ -121,6 +146,7 @@ namespace UnityInvader
             if (_waveClearElapsed + 1e-7f >= 1f)
             {
                 _formation.BeginWave();
+                _normalShotEndCount = 0; // ROM 09FD copies the mirror, including 208D/208F.
                 foreach (var shield in _shields)
                 {
                     shield.BeginWave();
