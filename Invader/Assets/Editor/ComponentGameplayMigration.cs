@@ -104,6 +104,7 @@ namespace UnityInvader.Editor
             {
                 camera.gameObject.AddComponent<ArcadeViewport>();
             }
+            RollingEnemyShotSetup.ConfigureInScene(scene, formation, playerObject.transform);
             // Finish preparation and reference wiring before destroying any existing gameplay object.
             foreach (var root in oldRoots)
             {

@@ -358,6 +358,9 @@ MonoBehaviour:
   - {fileID: 1420704182, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   - {fileID: -1863489634, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   _aliveCount: 0
+  _player: {fileID: 1668351247}
+  _rollingShot: {fileID: 1150688045}
+  _rollingFireInterval: 2
 --- !u!50 &805784279
 Rigidbody2D:
   serializedVersion: 5
@@ -468,6 +471,74 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9be99a7b813542b1bf35a716eb075aff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.PlayerShot
+--- !u!1001 &1150688044
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 727048083605718972, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+      propertyPath: m_Name
+      value: EnemyShot
+      objectReference: {fileID: 0}
+    - target: {fileID: 8295889448247079305, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8295889448247079305, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8295889448247079305, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8295889448247079305, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8295889448247079305, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8295889448247079305, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8295889448247079305, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8295889448247079305, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8295889448247079305, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8295889448247079305, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+--- !u!114 &1150688045 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1132450759832058114, guid: b34a745aad7f0eb488abe3ab30538bc5, type: 3}
+  m_PrefabInstance: {fileID: 1150688044}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc079101324847eb82b14e68964f1ec6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.EnemyShot
 --- !u!1001 &1668351245
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -540,6 +611,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f294f985e4cd47b59fb7a46c7bfe751b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.Player
+--- !u!4 &1668351247 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6512685292238339368, guid: f4880c4db70e45c4483fca151e42d0be, type: 3}
+  m_PrefabInstance: {fileID: 1668351245}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -549,3 +625,4 @@ SceneRoots:
   - {fileID: 984733094}
   - {fileID: 1668351245}
   - {fileID: 805784280}
+  - {fileID: 1150688044}
