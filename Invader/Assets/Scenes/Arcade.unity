@@ -530,6 +530,7 @@ MonoBehaviour:
   _aliveCount: 0
   _player: {fileID: 1668351247}
   _rollingShot: {fileID: 1150688045}
+  _plungerShot: {fileID: 1114205932}
   _rollingFireInterval: 2
 --- !u!50 &805784279
 Rigidbody2D:
@@ -721,6 +722,74 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9be99a7b813542b1bf35a716eb075aff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.PlayerShot
+--- !u!1001 &1114205931
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 18172314585353947, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 18172314585353947, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 18172314585353947, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 18172314585353947, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 18172314585353947, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 18172314585353947, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 18172314585353947, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 18172314585353947, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 18172314585353947, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 18172314585353947, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5183240577109808437, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+      propertyPath: m_Name
+      value: PlungerEnemyShot
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+--- !u!114 &1114205932 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5744344303797989677, guid: c1da99beb70f9324fb41c333cc6c156e, type: 3}
+  m_PrefabInstance: {fileID: 1114205931}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc079101324847eb82b14e68964f1ec6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.EnemyShot
 --- !u!1001 &1150688044
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -952,3 +1021,4 @@ SceneRoots:
   - {fileID: 95418053}
   - {fileID: 1906968457}
   - {fileID: 171432328}
+  - {fileID: 1114205931}
