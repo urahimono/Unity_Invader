@@ -11,10 +11,10 @@ Issue #57でPlayingのコードをComponent/Physics2Dへ移行し、現在はArc
 | Scene | 役割 |
 | --- | --- |
 | Bootstrap | StartでArcadeをSingleロード。今回変更なし |
-| Arcade | Driver、Player、単一PlayerShot、Formation、Rolling/Plunger各1個のEnemyShot、Shield4基、カメラ |
+| Arcade | Driver、Player、単一PlayerShot、Formation、Rolling/Plunger/Squiggly各1個のEnemyShot、Shield4基、カメラ |
 | SampleScene | 既存サンプル。今回変更なし |
 
-1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食を追加しています。待機デモ・開始/リトライ・追加残機/Lives HUD・UFO・HighScore保存、Squiggly敵弾と弾の相殺、Invader侵攻による敗北条件は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md) を参照してください。
+1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食を追加しています。待機デモ・開始/リトライ・追加残機/Lives HUD・UFO・HighScore保存、弾の相殺、Invader侵攻による敗北条件は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md) を参照してください。
 
 ## Playingの責務
 
@@ -30,7 +30,7 @@ flowchart TD
     Invader -->|NotifyDefeated| Formation
     Formation -->|得点・全滅通知| Driver
     Formation -->|配置・アニメ・再開| Invader
-    Formation -->|発射元選択 / TryLaunch / SetPlaying| EnemyShot[Rolling / Plunger EnemyShot: 下降・画面外消滅・再利用]
+    Formation -->|種類別phase / TryLaunch / AdvanceStep / SetPlaying| EnemyShot[3種類のEnemyShot: 下降・画面外消滅・再利用]
     EnemyShot -->|Trigger / TryReceiveHit| Player
     Player -->|NotifyPlayerHit| Driver
     Shot -->|Physics2D領域検索 / 移動区間の画素判定| Shield[Shield: 残存画素・局所破壊・描画]
@@ -50,8 +50,8 @@ flowchart TD
 | Player | InputReader、入力値と発射受付、release/再押下ゲート。Transformで移動し被弾をDriverへ通知。復帰時に自身の位置・受理/発射ゲートと自機弾を初期化 |
 | PlayerShot | 動的Rigidbody2DとTrigger。自身の接触をInvaderへ渡し、命中成立後に非アクティブ化して消費。画面上端でも消費 |
 | Invader | GameObjectの有効状態による生死、Spriteの2コマ、被弾反応、所属Formationへの一度だけの通知 |
-| InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、集団移動の方向/周期/アニメ位相、生存数の集計。通知からDriverへ得点・全滅を伝える |
-| EnemyShot | Kinematic Rigidbody2D、下降周期と速度区分。TriggerでPlayerへ被弾受付を依頼し、成立時または画面下端で非アクティブ化して再利用 |
+| InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、集団移動の方向/周期/アニメ位相、生存数の集計。敵弾専用60Hz時計・種類別phase、3種の発射元/Reload制御。通知からDriverへ得点・全滅を伝える |
+| EnemyShot | Kinematic Rigidbody2D、移動step countと速度区分。Formationのphaseから1stepを受け、既存Shield判定と移動を実行。TriggerでPlayerへ被弾受付を依頼し、成立時または画面下端で非アクティブ化して再利用 |
 | ArcadeViewport | 224:256の表示領域と論理px→Unity単位の倍率 |
 
 `GameplaySimulation`、`PlayerUnit`、`PlayerBody`、`InvaderSlot`、`InvaderFormationSimulation`、旧表示Controller2種、表示/検証スナップショットは削除しました。互換モデルや旧AABB判定は残しません。管理Componentや配列を返すGetterもありません。
@@ -68,11 +68,11 @@ Invaderは5×11個を一度生成し、次Waveでも同じ個体・Rendererを�
 
 - Player.Update：左右矢印・Spaceを読む。押しっぱなしでは再発射せず、飛行中の押下も消費する。短い押下は次のFixedUpdateまで保持する。
 - Player.FixedUpdate：60px/秒相当で左右移動し、端でclamp。受付済みの発射を行う。左右同時押しは従来どおり右優先。
-- Formation.FixedUpdate：通常20/60秒ごとに2px横移動。端では8px下降・方向反転し、全個体のA/Bを交換する。開発用F長押しは移動用の経過時間加算だけを10倍にし、既存の各移動・侵食ステップを繰り返す。敵弾発射用の経過時間とTime.timeScale / fixedDeltaTimeは変更しない。離した後も処理済みステップを除いた端数だけを引き継ぐ。
+- Formation.FixedUpdate：通常20/60秒ごとに2px横移動。端では8px下降・方向反転し、全個体のA/Bを交換する。開発用F長押しは移動用の経過時間加算だけを10倍にし、既存の各移動・侵食ステップを繰り返す。敵弾専用時計とTime.timeScale / fixedDeltaTimeは変更しない。離した後も処理済みステップを除いた端数だけを引き継ぐ。
 - Shot：Rigidbody2Dが240px/秒相当で上昇。FixedUpdateで画面上端を確認し、OnTriggerEnter2Dで接触対象を処理する。
 - Driver.Update：WaveClear待機とPlayerDead待機。次WaveではLives・Score・Player位置・Shot占有・releaseゲートを保持し、編隊を初期化する。死亡からの復帰では編隊を初期化しない。
 
-Unityの既存Fixed Timestep（0.02秒）を使い、ProjectSettingsは変更しません。独自60Hz時計や「Player→Shot→Formation→Collision」の旧tick順序は廃止しました。速度・周期は従来相当に換算しますが、接触タイミング・境界・端の到達frameは厳密一致を保証せず、描画FPS別の実測も未確認です。
+Unityの既存Fixed Timestep（0.02秒）を使い、ProjectSettingsは変更しません。全体の独自60Hz時計や「Player→Shot→Formation→Collision」の旧tick順序は廃止しました。Issue #77では敵弾に限定した60Hz種類別phaseをFormationへ追加し、Physics2Dは0.02秒刻みのままです。速度・周期は従来相当に換算しますが、接触タイミング・境界・端の到達frameは厳密一致を保証せず、描画FPS別の実測も未確認です。
 
 非Playing・Driver無効時はPlayer移動/射撃とFormation更新を止め、表示とCollider/物理シミュレーションを停止します。既存Shotの位置・占有と個体の生死は保持します。停止時は未実行入力とFormationの経過時間を破棄し、再開時に停止時間を取り戻しません。Player単体のDisableでも自身とShotを、Formation単体のDisableでも配下の表示・物理を停止します。
 
@@ -95,17 +95,15 @@ Shotが処理中ガードを立ててInvaderに命中を依頼し、Invaderは�
 
 EnemyShotは自身のOnTriggerEnter2Dで接触を検出し、PlayerがPlaying・Collider有効・未受理を確認して被弾を成立させます。DriverはPlaying中の通知だけでLivesを1機減らしてPlayerDeadへ遷移します。Playerの受理ガードは復帰時だけ解除します。EnemyShotは処理中ガードと非アクティブ化で重複接触を抑止します。
 
-PlayerDeadでは既存SetPlaying(false)で入力・射撃・編隊・弾の物理と表示を止め、Player Colliderも無効化します。暫定0.5秒後、Livesが残ればPlayer自身のRespawnで初期位置(112,24)へ戻し、旧自機弾・入力・受理ガードを初期化してPlayingへ直接戻ります。Formationは旧Rolling/Plunger弾と発射タイマーだけを解除し、位置・方向・生存個体・アニメとScore/Waveは保持します。0機ならGameOverで停止し、Attractへは戻りません。詳細は [Lives・復帰](LIVES.md) を参照してください。
+PlayerDeadでは既存SetPlaying(false)で入力・射撃・編隊・弾の物理と表示を止め、Player Colliderも無効化します。暫定0.5秒後、Livesが残ればPlayer自身のRespawnで初期位置(112,24)へ戻し、旧自機弾・入力・受理ガードを初期化してPlayingへ直接戻ります。Formationは3種類の旧敵弾・step count・敵弾時計を解除し、位置・方向・生存個体・アニメとScore/Waveは保持します。0機ならGameOverで停止し、Attractへは戻りません。詳細は [Lives・復帰](LIVES.md) を参照してください。
 
-### Plunger EnemyShot（Issue #75）
+### 3種類のEnemyShot（Issue #77）
 
-Formationが固定16列テーブルを循環し、指定列の最下段生存個体から独立したPlunger EnemyShotへ発射を依頼します。空列はポインタを進めて不発、飛行中・残り1体以下ではポインタも保持します。既存EnemyShotの移動・Shield・Player衝突を共用し、両種は同時飛行できます。Formation内の単一時計でRollingの2秒周期を保ち、Plungerを1秒遅らせる暫定制御です。Waveで列ポインタを初期化、死亡復帰では保持します。責務境界は維持し、新しいManagerは追加していません。詳細と未実装のROM共通reloadは [Plunger EnemyShot](PLUNGER_ENEMY_SHOT.md) を参照してください。
+FormationがRollingのPlayer対応列、Plunger16列、Squiggly15列を選びます。単一の敵弾専用60Hz蓄積時計でRolling=0 / Plunger=1 / Squiggly=2のphaseを0→2→1の順に処理し、各種は3tickに1回だけ発射試行または移動します。旧2秒タイマーは廃止しました。他2種のstep countが0またはScore依存Reload値を厳密に超えている場合だけ新規発射できます。ScoreはDriverの読み取り専用値から取得します。
 
-### Rolling EnemyShot（Issue #59）
+EnemyShotは3つの独立したインスタンスで、発射時count=1・移動ごとに加算し、既存のShield画素判定・Player Trigger・下端消滅を共用します。独立FixedUpdate時計はなく、Formationのphaseから移動を依頼します。各物理stepの先頭で前stepのMovePosition速度を保持位置へ戻してから、選択された種類の移動先を設定します。Rigidbody2D/GameObject有効状態を正とする点は維持しています。
 
-FormationがPlayerのTransformと再利用するEnemyShotを参照し、Playing中にPlayer対応列の最下段の生存Invaderから発射を依頼します。EnemyShotはKinematic Rigidbody2Dで0.05秒ごとに4px、残数8以下で5px下降し、画面下端で非アクティブ化します。DriverのScore/WaveとPlayerShotの既存経路は維持します。発射間隔2秒・橙色3×8px矩形は暫定仕様です。
-
-Scene参照・Prefabは保存済みです。専用の非表示バッチで発射・速度切替・停止・下端消滅・発射元不在・次Wave再利用・既存PlayerShotの接触/加点を確認しました。描画の目視や実キー操作は未確認です。詳細は [Rolling EnemyShot](ROLLING_ENEMY_SHOT.md) を参照してください。
+次Waveで3弾と両表ポインタを初期化、死亡復帰で弾枠だけを整理してポインタと編隊は保持します。初期phase・Wave/死亡時の持越し、爆発待ち省略、ビーム別ISRと0.02秒Physics2Dとの量子化差等は原作との未解決差分です。詳細・Reloadの実境界は [3種類のEnemyShot](ENEMY_SHOTS.md)、限定した時計の設計判断は [ADR-0009](adr/0009-enemy-shot-phases.md) を参照してください。Rolling/Plunger導入当時の記録は [Rolling](ROLLING_ENEMY_SHOT.md)・[Plunger](PLUNGER_ENEMY_SHOT.md) に残します。
 
 旧モデル・旧Push専用のEditor検証と旧設定ツールは削除しました。代わりに接続・物理設定・Missing Script・Play中の55体と生存集計を確認する `Verify Component Gameplay Setup`、Editor限定の一時停止/再開メニュー、READMEの最小限の操作確認を用意しています。接続チェックは衝突やWave進行の成功を意味しません。
 

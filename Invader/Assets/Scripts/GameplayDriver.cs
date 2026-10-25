@@ -39,6 +39,7 @@ namespace UnityInvader
         public GameState CurrentState => _currentState;
 
         public int Lives      => _lives;
+        public int Score      => _score;
         public int WaveNumber => _waveNumber;
 
         private void OnEnable()

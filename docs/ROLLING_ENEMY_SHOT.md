@@ -1,6 +1,6 @@
 # Rolling EnemyShot（Issue #59）
 
-Issue #75でPlungerを追加しました。現在はRollingと独立した弾枠を持ち、Formationの共通時計でRollingの2秒周期を維持しています。Plungerはその中間で試行します。現在の仕様は [Plunger EnemyShot](PLUNGER_ENEMY_SHOT.md) を併読してください。以下の「今回」はIssue #59当時の範囲・検証記録です。
+Issue #77で3種類共通のphase・step count・Score依存Reloadへ移行しました。現在の仕様は [3種類のEnemyShot](ENEMY_SHOTS.md) を参照してください。Plunger追加時の記録は [Issue #75資料](PLUNGER_ENEMY_SHOT.md)、以下はIssue #59当時の実装・検証記録です。
 
 ## 作業状態
 

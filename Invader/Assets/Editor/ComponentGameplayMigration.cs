@@ -109,6 +109,7 @@ namespace UnityInvader.Editor
             }
             RollingEnemyShotSetup.ConfigureInScene(scene, formation, playerObject.transform);
             PlungerEnemyShotSetup.ConfigureInScene(scene, formation);
+            SquigglyEnemyShotSetup.ConfigureInScene(scene, formation);
             // Finish preparation and reference wiring before destroying any existing gameplay object.
             foreach (var root in oldRoots)
             {

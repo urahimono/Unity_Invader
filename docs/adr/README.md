@@ -25,6 +25,7 @@ ADR（Architecture Decision Record）は、重要なArchitecture判断と、そ�
 | [0006](0006-gameplay-driver-owns-execution-state.md) | GameplayDriverへState・Simulationの保持と実行制御を統合 |
 | [0007](0007-push-display-and-encapsulation.md) | Driverから表示値をPushし、可変モデルを所有者内部に閉じる（0006をSupersede） |
 | [0008](0008-component-gameplay.md) | Component/Physics2DへPlayingを移行し、Driverに全体進行を残す（0002の位置基準、0003/0004/0005/0007をSupersede） |
+| [0009](0009-enemy-shot-phases.md) | 敵弾だけをFormationの60Hz種類別phaseで進め、移動・count・衝突はEnemyShotが所有 |
 
 ## 初期記録の根拠
 

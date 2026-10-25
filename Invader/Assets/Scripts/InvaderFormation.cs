@@ -22,19 +22,19 @@ namespace UnityInvader
         [SerializeField]
         private EnemyShot _plungerShot;
         [SerializeField]
-        [Min(0.05f)]
-        [Tooltip("Provisional per-type period: Rolling first at 2s, Plunger half a period later; not ROM score/step-based reload.")]
-        private float     _rollingFireInterval = 2f;
+        private EnemyShot _squigglyShot;
 
         private GameplayDriver _driver;
         private Rigidbody2D    _body;
         private float          _elapsed;
-        private int            _direction        = 1;
+        private int            _direction = 1;
         private bool           _frameB;
         private bool           _playing;
-        private float          _rollingFireElapsed;
-        private bool           _plungerAttempted = true;
+        private double         _shotTickElapsed;
+        private int            _shotPhase;
+        private bool           _rollingAttemptReady;
         private int            _plungerColumnIndex;
+        private int            _squigglyColumnIndex;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private float _debugMovementMultiplier = 1f;
@@ -51,6 +51,14 @@ namespace UnityInvader
 
         // ROM ColFireTable 0x1D00, indices 0x00..0x0F; one-based columns.
         private static readonly int[] _plungerColumns = { 1, 7, 1, 1, 1, 4, 11, 1, 6, 3, 1, 1, 11, 9, 2, 8 };
+
+        // ColFireTable indices 0x06..0x14, inclusive. UFO sharing is not implemented.
+        private static readonly int[] _squigglyColumns = { 11, 1, 6, 3, 1, 1, 11, 9, 2, 8, 2, 11, 4, 7, 10 };
+
+        private const double ShotTickPeriod = 1d / 60d;
+
+        private static readonly int[] _reloadScoreMsb = { 0x02, 0x10, 0x20, 0x30 };
+        private static readonly int[] _reloadRates    = { 0x30, 0x10, 0x0B, 0x08, 0x07 };
 
         private void OnEnable()
         {
@@ -83,9 +91,10 @@ namespace UnityInvader
             {
                 throw new InvalidOperationException("Formation requires its prefab and six frames. Migrate Arcade first.");
             }
-            if (_player == null || _rollingShot == null || _plungerShot == null || _rollingShot == _plungerShot)
+            if (_player == null || _rollingShot == null || _plungerShot == null || _squigglyShot == null ||
+                _rollingShot == _plungerShot || _rollingShot == _squigglyShot || _plungerShot == _squigglyShot)
             {
-                throw new InvalidOperationException("Formation requires independent Rolling/Plunger references. Run Configure Plunger EnemyShot.");
+                throw new InvalidOperationException("Formation requires three independent enemy shots. Run Configure Squiggly EnemyShot.");
             }
             _driver = inDriver;
             _body   = GetComponent<Rigidbody2D>();
@@ -95,10 +104,11 @@ namespace UnityInvader
 
         internal void BeginWave()
         {
-            _elapsed            = 0f;
-            _direction          = 1;
-            _frameB             = false;
-            _plungerColumnIndex = 0; // Provisional: restart each Wave; preserve on death.
+            _elapsed             = 0f;
+            _direction           = 1;
+            _frameB              = false;
+            _plungerColumnIndex  = 0; // Provisional: restart each Wave; preserve on death.
+            _squigglyColumnIndex = 0;
             ResetEnemyShots();
 
             var initialPosition = new Vector2(32f - ArcadeViewport.ScreenWidth / 2f,
@@ -110,6 +120,7 @@ namespace UnityInvader
             _aliveCount = _invaders.Count;
             _rollingShot.SetFast(false);
             _plungerShot.SetFast(false);
+            _squigglyShot.SetFast(false);
             foreach (var invader in _invaders)
             {
                 invader.BeginWave();
@@ -123,7 +134,7 @@ namespace UnityInvader
             if (inPlaying == false)
             {
                 _elapsed = 0f;
-                ResetFireSchedule();
+                ResetShotClock();
             }
             ApplyPlayingState();
         }
@@ -137,12 +148,13 @@ namespace UnityInvader
             _aliveCount--;
             _rollingShot.SetFast(_aliveCount <= 8);
             _plungerShot.SetFast(_aliveCount <= 8);
+            _squigglyShot.SetFast(_aliveCount <= 8);
             _driver.NotifyInvaderDefeated(inScore, _aliveCount == 0);
         }
 
         internal void PreparePlayerRespawn()
         {
-            // Clear both slots without resetting the rack, column pointer or movement state.
+            // Clear all slots without resetting the rack, column pointers or movement state.
             ResetEnemyShots();
         }
 
@@ -174,6 +186,10 @@ namespace UnityInvader
             if (_plungerShot != null)
             {
                 _plungerShot.SetPlaying(playing);
+            }
+            if (_squigglyShot != null)
+            {
+                _squigglyShot.SetPlaying(playing);
             }
             foreach (var invader in _invaders)
             {
@@ -221,17 +237,20 @@ namespace UnityInvader
             }
         }
 
-        private void ResetFireSchedule()
+        private void ResetShotClock()
         {
-            _rollingFireElapsed = 0f;
-            _plungerAttempted   = true;
+            // Initial relative phase is a Unity approximation; do not catch up paused time.
+            _shotTickElapsed = 0d;
+            _shotPhase       = 0;
         }
 
         private void ResetEnemyShots()
         {
             _rollingShot.ResetFlight();
             _plungerShot.ResetFlight();
-            ResetFireSchedule();
+            _squigglyShot.ResetFlight();
+            _rollingAttemptReady = false;
+            ResetShotClock();
         }
 
         private void UpdateEnemyShots()
@@ -240,38 +259,101 @@ namespace UnityInvader
             {
                 return;
             }
-            // Temporary shared phase clock: preserve Rolling's first launch and period,
-            // then try Plunger halfway after it. Replace with ROM reload alongside Squiggly.
-            _rollingFireElapsed += Time.fixedDeltaTime;
-            if (_rollingFireElapsed + 1e-7f >= _rollingFireInterval)
+            _rollingShot.PreparePhysicsStep();
+            _plungerShot.PreparePhysicsStep();
+            _squigglyShot.PreparePhysicsStep();
+            _shotTickElapsed += Time.fixedDeltaTime;
+            while (_shotTickElapsed + 1e-7d >= ShotTickPeriod)
             {
-                _rollingFireElapsed = 0f; // No catch-up burst or occupied-slot queue.
-                _plungerAttempted   = false;
-                if (_rollingShot.InFlight == false && TryGetRollingMuzzle(out var position))
+                // Do not accumulate a negative rounding residue from the float fixed delta.
+                _shotTickElapsed = Math.Max(0d, _shotTickElapsed - ShotTickPeriod);
+                switch (_shotPhase)
                 {
-                    _rollingShot.TryLaunch(position);
+                    case 0:
+                        ProcessEnemyShot(_rollingShot, _plungerShot, _squigglyShot, 0);
+                        break;
+                    case 1:
+                        ProcessEnemyShot(_plungerShot, _rollingShot, _squigglyShot, 1);
+                        break;
+                    case 2:
+                        ProcessEnemyShot(_squigglyShot, _rollingShot, _plungerShot, 2);
+                        break;
                 }
-            }
-            else if (_plungerAttempted == false && _rollingFireElapsed + 1e-7f >= _rollingFireInterval / 2f)
-            {
-                _plungerAttempted = true;
-                TryLaunchPlunger();
+                // ROM task timer counts down: 0 (Rolling), 2 (Squiggly), 1 (Plunger).
+                _shotPhase = (_shotPhase + 2) % 3;
             }
         }
 
-        private void TryLaunchPlunger()
+        private void ProcessEnemyShot(EnemyShot inShot, EnemyShot inOther1, EnemyShot inOther2, int inPhase)
         {
-            if (_aliveCount <= 1 || _plungerShot.InFlight)
+            if (inShot.InFlight)
+            {
+                inShot.AdvanceStep();
+                return;
+            }
+            if (inPhase == 0 && _rollingAttemptReady == false)
+            {
+                // ROM 047D..0489: skip the first idle attempt after slot reinitialization.
+                _rollingAttemptReady = true;
+                return;
+            }
+            if (inPhase == 1 && _aliveCount <= 1)
             {
                 return;
             }
-            int column          = _plungerColumns[_plungerColumnIndex] - 1;
-            _plungerColumnIndex = (_plungerColumnIndex + 1) % _plungerColumns.Length;
-            // Even an empty column consumes its table entry. Never substitute a neighbour.
-            if (TryGetColumnMuzzle(column, out var position))
+            int reload = GetReloadRate(_driver.Score);
+            if (CanReload(inOther1.StepCount, inOther2.StepCount, reload) == false)
             {
-                _plungerShot.TryLaunch(position);
+                return;
             }
+            Vector2 position;
+            bool found;
+            switch (inPhase)
+            {
+                case 0:
+                    found = TryGetRollingMuzzle(out position);
+                    break;
+                case 1:
+                    found = TryGetTableMuzzle(_plungerColumns, ref _plungerColumnIndex, out position);
+                    break;
+                default:
+                    found = TryGetTableMuzzle(_squigglyColumns, ref _squigglyColumnIndex, out position);
+                    break;
+            }
+            if (found && inShot.TryLaunch(position) && inPhase == 0)
+            {
+                _rollingAttemptReady = false;
+            }
+        }
+
+        private static int GetReloadRate(int inScore)
+        {
+            // 170E..1728 compares only the high BCD byte, not the full score.
+            // Keep the existing unbounded Unity Score; beyond 9999 retain fastest reload.
+            int hundreds = Mathf.Clamp(inScore / 100, 0, 99);
+            int scoreMsb = ((hundreds / 10) << 4) | (hundreds % 10);
+            for (int index = 0; index < _reloadScoreMsb.Length; index++)
+            {
+                if (scoreMsb <= _reloadScoreMsb[index])
+                {
+                    return _reloadRates[index];
+                }
+            }
+            return _reloadRates[4];
+        }
+
+        private static bool CanReload(int inOther1Steps, int inOther2Steps, int inReload)
+        {
+            // 057C..0595: ignore zero, otherwise require strictly greater than reload.
+            return (inOther1Steps == 0 || inOther1Steps > inReload) &&
+                (inOther2Steps == 0 || inOther2Steps > inReload);
+        }
+
+        private bool TryGetTableMuzzle(int[] inColumns, ref int inOutIndex, out Vector2 outPosition)
+        {
+            int column = inColumns[inOutIndex] - 1;
+            inOutIndex = (inOutIndex + 1) % inColumns.Length;
+            return TryGetColumnMuzzle(column, out outPosition);
         }
 
         private bool TryGetRollingMuzzle(out Vector2 outPosition)
