@@ -41,6 +41,15 @@ namespace UnityInvader
             _renderer.sprite = inFrameB ? _frameB : _frameA;
         }
 
+        internal void ErodeShields(Vector2 inMovement)
+        {
+            if (isActiveAndEnabled == false || _collider == null || _collider.enabled == false)
+            {
+                return;
+            }
+            Shield.ErodeByInvader(_collider.bounds, inMovement);
+        }
+
         internal bool TryReceiveHit()
         {
             if (isActiveAndEnabled == false || _collider.enabled == false)
