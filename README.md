@@ -55,6 +55,8 @@ Unityのバージョンは更新後の `Invader/ProjectSettings/ProjectVersion.t
 
 ## 操作と責務
 
+Editor / Development Buildでは、Gameビューで **Fキーを押している間だけ編隊の移動テンポが10倍**になります。離すと通常へ戻り、B絨毯爆撃とも併用できます。横2px・端で8px下降の各ステップとShield侵食をそのまま繰り返す開発用操作です。Player・弾・敵弾の発射間隔・待機時間やTime.timeScaleは変更しません。通常の製品ビルドでは無効です。保存済みArcadeに設定済みで、再設定は **Unity Invader > Configure Debug Formation Speed** です。
+
 Shield4基は自弾・Rolling敵弾の命中位置から画素単位で削れ、空いた穴を弾が通過します。Player死亡・復帰では穴を保持し、次Wave開始時に4基とも復元します。B長押しでも同じ処理で破壊できます。Invaderの横移動・下降でもColliderの通過範囲が侵食されます。形状・配置・破壊マスクとCollider全面による侵食は暫定仕様です。[仕様区分と実装](docs/SHIELDS.md) を参照してください。再設定は **Unity Invader > Configure Shields** です。
 
 Editor / Development Buildでは、Gameビューで **Bキーを長押しすると絨毯爆撃**します。下部の23レーン（10論理px間隔）をシャッフルし、3発ずつ約0.04〜0.08秒間隔で発射します。専用PlayerShotは最大96発を再利用し、通常のSpace射撃とは独立しています。Bを離すと追加発射を止め、非Playing時には専用弾を回収します。次Waveでも押し続けていれば再開します。原作仕様ではない開発用操作で、通常の製品ビルドでは動作しません。保存済みArcadeに設定済みで、再設定は **Unity Invader > Configure Debug Carpet Bomb** を使います。
