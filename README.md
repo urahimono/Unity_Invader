@@ -71,6 +71,8 @@ DriverがState・Score・Wave・Livesと死亡待機、Playerが入力・移動�
 
 Rolling・Plunger・Squigglyの3種類が独立したEnemyShotを再利用します。Squigglyは固定15列、Plungerは固定16列の最下段生存Invaderから発射し、空列でも表を進めます。Formationの敵弾専用60Hz phaseと他弾のstep count・Score依存Reloadで発射/更新を制御し、旧2秒タイマーは廃止しました。色付き3×8px矩形と初期phase・Wave時の列ポインタ初期化は暫定です。保存済みScene・Prefabを使用し、Squiggly再設定は **Unity Invader > Configure Squiggly EnemyShot** です。[ROM根拠・Unity上の近似・未解決事項](docs/ENEMY_SHOTS.md) を参照してください。
 
+UFOは編隊が初期高さより下降してからカウンタを進め、生存8体以上かつSquiggly枠が空いた時に出現します。方向・得点は通常PlayerShotの終了履歴で決まり、B弾は履歴対象外です。命中弾終了後に15周期の表から加点し、開発用オーバーレイのScoreで確認できます。再設定は **Unity Invader > Configure UFO**、仕様と時間/座標の近似は [UFO](docs/UFO.md) を参照してください。
+
 ## ローカルで必要な最小限の確認
 
 Issue #59のRolling EnemyShotはScene・Prefab保存済みで、Unity 6000.6.4f1の非表示バッチによる限定Play確認が成功しました。当時は約2秒ごとの暫定発射でした。Issue #77で3種類共通のphase・Reloadへ移行済みです。通常80px/秒、残数8体以下で100px/秒相当で下降します。橙色3×8px矩形は暫定です。[操作・仕様区分・確認結果](docs/ROLLING_ENEMY_SHOT.md) を参照してください。描画の目視と実キーによる操作は未確認です。
@@ -95,4 +97,4 @@ ScoreとWave番号はDriver、生存数はFormationのInspectorで確認でき�
 
 旧GameplaySimulation・表示Push・論理モデル専用のEditor検証/設定メニューは削除しました。新メニューは `ComponentGameplayMigration` と `ComponentGameplayVerification` です。移行のバッチ入口は `-executeMethod UnityInvader.Editor.ComponentGameplayMigration.Migrate`（`-batchmode -quit`）、ログはリポジトリの `Logs/` へ指定します。
 
-独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。追加残機・Lives HUD・開始/リトライ・UFO、弾同士の相殺、Invader侵攻による敗北条件は未実装です。
+独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。追加残機・Lives HUD・開始/リトライ、弾同士の相殺、Invader侵攻による敗北条件は未実装です。

@@ -110,6 +110,7 @@ namespace UnityInvader
                 var shot      = Instantiate(_shotPrefab, transform);
                 shot.name     = $"Debug PlayerShot {index}";
                 _shots[index] = shot;
+                shot.Initialize(_driver, false);
                 shot.ResetFlight();
             }
             return true;

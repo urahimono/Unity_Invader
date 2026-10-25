@@ -47,6 +47,7 @@ namespace UnityInvader.Editor
             RollingEnemyShotSetup.Configure();
             PlungerEnemyShotSetup.Configure();
             SquigglyEnemyShotSetup.Configure();
+            UfoSetup.Configure();
             ComponentGameplayVerification.Verify();
             EditorSceneManager.OpenScene("Assets/Scenes/Bootstrap.unity");
             SessionState.SetBool(SessionKey, true);

@@ -12,6 +12,8 @@ namespace UnityInvader
         private Rigidbody2D    _body;
         private bool           _playing;
         private bool           _resolvingHit;
+        private GameplayDriver _driver;
+        private bool           _countsNormalEnds;
 
         public bool InFlight => gameObject.activeSelf;
 
@@ -40,10 +42,7 @@ namespace UnityInvader
 
         private void OnTriggerEnter2D(Collider2D inOther)
         {
-            if (inOther.TryGetComponent<Invader>(out var invader))
-            {
-                ResolveHit(invader);
-            }
+            ResolveHit(inOther);
         }
 
         private void OnDisable()
@@ -75,6 +74,12 @@ namespace UnityInvader
             ApplyPlayingState();
         }
 
+        internal void Initialize(GameplayDriver inDriver, bool inCountsNormalEnds)
+        {
+            _driver           = inDriver;
+            _countsNormalEnds = inCountsNormalEnds;
+        }
+
         internal void ResetFlight()
         {
             _resolvingHit = false;
@@ -102,7 +107,7 @@ namespace UnityInvader
         {
             if (_playing && _body.position.y >= ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel)
             {
-                gameObject.SetActive(false);
+                FinishFlight();
             }
         }
 
@@ -116,23 +121,40 @@ namespace UnityInvader
             var size   = new Vector2(Width, Height) * ArcadeViewport.UnitsPerPixel;
             if (Shield.TryAbsorbShot(center, center + _body.linearVelocity * Time.fixedDeltaTime, size, true))
             {
-                ResetFlight();
+                FinishFlight();
                 return true;
             }
             return false;
         }
 
-        private void ResolveHit(Invader inInvader)
+        private void FinishFlight()
+        {
+            if (InFlight == false)
+            {
+                return;
+            }
+            gameObject.SetActive(false);
+            if (_countsNormalEnds)
+            {
+                _driver.NotifyNormalPlayerShotEnded();
+            }
+        }
+
+        private void ResolveHit(Collider2D inOther)
         {
             if (_playing == false || isActiveAndEnabled == false || _resolvingHit)
             {
                 return;
             }
             _resolvingHit = true;
-            if (inInvader.TryReceiveHit())
+            if (inOther.TryGetComponent<Invader>(out var invader) && invader.TryReceiveHit())
             {
-                // Inactive state consumes this reusable shot immediately after an accepted hit.
-                gameObject.SetActive(false);
+                FinishFlight();
+            }
+            else if (inOther.TryGetComponent<Ufo>(out var ufo) && ufo.TryReceiveHit())
+            {
+                FinishFlight();
+                _driver.NotifyUfoDefeated();
             }
             _resolvingHit = false;
         }

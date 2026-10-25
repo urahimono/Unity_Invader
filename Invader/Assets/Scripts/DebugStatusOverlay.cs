@@ -35,15 +35,15 @@ namespace UnityInvader
             }
             var previousMatrix = GUI.matrix;
             var previousColor  = GUI.color;
-            float scale        = Mathf.Min(1f, Screen.width / 208f, Screen.height / 108f);
+            float scale        = Mathf.Min(1f, Screen.width / 208f, Screen.height / 128f);
             try
             {
                 GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
                 GUI.color  = Color.black;
-                GUI.DrawTexture(new Rect(8f, 8f, 192f, 92f), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(8f, 8f, 192f, 112f), Texture2D.whiteTexture);
                 GUI.color = Color.white;
                 GUI.Label(new Rect(16f, 10f, 180f, 20f), "DEBUG", _style);
-                GUI.Label(new Rect(16f, 30f, 180f, 66f), GetStatusText(), _style);
+                GUI.Label(new Rect(16f, 30f, 180f, 86f), GetStatusText(), _style);
             }
             finally
             {
@@ -54,7 +54,7 @@ namespace UnityInvader
 
         private string GetStatusText()
         {
-            return $"State : {_driver.CurrentState}\nLives : {_driver.Lives}\nWave : {_driver.WaveNumber}";
+            return $"State : {_driver.CurrentState}\nLives : {_driver.Lives}\nWave : {_driver.WaveNumber}\nScore : {_driver.Score}";
         }
 #endif
     }
