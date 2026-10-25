@@ -35,9 +35,9 @@ namespace UnityInvader
 
         private void OnTriggerEnter2D(Collider2D inOther)
         {
-            if (inOther.TryGetComponent<Player>(out var player))
+            if (inOther.TryGetComponent<IHitReceiver>(out var receiver))
             {
-                ResolveHit(player);
+                ResolveHit(receiver);
             }
         }
 
@@ -139,14 +139,14 @@ namespace UnityInvader
             _body.MovePosition(position);
         }
 
-        private void ResolveHit(Player inPlayer)
+        private void ResolveHit(IHitReceiver inReceiver)
         {
             if (_playing == false || isActiveAndEnabled == false || _resolvingHit)
             {
                 return;
             }
             _resolvingHit = true;
-            if (inPlayer.TryReceiveHit())
+            if (inReceiver.TryReceiveHit())
             {
                 ResetFlight();
             }

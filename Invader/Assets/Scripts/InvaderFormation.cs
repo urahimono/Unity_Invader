@@ -16,8 +16,6 @@ namespace UnityInvader
         private int      _aliveCount;
 
         [SerializeField]
-        private Transform _player;
-        [SerializeField]
         private EnemyShot _rollingShot;
         [SerializeField]
         private EnemyShot _plungerShot;
@@ -26,19 +24,20 @@ namespace UnityInvader
         [SerializeField]
         private Ufo       _ufo;
 
-        private GameplayDriver _driver;
-        private Rigidbody2D    _body;
-        private float          _elapsed;
-        private int            _direction = 1;
-        private bool           _frameB;
-        private bool           _playing;
-        private double         _shotTickElapsed;
-        private int            _shotPhase;
-        private bool           _rollingAttemptReady;
-        private int            _plungerColumnIndex;
-        private int            _squigglyColumnIndex;
-        private int            _ufoTicksRemaining;
-        private bool           _ufoPending;
+        private IPositionProvider _player;
+        private GameplayDriver    _driver;
+        private Rigidbody2D       _body;
+        private float             _elapsed;
+        private int               _direction = 1;
+        private bool              _frameB;
+        private bool              _playing;
+        private double            _shotTickElapsed;
+        private int               _shotPhase;
+        private bool              _rollingAttemptReady;
+        private int               _plungerColumnIndex;
+        private int               _squigglyColumnIndex;
+        private int               _ufoTicksRemaining;
+        private bool              _ufoPending;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private float _debugMovementMultiplier = 1f;
@@ -94,17 +93,18 @@ namespace UnityInvader
             }
         }
 
-        internal void Initialize(GameplayDriver inDriver)
+        internal void Initialize(GameplayDriver inDriver, IPositionProvider inPlayer)
         {
             if (_invaderPrefab == null || _frames.Length != 6 || Array.Exists(_frames, inFrame => inFrame == null))
             {
                 throw new InvalidOperationException("Formation requires its prefab and six frames. Migrate Arcade first.");
             }
-            if (_player == null || _rollingShot == null || _plungerShot == null || _squigglyShot == null || _ufo == null ||
+            if (inPlayer == null || _rollingShot == null || _plungerShot == null || _squigglyShot == null || _ufo == null ||
                 _rollingShot == _plungerShot || _rollingShot == _squigglyShot || _plungerShot == _squigglyShot)
             {
                 throw new InvalidOperationException("Formation requires three independent enemy shots and UFO. Run Configure UFO.");
             }
+            _player = inPlayer;
             _driver = inDriver;
             _body   = GetComponent<Rigidbody2D>();
             CreateInvaders();
@@ -433,7 +433,7 @@ namespace UnityInvader
         {
             outPosition   = default;
             float spacing = Spacing * ArcadeViewport.UnitsPerPixel;
-            int column    = Mathf.FloorToInt((_player.position.x - _body.position.x) / spacing + 0.5f);
+            int column    = Mathf.FloorToInt((_player.Position.x - _body.position.x) / spacing + 0.5f);
             if (column < 0 || column >= Columns)
             {
                 return false; // Do not clamp to an edge column or choose a different one.

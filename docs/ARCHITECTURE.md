@@ -21,14 +21,16 @@ Issue #57でPlayingのコードをComponent/Physics2Dへ移行し、現在はArc
 ```mermaid
 flowchart TD
     Input[Input System] --> Reader[PlayerInputReader]
-    Reader --> Player[Player: 入力・移動・射撃受付]
+    Reader --> Driver
+    Driver -->|PlayerInputStateの値| Player[Player: 移動・射撃受付]
     Driver[GameplayDriver: State / Score / Wave / Lives] -->|SetPlaying / Respawn| Player
     Driver -->|SetPlaying / BeginWave / PreparePlayerRespawn| Formation[InvaderFormation: 集団移動・集計]
-    Player -->|TryLaunch / SetPlaying / event購読接続| Shot[PlayerShot: Rigidbody2D / Trigger / 消費]
+    Player -->|TryLaunch / SetPlaying / ResetFlight| Shot[PlayerShot: Rigidbody2D / Trigger / 消費]
+    Driver -->|通常弾参照・event購読| Shot
     Physics[Unity Physics2D] -->|OnTriggerEnter2D| Shot
     Shot -->|TryReceiveHit| Invader[Invader: 個体の被弾・撃破・表示]
     Shot -->|TryReceiveHit| Ufo[Ufo: 移動・被弾・解除]
-    Shot -.->|通常弾event: Playerが購読接続| Driver
+    Shot -.->|通常弾event: Driverが直接購読| Driver
     Shot -.->|B弾のUfoDefeated eventのみ| Bomb[DebugCarpetBomb]
     Bomb -->|UFO得点通知| Driver
     Invader -->|NotifyDefeated| Formation
@@ -36,8 +38,9 @@ flowchart TD
     Formation -->|配置・アニメ・再開| Invader
     Formation -->|種類別phase / TryLaunch / AdvanceStep / SetPlaying| EnemyShot[3種類のEnemyShot: 下降・画面外消滅・再利用]
     Formation -->|Squiggly共有phase / TryLaunch / AdvanceStep / SetPlaying| Ufo
-    EnemyShot -->|Trigger / TryReceiveHit| Player
-    Player -->|NotifyPlayerHit| Driver
+    EnemyShot -->|Trigger / IHitReceiver.TryReceiveHit| Player
+    Player -.->|HitAccepted event| Driver
+    Formation -->|IPositionProvider.Position| Player
     Shot -->|Physics2D領域検索 / 移動区間の画素判定| Shield[Shield: 残存画素・局所破壊・描画]
     EnemyShot -->|Physics2D領域検索 / 移動区間の画素判定| Shield
     Driver -->|SetPlaying / 次WaveのBeginWave| Shield
@@ -47,12 +50,12 @@ flowchart TD
 
 | Component | 所有する責務・状態 |
 | --- | --- |
-| GameplayDriver | 現在State、Score、Wave番号、Lives、通常PlayerShot終了履歴。履歴からUFO方向と15周期の得点表位置を導出。WaveClearの暫定1秒待機とPlayerDeadの暫定0.5秒待機。次Wave・復帰/GameOverを管理 |
+| GameplayDriver | 入力Readerの生成・破棄とUpdateでの入力取得、Playerへの値渡し、Player被弾と通常PlayerShotイベントの直接購読。現在State、Score、Wave番号、Lives、通常PlayerShot終了履歴。履歴からUFO方向と15周期の得点表位置を導出。WaveClearの暫定1秒待機とPlayerDeadの暫定0.5秒待機。次Wave・復帰/GameOverを管理 |
 | Shield | 各基の画素占有を所有し、描画・穴通過・方向別局所破壊を担当。弾の移動区間とInvader Colliderのswept boundsを既存Triggerで検索し、残存画素を判定・消去。死亡・停止時は保持、次Waveで初期画像から復元 |
 | DebugCarpetBomb | Editor/Development Build限定のB長押し入力、専用PlayerShot 96発の遅延生成・再利用、23レーンの一巡シャッフル。DriverのState/Waveを読み、非Playing・Driver無効・Wave変更・自身の無効化で専用弾を回収。生成時にUfoDefeatedだけを購読しOnDestroyで解除、通常終了履歴は購読しない。命中・Score・全滅・Wave進行は既存Componentへ任せる。製品ビルドにも型とScene参照は残すが入力・生成処理は含めない |
 | DebugFormationSpeed | Formationと同じGameObjectでF長押しを読み、Editor/Development Build限定の内部操作で移動経過時間の倍率を10/1へ設定。FixedUpdate実行順-100でFormationより先に反映し、自身またはFormation無効時は1へ戻す。製品ビルドにも型は残すが入力・倍率処理は含めない |
 | DebugStatusOverlay | ArcadeのDriverと同じGameObjectで、State・Lives・Wave・Scoreの読み取り専用enum/intを描画時に取得。状態の複製や進行操作を行わず、非Playingでも表示。OnGUIによる開発用表示はEditor/Development Buildのみ有効で、Componentの型は製品ビルドにも残す |
-| Player | InputReader、入力値と発射受付、同時1発・release/再押下ゲート。Transformで移動し被弾をDriverへ通知。既存Initializeで通常弾のFlightEndedとUfoDefeatedにDriverの履歴・加点処理を購読しOnDestroyで解除。復帰時に自身の位置・受理/発射ゲートと自機弾を初期化 |
+| Player | 受け取った入力値と発射受付、同時1発・release/再押下ゲート。Transformで移動し被弾受理後にHitAcceptedを発行。IHitReceiverとIPositionProviderを実装。直接操作するゲーム内ComponentはPlayerShotだけ。復帰時に自身の位置・受理/発射ゲートと自機弾を初期化 |
 | PlayerShot | 構成済みRigidbody2D/Renderer、Trigger、唯一の飛行状態_inFlight。Invader/Ufoへ命中を依頼し成立後に消費。上端・Shield吸収・命中でFlightEndedを一度通知し、UFOなら続いてUfoDefeated。通知先・通常弾の区別は知らない。ResetFlightは通知なしの中断 |
 | Invader | GameObjectの有効状態による生死、Spriteの2コマ、被弾反応、所属Formationへの一度だけの通知 |
 | InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、集団移動の方向/周期/アニメ位相、生存数の集計。敵弾/UFOの60Hz時計・種類別phase、3種の発射元/Reload制御。UFOの下降条件・出現カウンタ・開始待ち・Squiggly共有枠。通知からDriverへ得点・全滅を伝える |
@@ -75,19 +78,21 @@ var shot = Instantiate(shotPrefab);
 shot.TryLaunch(position);
 ```
 
-この利用例に購読者・Driverや準備呼出順は不要です。通常ゲームのPlayerは進行に応じてSetPlayingで明示的に停止/再開します。B弾はTryLaunchで発射しResetFlightで回収するだけです。PlayerとDebugCarpetBombは所有期間中購読を保持するため、一時停止やWaveClearへ遷移した命中処理の途中でも自然終了通知を取りこぼしません。詳しい判断と残る依存は [ADR-0010](adr/0010-player-shot-lifecycle-and-events.md) を参照してください。
+この利用例に購読者・Driverや準備呼出順は不要です。通常ゲームのPlayerは進行に応じてSetPlayingで明示的に停止/再開します。B弾はTryLaunchで発射しResetFlightで回収するだけです。DriverとDebugCarpetBombは所有期間中購読を保持するため、一時停止やWaveClearへ遷移した命中処理の途中でも自然終了通知を取りこぼしません。詳しい判断と残る依存は [ADR-0010](adr/0010-player-shot-lifecycle-and-events.md) を参照してください。
 
-PlayerがGameplayDriverを直接参照し、PlayerShotのイベントとDriverの通知メソッドを接続する現構造は、Issue #83の変更をPlayerShot周辺に限定するための暫定対応です。推奨する完成形ではありません。被弾通知を含むPlayerの依存関係は、次のIssueで改めて設計・修正します。
+Issue #85でPlayerのDriver参照とイベント接続の中継を解消しました。Driverは通常PlayerShotをSceneで明示的に参照し、StartでPlayer.HitAccepted・FlightEnded・UfoDefeatedを一度購読、OnDestroyで解除します。PauseやDisableでは解除しません。PlayerInputReaderはDriverのOnEnableで生成、OnDisableでDisposeし、Updateで取得したPlayerInputStateだけをPlayer.SetInputへ渡します。PlayerはFixedUpdateまで短い発射入力を保持します。停止・無効化で入力を破棄し、再開後はrelease→再押下を必要とします。
+
+Player自身のRenderer/ColliderはPrefab保存時、ShotはArcadeのinstance overrideで設定し、Awakeは構成検証だけを行います。SetPlayingやOnEnableから参照を再取得せず、Awakeで進行状態を上書きしないため、DriverとのAwake順に依存しません。FormationにはDriverのStartからPlayerをIPositionProviderとして一度渡し、Rolling照準に現在位置の値だけを使います。EnemyShotは接触先のIHitReceiverに被弾受付を依頼します。FormationのDriver依存は今回維持します。判断は [ADR-0011](adr/0011-player-dependencies.md) を参照してください。
 
 Invaderは5×11個を一度生成し、次Waveでも同じ個体・Rendererを再利用します。行ごとのSpriteは既存のTop/Middle/Bottom A/Bを渡し、画像全体の比率を維持します。表示用の子Visualだけを縮小し、親Colliderの寸法を変えません。ShotもBorder不要のSimple表示です。
 
 ## 入力・更新・停止
 
-- Player.Update：左右矢印・Spaceを読む。押しっぱなしでは再発射せず、飛行中の押下も消費する。短い押下は次のFixedUpdateまで保持する。
+- Driver.Update → Player.SetInput：左右矢印・SpaceをReaderで取得し、PlayerInputStateの値を渡す。Playerがrelease/再押下と占有を判定し、短い発射入力を次のFixedUpdateまで保持する。Player.Updateは持たない。
 - Player.FixedUpdate：60px/秒相当で左右移動し、端でclamp。受付済みの発射を行う。左右同時押しは従来どおり右優先。
 - Formation.FixedUpdate：通常20/60秒ごとに2px横移動。端では8px下降・方向反転し、全個体のA/Bを交換する。開発用F長押しは移動用の経過時間加算だけを10倍にし、既存の各移動・侵食ステップを繰り返す。敵弾専用時計とTime.timeScale / fixedDeltaTimeは変更しない。離した後も処理済みステップを除いた端数だけを引き継ぐ。
 - Shot：Rigidbody2Dが240px/秒相当で上昇。FixedUpdateで画面上端を確認し、OnTriggerEnter2Dで接触対象を処理する。
-- Driver.Update：WaveClear待機とPlayerDead待機。次WaveではLives・Score・Player位置・Shot占有・releaseゲートを保持し、編隊を初期化する。死亡からの復帰では編隊を初期化しない。
+- Driver.Update：WaveClear待機とPlayerDead待機。次WaveではLives・Score・Player位置・Shot占有を保持し、編隊を初期化する。停止中の入力は受理せず、Playing再開後のrelease→再押下を必要とする。死亡からの復帰では編隊を初期化しない。
 
 Unityの既存Fixed Timestep（0.02秒）を使い、ProjectSettingsは変更しません。全体の独自60Hz時計や「Player→Shot→Formation→Collision」の旧tick順序は廃止しました。Issue #77では敵弾に限定した60Hz種類別phaseをFormationへ追加し、Physics2Dは0.02秒刻みのままです。速度・周期は従来相当に換算しますが、接触タイミング・境界・端の到達frameは厳密一致を保証せず、描画FPS別の実測も未確認です。
 

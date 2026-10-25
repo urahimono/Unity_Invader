@@ -23,7 +23,7 @@ GameOverでは復帰しないため、最終機の停止した自機弾は非表
 
 ## 保存と操作
 
-ArcadeのDriverに初期Lives=3をEditor APIで保存済みです。既存の **Unity Invader > Configure Player Hit** はPlayer Collider/Driver参照に加え、初期Lives=3も設定します。全体移行メニューも同じ初期値を設定します。Sceneの構成は手書きせず、Unity生成の追加行の末尾空白だけを正規化しました。既存Prefabの内容とGUIDは変わらず、不要なPrefab/metaの差分は追加していません。
+ArcadeのDriverに初期Lives=3をEditor APIで保存済みです。既存の **Unity Invader > Configure Player Hit** はPlayer Colliderと自身のRenderer/Collider参照、DriverのPlayer/通常PlayerShot参照、初期Lives=3を設定します（Issue #85でPlayer→Driver参照を解消）。全体移行メニューも同じ初期値を設定します。Sceneの構成は手書きせず、Unity生成の追加行の末尾空白だけを正規化しました。既存Prefabの内容とGUIDは変わらず、不要なPrefab/metaの差分は追加していません。
 
 通常は保存済みBootstrapを開いてPlayします。左右矢印で移動、Spaceで射撃し、Driver InspectorのLives・Stateを観測できます。1回目/2回目の被弾は暫定0.5秒後に復帰、3回目はGameOverで停止します。LivesやGameOverの画面表示は追加していません。
 

@@ -23,12 +23,11 @@ namespace UnityInvader.Editor
             }
             var scene      = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
             var formations = UnityEngine.Object.FindObjectsByType<InvaderFormation>(FindObjectsInactive.Include);
-            var players    = UnityEngine.Object.FindObjectsByType<Player>(FindObjectsInactive.Include);
-            if (formations.Length != 1 || players.Length != 1)
+            if (formations.Length != 1)
             {
-                throw new InvalidOperationException("Arcade must contain one existing Player and InvaderFormation.");
+                throw new InvalidOperationException("Arcade must contain one existing InvaderFormation.");
             }
-            ConfigureInScene(scene, formations[0], players[0].transform);
+            ConfigureInScene(scene, formations[0]);
             if (EditorSceneManager.SaveScene(scene) == false)
             {
                 throw new InvalidOperationException("Could not save Rolling EnemyShot references in Arcade.");
@@ -37,7 +36,7 @@ namespace UnityInvader.Editor
             Debug.Log("ROLLING_ENEMY_SHOT_SETUP_PASS: EnemyShot prefab and Arcade references saved.");
         }
 
-        internal static void ConfigureInScene(Scene inScene, InvaderFormation inFormation, Transform inPlayer)
+        internal static void ConfigureInScene(Scene inScene, InvaderFormation inFormation)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
@@ -47,9 +46,9 @@ namespace UnityInvader.Editor
             var sprite   = AssetDatabase.LoadAssetAtPath<Sprite>(ComponentGameplayMigration.PrefabPath + "/PlayerShot.png");
             var material = AssetDatabase.LoadAssetAtPath<Material>(
                 "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
-            if (sprite == null || material == null || inFormation == null || inPlayer == null)
+            if (sprite == null || material == null || inFormation == null)
             {
-                throw new InvalidOperationException("Existing gameplay sprite/material and Player/Formation references are required.");
+                throw new InvalidOperationException("Existing gameplay sprite/material and Formation reference are required.");
             }
             var existing = Array.FindAll(UnityEngine.Object.FindObjectsByType<EnemyShot>(FindObjectsInactive.Include),
                 inShot => inShot.gameObject.name == "EnemyShot");
@@ -67,7 +66,6 @@ namespace UnityInvader.Editor
             shot.gameObject.name = "EnemyShot";
             shot.gameObject.SetActive(false);
             var data                                               = new SerializedObject(inFormation);
-            data.FindProperty("_player").objectReferenceValue      = inPlayer;
             data.FindProperty("_rollingShot").objectReferenceValue = shot;
             data.ApplyModifiedPropertiesWithoutUndo();
         }

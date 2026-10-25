@@ -1,0 +1,21 @@
+# ADR-0011: Playerの入力値・被弾イベントと最小Interface
+
+- Status: Accepted
+- Date: 2026-10-26
+- Supersedes: [ADR-0010](0010-player-shot-lifecycle-and-events.md)のPlayerのDriver参照・入力所有・通常弾イベント接続のみ
+
+## Context
+
+Issue #83でPlayerShotは管理者を知らずに動作するようになりましたが、PlayerがDriverを保持し、入力取得と通常弾イベントの接続を担う暫定構造が残っていました。Issue #85ではPlayerが直接操作するゲーム内ComponentをPlayerShotだけに限定します。
+
+## Decision
+
+DriverがPlayerInputReaderをOnEnableで生成しOnDisableでDisposeします。UpdateでPlayerInputStateの値だけをPlayer.SetInputへ渡し、移動・同時1発・入力ゲートはPlayerに残します。停止・無効化では入力を捨て、Playing中のrelease後に次の押下を受け付けます。
+
+Playerは被弾受理をHitAcceptedイベントで通知します。Driverは通常PlayerShotをSceneで明示的に参照し、StartでPlayerと通常弾のイベントを直接購読し、OnDestroyで解除します。Pause/Disableでは解除せず、FlightEnded→UfoDefeatedの履歴・得点順を保ちます。B弾の購読は従来どおり別扱いです。
+
+Player自身のRenderer/Collider参照はPrefab保存時に構成し、Awakeは検証だけを行います。進行状態の変更時に参照取得や初期化を繰り返しません。DriverのStartはFormationへPlayerをIPositionProviderとして一度渡します。Formationは位置の値、EnemyShotは接触先のIHitReceiver.TryReceiveHitだけに依存します。Interfaceはこの2つの契約に限定します。
+
+## Consequences
+
+PlayerからDriver・入力Reader・イベント接続の責務がなくなります。通知購読者がいなくても被弾受理・停止は完結します。位置は引き続きPlayerのTransformが正で、複製しません。PlayerShotのAPI・飛行状態、FormationのDriver依存、EnemyShotの移動・phase・再利用は変更しません。
