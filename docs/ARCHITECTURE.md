@@ -4,17 +4,17 @@
 
 ## 移行状態と起動
 
-Issue #57でPlayingのコードをComponent/Physics2Dへ移行しました。**作業環境ではUnityライセンスが利用できず、追跡中のArcade Sceneへ移行は未適用、Prefabは未生成、Play Modeは未検証です。** Scene YAMLは編集していません。旧SceneをそのままPlayしても新構造の接続は完成していません。
+Issue #57でPlayingのコードをComponent/Physics2Dへ移行し、現在はArcade SceneとGameplay Prefabを保存済みです。Issue #59ではRolling敵弾をEditor APIで追加し、Unity 6000.6.4f1の非表示バッチで限定Play確認を実施しました。Scene/PrefabのYAMLは直接編集していません。
 
-ローカルUnityで `Unity Invader > Migrate Arcade to Components` を実行してArcadeとPrefabを保存し、接続確認後にBootstrapから起動します。詳細は [README](../README.md) を参照してください。
+通常は保存済みBootstrapから起動します。Scene再生成が必要な場合の移行メニューは [README](../README.md) を参照してください。
 
 | Scene | 役割 |
 | --- | --- |
 | Bootstrap | StartでArcadeをSingleロード。今回変更なし |
-| Arcade | Driver、Player、単一Shot、Formation、カメラ。Editorメニューで新構造へ移行する |
+| Arcade | Driver、Player、単一PlayerShot、Formation、単一Rolling EnemyShot、カメラ |
 | SampleScene | 既存サンプル。今回変更なし |
 
-1P専用・クレジットなしです。待機デモ・開始/リトライ・敵弾・Player被弾/残機・Shield・UFO・HighScore保存は未実装です。
+1P専用・クレジットなしです。待機デモ・開始/リトライ・Player被弾/残機・Shield・UFO・HighScore保存、Rolling以外の敵弾と弾の相殺は未実装です。
 
 ## Playingの責務
 
@@ -30,6 +30,7 @@ flowchart TD
     Invader -->|NotifyDefeated| Formation
     Formation -->|得点・全滅通知| Driver
     Formation -->|配置・アニメ・再開| Invader
+    Formation -->|発射元選択 / TryLaunch / SetPlaying| EnemyShot[Rolling EnemyShot: 下降・画面外消滅・再利用]
 ```
 
 | Component | 所有する責務・状態 |
@@ -39,6 +40,7 @@ flowchart TD
 | PlayerShot | 動的Rigidbody2DとTrigger。自身の接触をInvaderへ渡し、命中成立後に非アクティブ化して消費。画面上端でも消費 |
 | Invader | GameObjectの有効状態による生死、Spriteの2コマ、被弾反応、所属Formationへの一度だけの通知 |
 | InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、集団移動の方向/周期/アニメ位相、生存数の集計。通知からDriverへ得点・全滅を伝える |
+| EnemyShot | Kinematic Rigidbody2D、下降周期と速度区分。画面下端で非アクティブ化し、同じ個体を再利用。命中反応はまだ持たない |
 | ArcadeViewport | 224:256の表示領域と論理px→Unity単位の倍率 |
 
 `GameplaySimulation`、`PlayerUnit`、`PlayerBody`、`InvaderSlot`、`InvaderFormationSimulation`、旧表示Controller2種、表示/検証スナップショットは削除しました。互換モデルや旧AABB判定は残しません。管理Componentや配列を返すGetterもありません。
@@ -77,6 +79,12 @@ Shotが処理中ガードを立ててInvaderに命中を依頼し、Invaderは�
 隣接2体への同時接触は最大1体だけを撃破しますが、どちらが選ばれるかは保証しません。旧独自判定の下段→上段・左→右の優先順位は再現しません。Discrete Triggerと固定物理stepを使うため、高速化時のすり抜け・接触境界の差はローカルで確認が必要です。移動速度・初期位置・WaveClearの1秒等は既存の暫定値を継承しています。
 
 ## 検証の範囲
+
+### Rolling EnemyShot（Issue #59）
+
+FormationがPlayerのTransformと再利用するEnemyShotを参照し、Playing中にPlayer対応列の最下段の生存Invaderから発射を依頼します。EnemyShotはKinematic Rigidbody2Dで0.05秒ごとに4px、残数8以下で5px下降し、画面下端で非アクティブ化します。DriverのScore/WaveとPlayerShotの既存経路は維持します。発射間隔2秒・橙色3×8px矩形は暫定仕様です。
+
+Scene参照・Prefabは保存済みです。専用の非表示バッチで発射・速度切替・停止・下端消滅・発射元不在・次Wave再利用・既存PlayerShotの接触/加点を確認しました。描画の目視や実キー操作は未確認です。詳細は [Rolling EnemyShot](ROLLING_ENEMY_SHOT.md) を参照してください。
 
 旧モデル・旧Push専用のEditor検証と旧設定ツールは削除しました。代わりに接続・物理設定・Missing Script・Play中の55体と生存集計を確認する `Verify Component Gameplay Setup`、Editor限定の一時停止/再開メニュー、READMEの最小限の操作確認を用意しています。接続チェックは衝突やWave進行の成功を意味しません。
 

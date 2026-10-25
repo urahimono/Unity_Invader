@@ -15,7 +15,7 @@ Unityを使用してSpace Invadersの挙動を再現する個人開発・学習�
 
 - Unity Project Root: `Invader/`
 - Unity: `6000.6.4f1`
-- 現在の状態: Bootstrap → Arcadeの起動経路とGameStateの土台に、Playing上のPlayer左右移動、55体の編隊、単一弾、命中・撃破・Score、次WaveをComponent/Physics2Dへ移行中です。下記のEditorメニューによるScene移行が必要です。
+- 現在の状態: Player左右移動、自機の単一弾、55体の編隊、命中・撃破・Score・次Waveに加え、Rolling敵弾の発射・下降・消滅を実装しています。必要なArcade SceneとPrefabは保存済みです。
 
 Unity Hubから `Invader/` を指定して、上記バージョンのEditorで開いてください。
 
@@ -37,9 +37,9 @@ Unity Hubから `Invader/` を指定して、上記バージョンのEditorで�
 
 Unityのバージョンは更新後の `Invader/ProjectSettings/ProjectVersion.txt` から読み、標準の `C:\Program Files\Unity\Hub\Editor\<version>\Editor\Unity.exe` を使用します。カスタム配置では、環境変数 `UNITY_EDITOR_PATH` に対応バージョンのUnity.exeのフルパスを設定してください（値自体に引用符は含めません）。例: `D:\Unity Editors\6000.6.4f1\Editor\Unity.exe`。バッチ冒頭の設定例でも指定できますが、追跡ファイルの編集は未コミット変更として検出されるため、環境変数の使用を推奨します。
 
-## Component版Playingへの移行（Issue #57）
+## Component版Playingの再生成（通常の起動には不要）
 
-**この変更の作業環境ではUnityライセンスを利用できず、Arcadeの移行・Prefab生成・Unity Editorコンパイル・Play Modeは未実施です。追跡中のSceneは旧構成です。** コードだけを取得してそのままPlayしても新Componentへの参照は未設定で、Driverは移行を促すエラーを出して停止します。マージ可能・実プレイ確認済みとは扱いません。
+保存済みのScene・Prefabを使用する通常の起動では移行操作は不要です。以下はSceneの再生成が必要な場合だけの手順です。Issue #59では既存のPlayer・Invader・PlayerShotを作り直さず、敵弾だけをEditor APIで追加しました。
 
 1. Unity **6000.6.4f1**でこのブランチの `Invader/` を開き、スクリプトのコンパイルを待ちます。
 2. Play停止中に **Unity Invader > Migrate Arcade to Components** を実行します。未保存Sceneには保存確認が出ます。既存Arcadeを開き、Player・InvaderFormation・PlayerShotという3つのルートを置き換えて保存します。これらに手作業の調整があれば、実行前に退避してください。
@@ -61,6 +61,8 @@ DriverがState・Score・Wave待機/進行、Playerが入力・移動・射撃�
 
 ## ローカルで必要な最小限の確認
 
+Issue #59のRolling EnemyShotはScene・Prefab保存済みで、Unity 6000.6.4f1の非表示バッチによる限定Play確認が成功しました。約2秒ごとに発射を試み、通常80px/秒、残数8体以下で100px/秒相当で下降します。発射周期と橙色3×8px矩形は暫定です。[操作・仕様区分・確認結果](docs/ROLLING_ENEMY_SHOT.md) を参照してください。描画の目視と実キーによる操作は未確認です。
+
 以下は**未実行の確認手順・期待結果**です。全旧モデルテストの移植や反復実行は行いません。
 
 | 確認 | 期待結果 |
@@ -81,4 +83,4 @@ ScoreとWave番号はDriver、生存数はFormationのInspectorで確認でき�
 
 旧GameplaySimulation・表示Push・論理モデル専用のEditor検証/設定メニューは削除しました。新メニューは `ComponentGameplayMigration` と `ComponentGameplayVerification` です。移行のバッチ入口は `-executeMethod UnityInvader.Editor.ComponentGameplayMigration.Migrate`（`-batchmode -quit`）、ログはリポジトリの `Logs/` へ指定します。
 
-独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。敵弾・Player死亡/残機・Shield・UFOは追加していません。
+独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。Player死亡/残機・Shield・UFO、Rolling以外の敵弾や弾同士の相殺は未実装です。
