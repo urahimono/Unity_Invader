@@ -66,12 +66,17 @@ namespace UnityInvader
 
         internal void BeginWave()
         {
-            _elapsed       = 0f;
-            _direction     = 1;
-            _frameB        = false;
-            _body.position = new Vector2(32f - ArcadeViewport.ScreenWidth / 2f,
+            _elapsed   = 0f;
+            _direction = 1;
+            _frameB    = false;
+
+            var initialPosition = new Vector2(32f - ArcadeViewport.ScreenWidth / 2f,
                 208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
-            _aliveCount    = _invaders.Count;
+            // Keep both poses aligned while simulation is disabled, before enabling it again.
+            transform.position = new Vector3(initialPosition.x, initialPosition.y, transform.position.z);
+            _body.position     = initialPosition;
+
+            _aliveCount = _invaders.Count;
             foreach (var invader in _invaders)
             {
                 invader.BeginWave();
