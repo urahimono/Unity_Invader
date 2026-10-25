@@ -11,10 +11,10 @@ Issue #57でPlayingのコードをComponent/Physics2Dへ移行し、現在はArc
 | Scene | 役割 |
 | --- | --- |
 | Bootstrap | StartでArcadeをSingleロード。今回変更なし |
-| Arcade | Driver、Player、単一PlayerShot、Formation、単一Rolling EnemyShot、Shield4基、カメラ |
+| Arcade | Driver、Player、単一PlayerShot、Formation、Rolling/Plunger各1個のEnemyShot、Shield4基、カメラ |
 | SampleScene | 既存サンプル。今回変更なし |
 
-1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食を追加しています。待機デモ・開始/リトライ・追加残機/Lives HUD・UFO・HighScore保存、Rolling以外の敵弾と弾の相殺、Invader侵攻による敗北条件は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md) を参照してください。
+1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食を追加しています。待機デモ・開始/リトライ・追加残機/Lives HUD・UFO・HighScore保存、Squiggly敵弾と弾の相殺、Invader侵攻による敗北条件は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md) を参照してください。
 
 ## Playingの責務
 
@@ -30,7 +30,7 @@ flowchart TD
     Invader -->|NotifyDefeated| Formation
     Formation -->|得点・全滅通知| Driver
     Formation -->|配置・アニメ・再開| Invader
-    Formation -->|発射元選択 / TryLaunch / SetPlaying| EnemyShot[Rolling EnemyShot: 下降・画面外消滅・再利用]
+    Formation -->|発射元選択 / TryLaunch / SetPlaying| EnemyShot[Rolling / Plunger EnemyShot: 下降・画面外消滅・再利用]
     EnemyShot -->|Trigger / TryReceiveHit| Player
     Player -->|NotifyPlayerHit| Driver
     Shot -->|Physics2D領域検索 / 移動区間の画素判定| Shield[Shield: 残存画素・局所破壊・描画]
@@ -95,7 +95,11 @@ Shotが処理中ガードを立ててInvaderに命中を依頼し、Invaderは�
 
 EnemyShotは自身のOnTriggerEnter2Dで接触を検出し、PlayerがPlaying・Collider有効・未受理を確認して被弾を成立させます。DriverはPlaying中の通知だけでLivesを1機減らしてPlayerDeadへ遷移します。Playerの受理ガードは復帰時だけ解除します。EnemyShotは処理中ガードと非アクティブ化で重複接触を抑止します。
 
-PlayerDeadでは既存SetPlaying(false)で入力・射撃・編隊・弾の物理と表示を止め、Player Colliderも無効化します。暫定0.5秒後、Livesが残ればPlayer自身のRespawnで初期位置(112,24)へ戻し、旧自機弾・入力・受理ガードを初期化してPlayingへ直接戻ります。Formationは旧Rolling弾と発射タイマーだけを解除し、位置・方向・生存個体・アニメとScore/Waveは保持します。0機ならGameOverで停止し、Attractへは戻りません。詳細は [Lives・復帰](LIVES.md) を参照してください。
+PlayerDeadでは既存SetPlaying(false)で入力・射撃・編隊・弾の物理と表示を止め、Player Colliderも無効化します。暫定0.5秒後、Livesが残ればPlayer自身のRespawnで初期位置(112,24)へ戻し、旧自機弾・入力・受理ガードを初期化してPlayingへ直接戻ります。Formationは旧Rolling/Plunger弾と発射タイマーだけを解除し、位置・方向・生存個体・アニメとScore/Waveは保持します。0機ならGameOverで停止し、Attractへは戻りません。詳細は [Lives・復帰](LIVES.md) を参照してください。
+
+### Plunger EnemyShot（Issue #75）
+
+Formationが固定16列テーブルを循環し、指定列の最下段生存個体から独立したPlunger EnemyShotへ発射を依頼します。空列はポインタを進めて不発、飛行中・残り1体以下ではポインタも保持します。既存EnemyShotの移動・Shield・Player衝突を共用し、両種は同時飛行できます。Formation内の単一時計でRollingの2秒周期を保ち、Plungerを1秒遅らせる暫定制御です。Waveで列ポインタを初期化、死亡復帰では保持します。責務境界は維持し、新しいManagerは追加していません。詳細と未実装のROM共通reloadは [Plunger EnemyShot](PLUNGER_ENEMY_SHOT.md) を参照してください。
 
 ### Rolling EnemyShot（Issue #59）
 

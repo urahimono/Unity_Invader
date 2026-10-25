@@ -1,5 +1,7 @@
 # Rolling EnemyShot（Issue #59）
 
+Issue #75でPlungerを追加しました。現在はRollingと独立した弾枠を持ち、Formationの共通時計でRollingの2秒周期を維持しています。Plungerはその中間で試行します。現在の仕様は [Plunger EnemyShot](PLUNGER_ENEMY_SHOT.md) を併読してください。以下の「今回」はIssue #59当時の範囲・検証記録です。
+
 ## 作業状態
 
 Unity 6000.6.4f1のEditor APIでArcadeの敵弾参照とEnemyShot Prefabを保存しました。Scene・Prefab・対応するmetaをGit管理します。2026-10-25に、承認済みの隔離プロジェクトの非表示バッチでコンパイル・限定Play確認が成功しました。既存EditorやWindowsデスクトップは操作していません。

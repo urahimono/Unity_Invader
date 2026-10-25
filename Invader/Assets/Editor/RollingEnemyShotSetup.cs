@@ -51,7 +51,8 @@ namespace UnityInvader.Editor
             {
                 throw new InvalidOperationException("Existing gameplay sprite/material and Player/Formation references are required.");
             }
-            var existing = UnityEngine.Object.FindObjectsByType<EnemyShot>(FindObjectsInactive.Include);
+            var existing = Array.FindAll(UnityEngine.Object.FindObjectsByType<EnemyShot>(FindObjectsInactive.Include),
+                inShot => inShot.gameObject.name == "EnemyShot");
             if (existing.Length > 1 || (existing.Length == 1 && existing[0].gameObject.scene != inScene))
             {
                 throw new InvalidOperationException("Expected at most one EnemyShot in the target scene.");

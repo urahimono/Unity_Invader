@@ -30,6 +30,16 @@ namespace UnityInvader.Editor
             Require(shotBody.bodyType == RigidbodyType2D.Dynamic && shotBody.gravityScale == 0f && shotBody.linearDamping == 0f, "Shot body settings.");
             Require(collider.isTrigger && Vector2.Distance(collider.size, new Vector2(1f, 4f) * ArcadeViewport.UnitsPerPixel) < 1e-6f, "Shot trigger dimensions.");
             Require(formations[0].GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Kinematic, "Formation body must be kinematic.");
+            var formationData = new SerializedObject(formations[0]);
+            var rolling       = formationData.FindProperty("_rollingShot").objectReferenceValue as EnemyShot;
+            var plunger       = formationData.FindProperty("_plungerShot").objectReferenceValue as EnemyShot;
+            Require(rolling != null && plunger != null && rolling != plunger, "Independent Rolling and Plunger slots.");
+            foreach (var enemyShot in new[] { rolling, plunger })
+            {
+                Require(enemyShot.gameObject.scene == scene, "EnemyShot belongs to Arcade.");
+                Require(enemyShot.GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Kinematic &&
+                    enemyShot.GetComponent<BoxCollider2D>().isTrigger, "EnemyShot physics settings.");
+            }
             Require(Mathf.Approximately(Camera.main.orthographicSize, ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel), "Camera pixel scale.");
             foreach (var root in roots)
             {
