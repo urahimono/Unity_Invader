@@ -91,6 +91,17 @@ namespace UnityInvader
             return true;
         }
 
+        internal void Respawn()
+        {
+            SetPlaying(false);
+            _shot.ResetFlight();
+            transform.position = new Vector3((112f - ArcadeViewport.ScreenWidth / 2f) * ArcadeViewport.UnitsPerPixel,
+                (24f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel, transform.position.z);
+            _hitAccepted       = false;
+            // A release during Playing is required before the next press may launch a shot.
+            _fireReady = false;
+        }
+
         private void ApplyPlayingState()
         {
             bool playing = _playing && isActiveAndEnabled;

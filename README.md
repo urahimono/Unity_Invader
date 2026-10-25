@@ -53,11 +53,11 @@ Unityのバージョンは更新後の `Invader/ProjectSettings/ProjectVersion.t
 
 ## 操作と責務
 
-Issue #61でPlayer被弾を追加しました。敵弾がPlayerの16×16px Triggerへ命中すると一度だけ受理し、DriverがPlayingからPlayerDeadへ遷移します。既存の停止方針に合わせて表示・入力・弾・編隊が止まり、自動復帰やLives管理は行いません。Prefab・Sceneは保存済みで、非表示バッチの実Trigger確認が成功しています。描画の目視・実キー操作は未確認です。詳細は [Player被弾](docs/PLAYER_HIT.md) を参照してください。
+Playerの16×16px Triggerへ敵弾が命中すると、DriverがLivesを1機減らしてPlayerDeadへ遷移します。初期3機は操作中の1機を含み、暫定0.5秒後、残機があれば初期位置へ戻ってPlayingへ直接復帰し、0機ならGameOverで停止します。編隊の進捗・Score・Waveは保持します。LivesはDriver Inspectorで確認できます。詳細と検証状況は [Lives・復帰](docs/LIVES.md)、被弾の基礎実装は [Player被弾](docs/PLAYER_HIT.md) を参照してください。
 
 Gameビューで左右矢印キーを押すと移動し、Spaceで射撃します。同時発射は1発で、押しっぱなしでは再発射せず、離して再押下が必要です。発射中の押下も消費します。ShotはPlayerの子ではなく、Player移動後もShotのXは一定です。画面上端と命中時に非アクティブ化し、同じShotを次の発射に再利用します。
 
-DriverがState・Score・Wave待機/進行、Playerが入力・移動・射撃受付、Shotが自身のTriggerと消費、Invaderが自身の撃破/表示、Formationが55体の一斉移動・A/B・生存集計を担当します。GameplaySimulationと旧表示Controller/モデル/スナップショットは廃止しました。[Architecture](docs/ARCHITECTURE.md) と [ADR-0008](docs/adr/0008-component-gameplay.md) が現在の責務の正本です。
+DriverがState・Score・Wave・Livesと死亡待機、Playerが入力・移動・射撃受付と復帰、Shotが自身のTriggerと消費、Invaderが自身の撃破/表示、Formationが55体の一斉移動・A/B・生存集計を担当します。GameplaySimulationと旧表示Controller/モデル/スナップショットは廃止しました。[Architecture](docs/ARCHITECTURE.md) と [ADR-0008](docs/adr/0008-component-gameplay.md) が現在の責務の正本です。
 
 1px＝0.01 Unity単位、224×256の画面比率です。速度はPlayer=60px/秒、Shot=240px/秒、Formationは20/60秒ごとに2px、端で8px下降します。既存Fixed Timestep 0.02秒を使い、ProjectSettingsを変更しません。旧60Hz時計・tick順序は維持せず、Triggerの境界・命中タイミングには差があります。同時接触で1発が倒すのは最大1体ですが、左右どちらが先かは保証しません。
 
@@ -85,4 +85,4 @@ ScoreとWave番号はDriver、生存数はFormationのInspectorで確認でき�
 
 旧GameplaySimulation・表示Push・論理モデル専用のEditor検証/設定メニューは削除しました。新メニューは `ComponentGameplayMigration` と `ComponentGameplayVerification` です。移行のバッチ入口は `-executeMethod UnityInvader.Editor.ComponentGameplayMigration.Migrate`（`-batchmode -quit`）、ログはリポジトリの `Logs/` へ指定します。
 
-独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。残機・復帰・Shield・UFO、Rolling以外の敵弾や弾同士の相殺は未実装です。
+独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。追加残機・Lives HUD・開始/リトライ・Shield・UFO、Rolling以外の敵弾や弾同士の相殺は未実装です。

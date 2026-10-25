@@ -88,7 +88,7 @@ namespace UnityInvader
             _fast = inFast;
         }
 
-        internal void ResetForWave()
+        internal void ResetFlight()
         {
             _stepElapsed = 0f;
             gameObject.SetActive(false);

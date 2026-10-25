@@ -100,6 +100,7 @@ namespace UnityInvader.Editor
             driverData.FindProperty("_formation").objectReferenceValue = formation;
             driverData.FindProperty("_score").intValue                 = 0;
             driverData.FindProperty("_waveNumber").intValue            = 1;
+            driverData.FindProperty("_lives").intValue                 = 3;
             driverData.ApplyModifiedPropertiesWithoutUndo();
             camera.orthographicSize = ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel;
             if (camera.GetComponent<ArcadeViewport>() == null)

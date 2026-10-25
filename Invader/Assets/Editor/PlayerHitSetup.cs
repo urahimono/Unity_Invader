@@ -31,12 +31,15 @@ namespace UnityInvader.Editor
             var data                                          = new SerializedObject(players[0]);
             data.FindProperty("_driver").objectReferenceValue = drivers[0];
             data.ApplyModifiedPropertiesWithoutUndo();
+            var driverData                             = new SerializedObject(drivers[0]);
+            driverData.FindProperty("_lives").intValue = 3;
+            driverData.ApplyModifiedPropertiesWithoutUndo();
             if (EditorSceneManager.SaveScene(scene) == false)
             {
                 throw new InvalidOperationException("Could not save Player Hit references in Arcade.");
             }
             AssetDatabase.SaveAssets();
-            Debug.Log("PLAYER_HIT_SETUP_PASS: existing Player prefab collider and Arcade driver reference saved.");
+            Debug.Log("PLAYER_HIT_SETUP_PASS: Player collider, Arcade driver reference and three initial lives saved.");
         }
 
         internal static void ConfigurePrefab()

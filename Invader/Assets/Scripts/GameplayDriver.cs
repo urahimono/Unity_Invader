@@ -17,9 +17,17 @@ namespace UnityInvader
         private int              _score;
         [SerializeField]
         private int              _waveNumber   = 1;
+        [Tooltip("Includes the current Player. Extra lives are not implemented yet.")]
+        [SerializeField]
+        [Min(0)]
+        private int              _lives        = 3;
 
         private float _waveClearElapsed;
+        private float _playerDeadElapsed;
         private bool  _initialized;
+
+        // Provisional death wait; exact animation/video timing is a later task.
+        private const float PlayerDeadDelay = 0.5f;
 
         [Tooltip("Temporary development start path; real game-start transitions are not implemented.")]
         [FormerlySerializedAs("developmentStartPlaying")]
@@ -42,6 +50,7 @@ namespace UnityInvader
         private void Update()
         {
             UpdateWaveClear();
+            UpdatePlayerDead();
         }
 
         private void OnDisable()
@@ -69,10 +78,12 @@ namespace UnityInvader
 
         internal void NotifyPlayerHit()
         {
-            if (_initialized == false || isActiveAndEnabled == false || _currentState != GameState.Playing)
+            if (_initialized == false || isActiveAndEnabled == false || _currentState != GameState.Playing || _lives <= 0)
             {
                 return;
             }
+            _lives--;
+            _playerDeadElapsed = 0f;
             ChangeState(GameState.PlayerDead);
         }
 
@@ -103,6 +114,27 @@ namespace UnityInvader
                 _waveNumber++;
                 ChangeState(GameState.Playing);
             }
+        }
+
+        private void UpdatePlayerDead()
+        {
+            if (_initialized == false || _currentState != GameState.PlayerDead)
+            {
+                return;
+            }
+            _playerDeadElapsed += Time.deltaTime;
+            if (_playerDeadElapsed + 1e-7f < PlayerDeadDelay)
+            {
+                return;
+            }
+            if (_lives == 0)
+            {
+                ChangeState(GameState.GameOver);
+                return;
+            }
+            _formation.PreparePlayerRespawn();
+            _player.Respawn();
+            ChangeState(GameState.Playing);
         }
 
         private void ChangeState(GameState inNextState)

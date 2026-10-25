@@ -71,6 +71,12 @@ namespace UnityInvader
             ApplyPlayingState();
         }
 
+        internal void ResetFlight()
+        {
+            _resolvingHit = false;
+            gameObject.SetActive(false);
+        }
+
         private void CacheComponents()
         {
             if (_body == null)
