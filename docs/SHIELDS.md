@@ -23,6 +23,8 @@ Formationの各移動ステップで、移動前のInvader Colliderと移動量�
 
 侵食依頼はFormationの移動時のみで、毎フレームの全シーン検索や新しいScene参照はありません。無効・撃破済み・Collider無効のInvaderは対象外です。空の画素を再び変更せず、実際に残存画素を消した場合だけ既存LateUpdateの描画更新を要求します。
 
+Editor / Development BuildではF長押しで編隊の移動テンポだけを10倍にでき、侵食の確認に使えます。各移動ステップの侵食を省略せず、B絨毯爆撃とも併用できます。原作仕様ではない開発用操作です。
+
 非Playingでは編隊移動・Invader Collider・Shieldの受付が停止するため侵食しません。Player死亡・復帰では侵食状態を保持し、次Waveでは弾による破壊とともに4基を復元します。侵食でInvaderの生死・移動・Score・Livesを変更しません。侵攻によるGameOverやPlayerとの接触は未実装です。
 
 ## 責務と衝突

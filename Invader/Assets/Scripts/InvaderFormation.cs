@@ -32,6 +32,10 @@ namespace UnityInvader
         private bool           _playing;
         private float          _rollingFireElapsed;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private float _debugMovementMultiplier = 1f;
+#endif
+
         public  const    int           Rows       = 5;
         public  const    int           Columns    = 11;
         public  const    int           Spacing    = 16;
@@ -57,6 +61,9 @@ namespace UnityInvader
 
         private void OnDisable()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            _debugMovementMultiplier = 1f;
+#endif
             if (_body != null)
             {
                 ApplyPlayingState();
@@ -168,7 +175,11 @@ namespace UnityInvader
             {
                 return;
             }
-            _elapsed += Time.fixedDeltaTime;
+            float elapsed = Time.fixedDeltaTime;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            elapsed *= _debugMovementMultiplier;
+#endif
+            _elapsed += elapsed;
             while (_elapsed + 1e-7f >= StepPeriod)
             {
                 _elapsed -= StepPeriod;
@@ -239,5 +250,12 @@ namespace UnityInvader
             }
             return false; // An empty target column does not fall back to an adjacent column.
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal void SetDebugFastMovement(bool inFast)
+        {
+            _debugMovementMultiplier = inFast && _playing && isActiveAndEnabled ? 10f : 1f;
+        }
+#endif
     }
 }
