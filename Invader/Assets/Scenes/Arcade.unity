@@ -555,6 +555,10 @@ PrefabInstance:
       propertyPath: _shot
       value: 
       objectReference: {fileID: 984733095}
+    - target: {fileID: 5253637110638915733, guid: f4880c4db70e45c4483fca151e42d0be, type: 3}
+      propertyPath: _driver
+      value:
+      objectReference: {fileID: 788391821}
     - target: {fileID: 6512685292238339368, guid: f4880c4db70e45c4483fca151e42d0be, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

@@ -14,7 +14,7 @@ Issue #57でPlayingのコードをComponent/Physics2Dへ移行し、現在はArc
 | Arcade | Driver、Player、単一PlayerShot、Formation、単一Rolling EnemyShot、カメラ |
 | SampleScene | 既存サンプル。今回変更なし |
 
-1P専用・クレジットなしです。待機デモ・開始/リトライ・Player被弾/残機・Shield・UFO・HighScore保存、Rolling以外の敵弾と弾の相殺は未実装です。
+1P専用・クレジットなしです。待機デモ・開始/リトライ・残機/復帰・Shield・UFO・HighScore保存、Rolling以外の敵弾と弾の相殺は未実装です。Issue #61でPlayer被弾とPlayerDead遷移を追加し、Prefab/Scene保存と非表示バッチの実Trigger確認を実施しました。
 
 ## Playingの責務
 
@@ -31,16 +31,18 @@ flowchart TD
     Formation -->|得点・全滅通知| Driver
     Formation -->|配置・アニメ・再開| Invader
     Formation -->|発射元選択 / TryLaunch / SetPlaying| EnemyShot[Rolling EnemyShot: 下降・画面外消滅・再利用]
+    EnemyShot -->|Trigger / TryReceiveHit| Player
+    Player -->|NotifyPlayerHit| Driver
 ```
 
 | Component | 所有する責務・状態 |
 | --- | --- |
 | GameplayDriver | 現在State、Score、Wave番号、WaveClearの暫定1秒待機。全滅通知から遷移し、次Waveを開始する |
-| Player | InputReader、入力値と発射受付、release/再押下ゲート。Transformを移動し、Scene内の単一Shotへ発射を依頼 |
+| Player | InputReader、入力値と発射受付、release/再押下ゲート。Transformで移動。Playing中のみ被弾を一度受理し、Driverへ通知 |
 | PlayerShot | 動的Rigidbody2DとTrigger。自身の接触をInvaderへ渡し、命中成立後に非アクティブ化して消費。画面上端でも消費 |
 | Invader | GameObjectの有効状態による生死、Spriteの2コマ、被弾反応、所属Formationへの一度だけの通知 |
 | InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、集団移動の方向/周期/アニメ位相、生存数の集計。通知からDriverへ得点・全滅を伝える |
-| EnemyShot | Kinematic Rigidbody2D、下降周期と速度区分。画面下端で非アクティブ化し、同じ個体を再利用。命中反応はまだ持たない |
+| EnemyShot | Kinematic Rigidbody2D、下降周期と速度区分。TriggerでPlayerへ被弾受付を依頼し、成立時または画面下端で非アクティブ化して再利用 |
 | ArcadeViewport | 224:256の表示領域と論理px→Unity単位の倍率 |
 
 `GameplaySimulation`、`PlayerUnit`、`PlayerBody`、`InvaderSlot`、`InvaderFormationSimulation`、旧表示Controller2種、表示/検証スナップショットは削除しました。互換モデルや旧AABB判定は残しません。管理Componentや配列を返すGetterもありません。
@@ -79,6 +81,12 @@ Shotが処理中ガードを立ててInvaderに命中を依頼し、Invaderは�
 隣接2体への同時接触は最大1体だけを撃破しますが、どちらが選ばれるかは保証しません。旧独自判定の下段→上段・左→右の優先順位は再現しません。Discrete Triggerと固定物理stepを使うため、高速化時のすり抜け・接触境界の差はローカルで確認が必要です。移動速度・初期位置・WaveClearの1秒等は既存の暫定値を継承しています。
 
 ## 検証の範囲
+
+### Player被弾（Issue #61）
+
+EnemyShotは自身のOnTriggerEnter2Dで接触を検出し、PlayerがPlaying・Collider有効・未受理を確認して被弾を成立させます。Playerの受理ガードは今回解除せず、DriverはPlaying中の通知だけでPlayerDeadへ遷移します。EnemyShotは処理中ガードと非アクティブ化で重複接触を抑止します。Score/Wave進行には手を加えません。
+
+PlayerDeadでは既存SetPlaying(false)で入力・射撃・編隊・弾の物理と表示を止め、Player Colliderも無効化します。自動復帰やLivesは持ちません。Player ColliderはSprite.boundsの16×16px矩形と既存Transform倍率を使い、Transform移動を維持します。SceneのPlayerからDriverへの参照とPrefab ColliderはEditor APIで保存済みです。実Trigger命中・重複拒否・2.2秒の停止と既存Score/Wave経路を非表示バッチで確認しました。詳細は [Player被弾](PLAYER_HIT.md) を参照してください。
 
 ### Rolling EnemyShot（Issue #59）
 

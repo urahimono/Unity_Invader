@@ -58,6 +58,7 @@ namespace UnityInvader.Editor
             var invaderPrefab = CreateInvaderPrefab(ordered[0], material);
             var shotPrefab    = CreateShotPrefab(CreateShotSprite(), material);
             var playerPrefab  = CreatePlayerPrefab(playerSprite, material);
+            PlayerHitSetup.ConfigurePrefab();
             if (invaderPrefab == null || invaderPrefab.GetComponent<Invader>() == null ||
                 shotPrefab == null || shotPrefab.GetComponent<PlayerShot>() == null ||
                 playerPrefab == null || playerPrefab.GetComponent<Player>() == null)
@@ -72,7 +73,8 @@ namespace UnityInvader.Editor
             playerObject.transform.position = new Vector3(0f, 24f - ArcadeViewport.ScreenHeight / 2f, 0f) * ArcadeViewport.UnitsPerPixel;
             var playerData                  = new SerializedObject(playerObject.GetComponent<Player>());
 
-            playerData.FindProperty("_shot").objectReferenceValue = shotObject.GetComponent<PlayerShot>();
+            playerData.FindProperty("_shot").objectReferenceValue   = shotObject.GetComponent<PlayerShot>();
+            playerData.FindProperty("_driver").objectReferenceValue = drivers[0];
             playerData.ApplyModifiedPropertiesWithoutUndo();
 
             var formationObject = new GameObject("InvaderFormation");
@@ -135,6 +137,11 @@ namespace UnityInvader.Editor
                 renderer.sharedMaterial       = inMaterial;
                 renderer.enabled              = false;
                 instance.transform.localScale = new Vector3(ArcadeViewport.UnitsPerPixel, ArcadeViewport.UnitsPerPixel, 1f);
+                var collider                  = instance.AddComponent<BoxCollider2D>();
+                collider.size                 = inSprite.bounds.size;
+                collider.offset               = inSprite.bounds.center;
+                collider.isTrigger            = true;
+                collider.enabled              = false;
                 return PrefabUtility.SaveAsPrefabAsset(instance, path);
             }
             finally

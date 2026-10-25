@@ -8,22 +8,31 @@ namespace UnityInvader
     public sealed class Player : MonoBehaviour
     {
         [SerializeField]
-        private PlayerShot _shot;
+        private PlayerShot     _shot;
+        [SerializeField]
+        private GameplayDriver _driver;
 
         private PlayerInputReader _input;
         private PlayerInputState  _inputState;
         private SpriteRenderer    _renderer;
+        private BoxCollider2D     _hitCollider;
         private bool              _playing;
         private bool              _pendingFire;
         private bool              _fireReady = true;
+        private bool              _hitAccepted;
 
         private const float Speed    = 60f * ArcadeViewport.UnitsPerPixel;
         private const float MaximumX = (ArcadeViewport.ScreenWidth / 2f - 8f) * ArcadeViewport.UnitsPerPixel;
 
         private void Awake()
         {
-            _renderer         = GetComponent<SpriteRenderer>();
-            _renderer.enabled = false;
+            _renderer            = GetComponent<SpriteRenderer>();
+            _hitCollider         = GetComponent<BoxCollider2D>();
+            _renderer.enabled    = false;
+            if (_hitCollider != null)
+            {
+                _hitCollider.enabled = false;
+            }
         }
 
         private void OnEnable()
@@ -53,21 +62,33 @@ namespace UnityInvader
 
         internal void Initialize()
         {
-            if (_shot == null)
+            if (_shot == null || _driver == null || _hitCollider == null)
             {
-                throw new InvalidOperationException("Player requires a scene PlayerShot reference. Migrate Arcade first.");
+                throw new InvalidOperationException("Player requires a hit collider, PlayerShot and GameplayDriver references. Configure Player Hit first.");
             }
         }
 
         internal void SetPlaying(bool inPlaying)
         {
-            _playing = inPlaying;
-            if (inPlaying == false)
+            _playing = inPlaying && _hitAccepted == false;
+            if (_playing == false)
             {
                 _inputState  = default;
                 _pendingFire = false;
             }
             ApplyPlayingState();
+        }
+
+        internal bool TryReceiveHit()
+        {
+            if (_playing == false || isActiveAndEnabled == false || _hitAccepted || _hitCollider.enabled == false)
+            {
+                return false;
+            }
+            _hitAccepted = true;
+            SetPlaying(false);
+            _driver.NotifyPlayerHit();
+            return true;
         }
 
         private void ApplyPlayingState()
@@ -76,6 +97,10 @@ namespace UnityInvader
             if (_renderer != null)
             {
                 _renderer.enabled = playing;
+            }
+            if (_hitCollider != null)
+            {
+                _hitCollider.enabled = playing;
             }
             if (_shot != null)
             {

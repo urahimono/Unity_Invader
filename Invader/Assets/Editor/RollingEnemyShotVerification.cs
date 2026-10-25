@@ -24,6 +24,8 @@ namespace UnityInvader.Editor
         private static float            _startTime;
         private static Vector2          _startPosition;
         private static Vector3          _playerPosition;
+        private static Vector2          _formationPosition;
+        private static Vector2          _playerShotPosition;
 
         private const string SessionKey = "UnityInvader.RollingEnemyShotVerification";
 
@@ -33,6 +35,7 @@ namespace UnityInvader.Editor
             {
                 throw new InvalidOperationException("Use the explicitly approved batch process for this verification.");
             }
+            PlayerHitSetup.Configure();
             RollingEnemyShotSetup.Configure();
             ComponentGameplayVerification.Verify();
             EditorSceneManager.OpenScene("Assets/Scenes/Bootstrap.unity");
@@ -68,7 +71,7 @@ namespace UnityInvader.Editor
                     }
                     if (EditorApplication.timeSinceStartup >= _readyAt)
                     {
-                        _stage = 0;
+                        _stage                      = 0;
                         EditorApplication.isPlaying = true;
                     }
                     return;
@@ -109,6 +112,9 @@ namespace UnityInvader.Editor
                         InputSystem.DisableDevice(keyboard);
                     }
                     Require(_invaders.Length == 55 && AliveCount() == 55, "Initial formation is not 55 living objects.");
+                    var hitCollider = _player.GetComponent<BoxCollider2D>();
+                    Require(hitCollider.enabled && hitCollider.isTrigger, "Playing must enable Player hit detection.");
+                    Require(Vector2.Distance(hitCollider.bounds.size, _player.GetComponent<SpriteRenderer>().bounds.size) < 1e-5f, "Player hitbox must match the current sprite rectangle.");
                     Require(Vector2.Distance(_formation.GetComponent<Rigidbody2D>().position, new Vector2(-0.8f, 0.8f)) < 0.025f, "Formation initial pose.");
                     Require(TryMuzzle(out var muzzle) && Mathf.Abs(muzzle.y - (0.16f - 0.08f)) < 1e-5f, "Rolling must choose the lowest live row.");
                     Debug.Log("ROLLING_CHECK_PASS: Bootstrap -> Arcade; 55 targets; valid lowest-row source.");
@@ -121,6 +127,8 @@ namespace UnityInvader.Editor
                     }
                     _startPosition = _enemyShot.GetComponent<Rigidbody2D>().position;
                     _startTime     = Time.fixedTime;
+                    // Dodge the real automatic shot, keeping Player's collider enabled.
+                    _player.transform.position = new Vector3(1.04f, _player.transform.position.y, _player.transform.position.z);
                     _stage         = 2;
                     break;
                 case 2:
@@ -144,6 +152,9 @@ namespace UnityInvader.Editor
                     Require(_enemyShot.gameObject.activeSelf && _enemyShot.GetComponent<Rigidbody2D>().simulated == false, "Pause must preserve occupancy and stop physics.");
                     Require(Vector2.Distance(_startPosition, _enemyShot.GetComponent<Rigidbody2D>().position) < 1e-6f, "Paused shot moved.");
                     Require(_enemyShot.GetComponentInChildren<SpriteRenderer>(true).enabled == false, "Paused shot is visible.");
+                    Require(_player.GetComponent<BoxCollider2D>().enabled == false && ReceivePlayerHit() == false, "Non-Playing must reject Player damage.");
+                    typeof(GameplayDriver).GetMethod("NotifyPlayerHit", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_driver, null);
+                    Require(DriverValue("_currentState") == (int)GameState.Attract, "Driver must ignore a non-Playing hit notification.");
                     _driver.EditorSetState(GameState.Playing);
                     // Fixture uses the actual individual reaction/notification path, without new runtime test APIs.
                     foreach (var invader in _invaders.Take(47))
@@ -177,6 +188,7 @@ namespace UnityInvader.Editor
                         return; // Actual bottom-boundary deactivation, not a forced fixture reset.
                     }
                     Debug.Log("ROLLING_CHECK_PASS: shot deactivated at bottom boundary.");
+                    Require(DriverValue("_currentState") == (int)GameState.Playing, "Dodging a shot must allow continued play.");
                     foreach (var invader in _invaders.Where(inInvader => inInvader.gameObject.activeSelf))
                     {
                         Defeat(invader);
@@ -206,9 +218,47 @@ namespace UnityInvader.Editor
                     Require(AliveCount() == 54 && DriverValue("_score") == 1000, "Existing PlayerShot Physics2D hit/score regression.");
                     Require(_playerShot.gameObject.activeSelf == false, "Existing PlayerShot was not consumed.");
                     Debug.Log("ROLLING_ENEMY_SHOT_PLAY_PASS: launch/normal/fast/pause/bottom/source/Wave reuse and existing PlayerShot contact.");
+                    Require(_playerShot.TryLaunch((Vector2)_player.transform.position + Vector2.up * 0.08f), "Launch a PlayerShot before Player death.");
+                    Require((bool)typeof(EnemyShot).GetMethod("TryLaunch", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_enemyShot,
+                        new object[] { (Vector2)_player.transform.position + Vector2.up * 0.24f }), "Launch a descending hit fixture.");
+                    _stage = 8;
+                    break;
+                case 8:
+                    if (DriverValue("_currentState") != (int)GameState.PlayerDead)
+                    {
+                        return; // Require an actual Physics2D trigger, not a direct damage call.
+                    }
+                    Require((bool)typeof(Player).GetField("_hitAccepted", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_player), "Player must accept the trigger hit.");
+                    Require(_enemyShot.gameObject.activeSelf == false, "The successful EnemyShot must be consumed.");
+                    Require(ReceivePlayerHit() == false && ReceivePlayerHit() == false, "Player must reject repeated damage.");
+                    // Duplicate or late callbacks must not reactivate or consume anything else.
+                    typeof(EnemyShot).GetMethod("OnTriggerEnter2D", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_enemyShot,
+                        new object[] { _player.GetComponent<BoxCollider2D>() });
+                    _playerPosition     = _player.transform.position;
+                    _formationPosition  = _formation.GetComponent<Rigidbody2D>().position;
+                    _playerShotPosition = _playerShot.GetComponent<Rigidbody2D>().position;
+                    _startTime          = Time.fixedTime;
+                    _stage              = 9;
+                    break;
+                case 9:
+                    if (Time.fixedTime - _startTime < 2.2f)
+                    {
+                        return; // Longer than the provisional firing interval and WaveClear wait.
+                    }
+                    Require(DriverValue("_currentState") == (int)GameState.PlayerDead && DriverValue("_score") == 1000 && DriverValue("_waveNumber") == 2 && AliveCount() == 54, "Death must not resume or change Score/Wave/Invaders.");
+                    Require(_player.transform.position == _playerPosition && Vector2.Distance(_formationPosition, _formation.GetComponent<Rigidbody2D>().position) < 1e-6f, "Player/Formation must stay stopped.");
+                    Require(_player.GetComponent<BoxCollider2D>().enabled == false && _player.GetComponent<SpriteRenderer>().enabled == false, "PlayerDead must hide and disable the Player hitbox.");
+                    Require(_playerShot.gameObject.activeSelf && _playerShot.GetComponent<Rigidbody2D>().simulated == false && Vector2.Distance(_playerShotPosition, _playerShot.GetComponent<Rigidbody2D>().position) < 1e-6f, "Existing PlayerShot occupancy/pose must be held while physics stops.");
+                    Require(_playerShot.TryLaunch(Vector2.zero) == false && _enemyShot.gameObject.activeSelf == false && _enemyShot.GetComponent<Rigidbody2D>().simulated == false, "PlayerDead must prevent shots and further enemy firing.");
+                    Debug.Log("PLAYER_HIT_PLAY_PASS: real Trigger -> single accepted hit -> consumed EnemyShot -> PlayerDead; stopped for 2.2s without automatic recovery or Score/Wave changes.");
                     Finish(0);
                     break;
             }
+        }
+
+        private static bool ReceivePlayerHit()
+        {
+            return (bool)typeof(Player).GetMethod("TryReceiveHit", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_player, null);
         }
 
         private static bool TryMuzzle(out Vector2 outPosition)

@@ -67,6 +67,15 @@ namespace UnityInvader
             }
         }
 
+        internal void NotifyPlayerHit()
+        {
+            if (_initialized == false || isActiveAndEnabled == false || _currentState != GameState.Playing)
+            {
+                return;
+            }
+            ChangeState(GameState.PlayerDead);
+        }
+
         private void InitializeGameplay()
         {
             if (_player == null || _formation == null)
