@@ -1,5 +1,7 @@
 # Plunger EnemyShot（Issue #75）
 
+Issue #77でSquigglyを追加し、以下に記録した暫定2秒周期を3種類共通のphase・step count・Score依存Reloadへ置き換えました。現在の仕様と原作との差は [3種類のEnemyShot](ENEMY_SHOTS.md) を参照してください。以下はIssue #75当時の実装・検証記録です。
+
 ## 発射元と既存経路
 
 [Issue #75](https://github.com/urahimono/Unity_Invader/issues/75) と [ROM解析のColFireTable（0x1D00）](https://computerarcheology.com/Arcade/SpaceInvaders/Code.html) を根拠に、左から1始まりの列順を使います。

@@ -46,6 +46,7 @@ namespace UnityInvader.Editor
             PlayerHitSetup.Configure();
             RollingEnemyShotSetup.Configure();
             PlungerEnemyShotSetup.Configure();
+            SquigglyEnemyShotSetup.Configure();
             ComponentGameplayVerification.Verify();
             EditorSceneManager.OpenScene("Assets/Scenes/Bootstrap.unity");
             SessionState.SetBool(SessionKey, true);
@@ -145,7 +146,7 @@ namespace UnityInvader.Editor
                 case 1:
                     if (_enemyShot.gameObject.activeSelf == false)
                     {
-                        return; // Wait for the real provisional 2-second automatic firing interval.
+                        return; // Wait for the real phase/step-count automatic launch.
                     }
                     _startPosition = _enemyShot.GetComponent<Rigidbody2D>().position;
                     _startTime     = Time.fixedTime;

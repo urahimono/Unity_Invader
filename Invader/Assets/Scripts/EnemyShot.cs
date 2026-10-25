@@ -10,18 +10,18 @@ namespace UnityInvader
         private SpriteRenderer _renderer;
 
         private Rigidbody2D _body;
-        private float       _stepElapsed;
+        private int         _stepCount;
         private bool        _playing;
         private bool        _fast;
         private bool        _resolvingHit;
 
         internal bool InFlight => gameObject.activeSelf;
 
-        // Placeholder rectangle, not the original Rolling animation or collision shape.
+        internal int StepCount => _stepCount;
+
+        // Placeholder rectangle, not the original shot animations or collision shapes.
         public const float Width  = 3f;
         public const float Height = 8f;
-
-        private const float StepPeriod = 3f / 60f;
 
         private void Awake()
         {
@@ -31,11 +31,6 @@ namespace UnityInvader
         private void OnEnable()
         {
             ApplyPlayingState();
-        }
-
-        private void FixedUpdate()
-        {
-            UpdateShot();
         }
 
         private void OnTriggerEnter2D(Collider2D inOther)
@@ -67,7 +62,7 @@ namespace UnityInvader
             CacheBody();
             transform.position = new Vector3(inPosition.x, inPosition.y, transform.position.z);
             _body.position     = inPosition;
-            _stepElapsed       = 0f;
+            _stepCount         = 1; // ROM 05BF: starting a shot counts as its first step.
             _resolvingHit      = false;
             gameObject.SetActive(true);
             return true;
@@ -76,10 +71,6 @@ namespace UnityInvader
         internal void SetPlaying(bool inPlaying)
         {
             _playing = inPlaying;
-            if (inPlaying == false)
-            {
-                _stepElapsed = 0f;
-            }
             ApplyPlayingState();
         }
 
@@ -90,8 +81,27 @@ namespace UnityInvader
 
         internal void ResetFlight()
         {
-            _stepElapsed = 0f;
+            _stepCount = 0;
             gameObject.SetActive(false);
+        }
+
+        internal void PreparePhysicsStep()
+        {
+            if (_playing && isActiveAndEnabled)
+            {
+                // MovePosition's velocity must not persist on another type's phase.
+                _body.MovePosition(_body.position);
+            }
+        }
+
+        internal void AdvanceStep()
+        {
+            if (_playing == false || isActiveAndEnabled == false)
+            {
+                return;
+            }
+            _stepCount = (_stepCount + 1) & 0xFF; // ROM INC byte at 05D0.
+            MoveShot();
         }
 
         private void CacheBody()
@@ -111,19 +121,10 @@ namespace UnityInvader
             _body.linearVelocity = Vector2.zero;
         }
 
-        private void UpdateShot()
+        private void MoveShot()
         {
-            if (_playing == false)
-            {
-                return;
-            }
-            _stepElapsed += Time.fixedDeltaTime;
             var position = _body.position;
-            while (_stepElapsed + 1e-7f >= StepPeriod)
-            {
-                _stepElapsed -= StepPeriod;
-                position.y -= (_fast ? 5f : 4f) * ArcadeViewport.UnitsPerPixel;
-            }
+            position.y -= (_fast ? 5f : 4f) * ArcadeViewport.UnitsPerPixel;
             if (Shield.TryAbsorbShot(_body.position, position,
                 new Vector2(Width, Height) * ArcadeViewport.UnitsPerPixel, false))
             {
@@ -132,10 +133,9 @@ namespace UnityInvader
             }
             if (position.y + Height / 2f * ArcadeViewport.UnitsPerPixel <= -ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel)
             {
-                gameObject.SetActive(false);
+                ResetFlight();
                 return;
             }
-            // Also hold the current position on non-step ticks, so no movement velocity persists.
             _body.MovePosition(position);
         }
 
@@ -148,7 +148,7 @@ namespace UnityInvader
             _resolvingHit = true;
             if (inPlayer.TryReceiveHit())
             {
-                gameObject.SetActive(false);
+                ResetFlight();
             }
             _resolvingHit = false;
         }

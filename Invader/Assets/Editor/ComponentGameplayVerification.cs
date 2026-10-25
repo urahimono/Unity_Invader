@@ -33,8 +33,10 @@ namespace UnityInvader.Editor
             var formationData = new SerializedObject(formations[0]);
             var rolling       = formationData.FindProperty("_rollingShot").objectReferenceValue as EnemyShot;
             var plunger       = formationData.FindProperty("_plungerShot").objectReferenceValue as EnemyShot;
-            Require(rolling != null && plunger != null && rolling != plunger, "Independent Rolling and Plunger slots.");
-            foreach (var enemyShot in new[] { rolling, plunger })
+            var squiggly      = formationData.FindProperty("_squigglyShot").objectReferenceValue as EnemyShot;
+            Require(rolling != null && plunger != null && squiggly != null && rolling != plunger &&
+                rolling != squiggly && plunger != squiggly, "Three independent enemy shot slots.");
+            foreach (var enemyShot in new[] { rolling, plunger, squiggly })
             {
                 Require(enemyShot.gameObject.scene == scene, "EnemyShot belongs to Arcade.");
                 Require(enemyShot.GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Kinematic &&
