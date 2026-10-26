@@ -15,7 +15,7 @@ namespace UnityInvader
         private Sprite           _frameB;
         private int              _score;
 
-        public bool TryReceiveHit(Component inSource)
+        public bool TryReceiveHit(in HitInfo inHit)
         {
             if (isActiveAndEnabled == false || _collider.enabled == false)
             {

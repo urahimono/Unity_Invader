@@ -34,6 +34,8 @@ ADR（Architecture Decision Record）は、重要なArchitecture判断と、そ�
 
 | [0013](0013-hit-receivers-and-ufo-scoring.md) | IHitReceiverへ命中元を渡し、UFO自身の撃破イベントからFormation経由で加点。友軍接触はPhysics2Dレイヤーで除外 |
 
+| [0014](0014-shield-hit-receiver.md) | 弾のShield直接依存を解消し、HitInfoと共通命中受付で画素衝突を処理 |
+
 ## 初期記録の根拠
 
 [Issue #15](https://github.com/urahimono/Unity_Invader/issues/15) とNotionの [Unity設計](https://www.notion.so/3ff4f337d5bf814eaa3dd6871eab5160) の確定判断を、Phase 3完了コードと照合しました。Notionには古い暫定案と未実装の責務図も含まれます。現行構造はコードを優先し、ADRには採用理由だけを要約しています。ADR-0005は [PR #13](https://github.com/urahimono/Unity_Invader/pull/13) のレビュー対応を根拠にしています。各ADRは過去会話や外部資料を開かなくても判断の要旨を読めるようにします。

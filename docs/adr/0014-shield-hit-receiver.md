@@ -1,0 +1,21 @@
+# ADR-0014: Shield命中受付の共通化と移動区間検索の分離
+
+- Status: Accepted
+- Date: 2026-10-27
+- Extends: ADR-0013のIHitReceiver、Shieldだけ例外とした扱い
+
+## Context
+
+弾からShield.TryAbsorbShotという具体型staticメソッドを呼んでいた。通常ターゲットはPhysics2D TriggerとIHitReceiverを通るが、Shieldは破壊後もCollider形状を変えず、残存1px・穴通過・上下別の破壊が必要なため、Trigger侵入だけでは正しい消費判定ができない。
+
+## Decision
+
+`HitInfo`は弾の中心ベースの移動開始・終了位置、弾の寸法、進行方向、命中元Componentを伝える読み取り専用値型とする。`IHitReceiver.TryReceiveHit(in HitInfo)`をPlayer/Invader/Ufo/Shieldで共有し、Receiver自身が受理可否を返す。
+
+`ProjectileHitDetector`は専用MonoBehaviourやManagerを作らない静的な内部ヘルパー。一般ターゲットのTrigger通知はIHitReceiverへ転送し、`ISweptHitReceiver`（Shield）へのTrigger通知は二重処理を防ぐため無視する。swept経路は従来のOverlapBox候補検索を利用し、各候補の最も手前の残存画素への距離を比較、最短の1件だけを同じIHitReceiverで受理する。各Shieldの画素探索/破壊マスク/復元処理は維持する。
+
+自弾はRigidbody2Dの速度をもとに次回FixedUpdateの予定区間を調べ、敵弾はFormation位相ごとの移動区間を使う。開始・終了ともShotの占有矩形中心として扱い、止まっている場合も上下を判断できるよう進行方向を別に渡す。Shield以外のTrigger命中結果・得点通知順は変えない。ProjectileHitDetectorはShieldの型を参照しない。
+
+## Consequences
+
+弾とShieldの具体型依存はなくなる。Layerの友軍誤射設定は現行のTrigger経路で維持する。swept検索はIHitReceiverの全部を無条件に処理せず、ISweptHitReceiverに絞るため、従来のTrigger命中を二重に処理しない。Physics2D Triggerとsweptとのグローバルな命中優先順位は統一せず既存挙動を維持する。Invader→Shield.ErodeByInvaderは今後の別課題。

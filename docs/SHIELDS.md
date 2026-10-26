@@ -32,9 +32,9 @@ Editor / Development BuildではF長押しで編隊の移動テンポだけを10
 - 各Shieldの`bool[] _solid`だけが現在の残存画素の正です。HPはありません。初期画像は復元用テンプレート、Textureへの出力配列は残存画素から作る描画用バッファです。4基でTexture・Sprite・破壊状態を共有しません。
 - SpriteはPoint / FullRect表示です。破壊したフレームのLateUpdateで描画用Textureを更新し、複数の物理stepや絨毯爆撃による同フレームの命中をまとめます。毎フレーム無条件では更新しません。生成したSprite・Textureは破棄時に解放します。
 - 各Shieldには固定のBoxCollider2D Triggerが1個だけあります。Colliderは領域候補の検出用であり、透明部分で弾を消費しません。画素ごとのColliderやダメージ後のCollider再生成はありません。
-- 弾自身のFixedUpdateから、現在位置〜次の予定位置に弾の幅・高さを加えた範囲を`Physics2D.OverlapBox`で調べます。Shield内では残存画素を進行方向順に走査し、最初の画素だけを削ります。領域内の穴を進み続ける場合も毎物理step確認し、移動区間の途中にある1pxも対象にします。
+- 弾はShieldクラスを直接参照せず、`HitInfo`（中心の開始・終了位置、幅・高さ、進行方向、命中元）を`ProjectileHitDetector`に渡します。共通処理は移動区間を`Physics2D.OverlapBox`で検索し、`ISweptHitReceiver`を持つ候補の残存画素を距離順に調べ、最も手前の1件だけへ`IHitReceiver.TryReceiveHit(in HitInfo)`で命中を通知します。Shield内では進行方向順に残存画素を走査し、最初の画素だけを削ります。穴を通る場合はfalseで弾の飛行を継続します。Shieldへの通常Trigger通知は二重判定を避けるため対象外です。
 - 現在の弾は鉛直移動、Shieldは回転なし・unit scale・左下原点です。この構成専用の判定であり、任意回転や斜め弾用の汎用衝突基盤ではありません。
-- 命中が成立したときだけ既存`ResetFlight`で弾を消費します。PlayerShotのRigidbody2D速度、EnemyShotの4/5px下降とMovePosition、Invader撃破・ScoreやPlayer被弾のTrigger経路は維持します。Bの専用弾も同じPlayerShotを使います。
+- 命中が成立したときだけ弾を消費します。PlayerShotの自然終了は既存FlightEndedを1回通知し、EnemyShotはResetFlightで無通知回収します。PlayerShotのRigidbody2D速度、EnemyShotの4/5px下降とMovePosition、Invader撃破・ScoreやPlayer被弾のTrigger経路は維持します。Bの専用弾も同じPlayerShotを使います。
 - DriverがPlaying可否をShieldへ伝えます。停止StateではCollider・破壊受付を止め、残存画素と表示を保持します。復帰では初期化せず、WaveClearの待機完了後、Playingへ戻す前に4基の`BeginWave`を呼びます。
 
 ## 保存と確認

@@ -25,7 +25,7 @@ namespace UnityInvader
 
         private void FixedUpdate()
         {
-            if (TryHitShield())
+            if (TryHitSwept())
             {
                 return;
             }
@@ -81,11 +81,12 @@ namespace UnityInvader
             }
         }
 
-        private bool TryHitShield()
+        private bool TryHitSwept()
         {
             var center = _body.position + Vector2.up * (Height * 0.5f * ArcadeViewport.UnitsPerPixel);
             var size   = new Vector2(Width, Height) * ArcadeViewport.UnitsPerPixel;
-            if (Shield.TryAbsorbShot(center, center + _body.linearVelocity * Time.fixedDeltaTime, size, true))
+            var hit    = new HitInfo(this, center, center + _body.linearVelocity * Time.fixedDeltaTime, size, Vector2.up);
+            if (ProjectileHitDetector.TryResolveSwept(in hit))
             {
                 FinishFlight();
                 return true;
@@ -109,7 +110,10 @@ namespace UnityInvader
             {
                 return;
             }
-            if (inOther.TryGetComponent<IHitReceiver>(out var receiver) && receiver.TryReceiveHit(this))
+            var center = _body.position + Vector2.up * (Height * 0.5f * ArcadeViewport.UnitsPerPixel);
+            var size   = new Vector2(Width, Height) * ArcadeViewport.UnitsPerPixel;
+            var hit    = new HitInfo(this, center, center, size, Vector2.up);
+            if (ProjectileHitDetector.TryResolveTrigger(inOther, in hit))
             {
                 FinishFlight();
             }

@@ -4,6 +4,6 @@ namespace UnityInvader
 {
     public interface IHitReceiver
     {
-        bool TryReceiveHit(Component inSource);
+        bool TryReceiveHit(in HitInfo inHit);
     }
 }

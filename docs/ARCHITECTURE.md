@@ -41,8 +41,9 @@ flowchart TD
     EnemyShot -->|Trigger / IHitReceiver.TryReceiveHit| Player
     Player -.->|HitAccepted event| Driver
     Formation -->|IPositionProvider.Position| Player
-    Shot -->|Physics2D領域検索 / 移動区間の画素判定| Shield[Shield: 残存画素・局所破壊・描画]
-    EnemyShot -->|Physics2D領域検索 / 移動区間の画素判定| Shield
+    Shot -->|HitInfo / Trigger・swept候補| Detector[ProjectileHitDetector]
+    EnemyShot -->|HitInfo / Trigger・swept候補| Detector
+    Detector -->|ISweptHitReceiver / IHitReceiver| Shield[Shield: 残存画素・局所破壊・描画]
     Driver -->|SetPlaying / 次WaveのBeginWave| Shield
     Formation -->|各移動ステップの侵食依頼| Invader
     Invader -->|生存個体のColliderと移動量| Shield
@@ -142,3 +143,9 @@ Formationの既存phase 2をSquigglyと共有し、下降後の出現カウン�
 旧モデル・旧Push専用のEditor検証と旧設定ツールは削除しました。代わりに接続・物理設定・Missing Script・Play中の55体と生存集計を確認する `Verify Component Gameplay Setup`、Editor限定の一時停止/再開メニュー、READMEの最小限の操作確認を用意しています。接続チェックは衝突やWave進行の成功を意味しません。
 
 Scene/Prefab移行・Unityコンパイル・Play動作の実行状況はPR本文を参照してください。独立PoC [Physics2DProbe](../Invader/Assets/Prototypes/Physics2DProbe/README.md) は今回変更せず、本編から参照しません。
+
+## Shield命中受付の共通化（Issue #91）
+
+PlayerShot/EnemyShotはShieldの具体型を参照しない。弾は中心座標の移動区間・寸法・進行方向・Sourceを`HitInfo`へまとめ、`ProjectileHitDetector`へ渡す。通常のInvader/Ufo/Playerは既存のPhysics2D Triggerから`IHitReceiver.TryReceiveHit(in HitInfo)`へ通知し、Shieldは`ISweptHitReceiver`の追加契約を通じて移動区間の候補を検索してから同じ`IHitReceiver`で破壊を受理する。ShieldへのTrigger通知は重複防止のため無視する。Shield固有の画素判定・上下破壊マスク・穴通過はShieldに閉じる。
+
+swept検索は従来の`Physics2D.OverlapBox`を用い、複数候補があれば実際の最初の残存画素までの距離が近い1件だけを受理する。PlayerShotはFixedUpdate中の次ステップの予定区間、EnemyShotはFormationの位相で移動するときの4/5px区間を渡す。既存のTrigger対swept間で完璧な距離統合は行わず、従来の命中タイミングを維持する。Formation→Driver、Invader→Shieldの侵食依存は今回変更しない。
