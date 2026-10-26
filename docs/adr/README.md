@@ -33,7 +33,6 @@ ADR（Architecture Decision Record）は、重要なArchitecture判断と、そ�
 | [0012](0012-player-shot-unity-state.md) | PlayerShotの飛行・進行可否をUnityの有効状態へ統合し、Playerが入力時点の射撃枠を所有 |
 
 | [0013](0013-hit-receivers-and-ufo-scoring.md) | IHitReceiverへ命中元を渡し、UFO自身の撃破イベントからFormation経由で加点。友軍接触はPhysics2Dレイヤーで除外 |
-
 | [0014](0014-shield-hit-receiver.md) | 弾のShield直接依存を解消し、HitInfoと共通命中受付で画素衝突を処理 |
 
 ## 初期記録の根拠
