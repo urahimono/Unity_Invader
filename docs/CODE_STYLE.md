@@ -24,7 +24,7 @@ Issue #57 / ADR-0008に基づき、PlayingはComponent・Physics2D中心に構�
 
 - GameplayDriverはState・Score・Wave進行を管理し、Player/Formationへ進行可否を伝えます。
 - Playerは入力・移動・単一Shotへの発射依頼を担当します。
-- PlayerShotは自身のOnTriggerEnter2Dで接触を検出し、IHitReceiverへ命中元Componentを渡し、受理されたら自身を消費します。具体的な対象型・得点は判定しません。
+- PlayerShotは自身のOnTriggerEnter2Dで接触を検出し、ProjectileHitDetector経由でIHitReceiverへHitInfoを渡し、受理されたら自身を消費します。具体的な対象型・得点は判定しません。
 - Invaderは自身の被弾・撃破・表示を担当し、Formationへ一度だけ通知します。
 - Formationは個体の配置・集団移動・生存数を集計し、Driverへ得点・全滅を通知します。Driver/Formationへ独自AABB判定を持ち込みません。
 
@@ -77,7 +77,7 @@ shot.FlightEnded += driver.NotifyNormalPlayerShotEnded;
 
 この例は結果イベントの購読を示すもので、PlayerがDriverを参照して接続する配置を推奨するものではありません。Issue #85で暫定接続を解消し、Driverが通常弾を明示的に参照して直接購読します。PlayerはPlayerInputStateの値だけを受け取り、被弾をHitAcceptedで通知します。Playerが直接操作するゲーム内ComponentはPlayerShotだけです。
 
-IHitReceiver.TryReceiveHit(Component inSource)は命中元を最小限の事実として渡します。UFOのDefeated通知は所属Formationが購読してDriverへ転送し、弾にUFO固有イベントを置きません。通知がFlightEndedより先に届くため、Driverは通常弾なら得点添字だけ終了予定分+1を反映します。実履歴はFlightEndedだけで更新し、B弾では進めません。友軍誤射の対象制限は保存済みPhysics2Dレイヤー設定で行い、弾同士の具体型依存を追加しません。
+IHitReceiver.TryReceiveHit(in HitInfo inHit)は命中元Componentと移動区間・寸法・進行方向を渡します。ShieldはISweptHitReceiver経由で画素の精密判定を行い、通常のTrigger経路では重複受理しません。UFOのDefeated通知は所属Formationが購読してDriverへ転送し、弾にUFO固有イベントを置きません。通知がFlightEndedより先に届くため、Driverは通常弾なら得点添字だけ終了予定分+1を反映します。実履歴はFlightEndedだけで更新し、B弾では進めません。友軍誤射の対象制限は保存済みPhysics2Dレイヤー設定で行い、弾同士の具体型依存を追加しません。
 
 同時1発・入力の再押下条件はPlayer側へ置きます。弾は自身の飛行中の再発射を拒否しますが、複数インスタンスの利用は制限しません。Issue #83ではPlayerShot周辺に適用し、Issue #85ではPlayerの入力・被弾通知とEnemyShot/Formationからの最小Interface接続へ適用しました。FormationのDriver通知は今回変更しません。
 
