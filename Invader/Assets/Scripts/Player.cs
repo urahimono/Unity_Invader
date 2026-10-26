@@ -4,46 +4,40 @@ using UnityEngine;
 namespace UnityInvader
 {
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(SpriteRenderer))]
-    public sealed class Player : MonoBehaviour
+    [RequireComponent(typeof(SpriteRenderer), typeof(BoxCollider2D))]
+    public sealed class Player : MonoBehaviour, IHitReceiver, IPositionProvider
     {
         [SerializeField]
         private PlayerShot     _shot;
         [SerializeField]
-        private GameplayDriver _driver;
+        private SpriteRenderer _renderer;
+        [SerializeField]
+        private BoxCollider2D  _hitCollider;
 
-        private PlayerInputReader _input;
-        private PlayerInputState  _inputState;
-        private SpriteRenderer    _renderer;
-        private BoxCollider2D     _hitCollider;
-        private bool              _playing;
-        private bool              _pendingFire;
-        private bool              _fireReady = true;
-        private bool              _hitAccepted;
+        private PlayerInputState _inputState;
+        private bool             _playing;
+        private bool             _pendingFire;
+        private bool             _fireReady = true;
+        private bool             _hitAccepted;
+
+        public event Action HitAccepted;
+
+        public Vector2 Position => transform.position;
 
         private const float Speed    = 60f * ArcadeViewport.UnitsPerPixel;
         private const float MaximumX = (ArcadeViewport.ScreenWidth / 2f - 8f) * ArcadeViewport.UnitsPerPixel;
 
         private void Awake()
         {
-            _renderer            = GetComponent<SpriteRenderer>();
-            _hitCollider         = GetComponent<BoxCollider2D>();
-            _renderer.enabled    = false;
-            if (_hitCollider != null)
+            if (_shot == null || _renderer == null || _hitCollider == null)
             {
-                _hitCollider.enabled = false;
+                throw new InvalidOperationException("Player requires saved PlayerShot, renderer and hit collider references. Configure Player Hit first.");
             }
         }
 
         private void OnEnable()
         {
-            _input = new PlayerInputReader();
             ApplyPlayingState();
-        }
-
-        private void Update()
-        {
-            ReadInput();
         }
 
         private void FixedUpdate()
@@ -53,30 +47,24 @@ namespace UnityInvader
 
         private void OnDisable()
         {
-            _input?.Dispose();
-            _input       = null;
             _inputState  = default;
             _pendingFire = false;
-            ApplyPlayingState();
-        }
-
-        private void OnDestroy()
-        {
-            if (_shot != null && _driver != null)
+            if (_playing)
             {
-                _shot.FlightEnded -= _driver.NotifyNormalPlayerShotEnded;
-                _shot.UfoDefeated -= _driver.NotifyUfoDefeated;
+                ApplyPlayingState();
             }
         }
 
-        internal void Initialize()
+        public bool TryReceiveHit()
         {
-            if (_shot == null || _driver == null || _hitCollider == null)
+            if (_playing == false || isActiveAndEnabled == false || _hitAccepted || _hitCollider.enabled == false)
             {
-                throw new InvalidOperationException("Player requires a hit collider, PlayerShot and GameplayDriver references. Configure Player Hit first.");
+                return false;
             }
-            _shot.FlightEnded += _driver.NotifyNormalPlayerShotEnded;
-            _shot.UfoDefeated += _driver.NotifyUfoDefeated;
+            _hitAccepted = true;
+            SetPlaying(false);
+            HitAccepted?.Invoke();
+            return true;
         }
 
         internal void SetPlaying(bool inPlaying)
@@ -90,18 +78,6 @@ namespace UnityInvader
             ApplyPlayingState();
         }
 
-        internal bool TryReceiveHit()
-        {
-            if (_playing == false || isActiveAndEnabled == false || _hitAccepted || _hitCollider.enabled == false)
-            {
-                return false;
-            }
-            _hitAccepted = true;
-            SetPlaying(false);
-            _driver.NotifyPlayerHit();
-            return true;
-        }
-
         internal void Respawn()
         {
             SetPlaying(false);
@@ -113,30 +89,13 @@ namespace UnityInvader
             _fireReady = false;
         }
 
-        private void ApplyPlayingState()
+        internal void SetInput(PlayerInputState inInput)
         {
-            bool playing = _playing && isActiveAndEnabled;
-            if (_renderer != null)
-            {
-                _renderer.enabled = playing;
-            }
-            if (_hitCollider != null)
-            {
-                _hitCollider.enabled = playing;
-            }
-            if (_shot != null)
-            {
-                _shot.SetPlaying(playing);
-            }
-        }
-
-        private void ReadInput()
-        {
-            if (_playing == false)
+            if (_playing == false || isActiveAndEnabled == false)
             {
                 return;
             }
-            _inputState = _input.Read();
+            _inputState = inInput;
             if (_inputState.Fire == false)
             {
                 _fireReady = true;
@@ -152,6 +111,14 @@ namespace UnityInvader
             {
                 _pendingFire = true;
             }
+        }
+
+        private void ApplyPlayingState()
+        {
+            bool playing         = _playing && isActiveAndEnabled;
+            _renderer.enabled    = playing;
+            _hitCollider.enabled = playing;
+            _shot.SetPlaying(playing);
         }
 
         private void UpdatePlayer()

@@ -14,6 +14,8 @@ namespace UnityInvader
         [SerializeField]
         private InvaderFormation _formation;
         [SerializeField]
+        private PlayerShot       _playerShot;
+        [SerializeField]
         private Shield[]         _shields      = new Shield[4];
         [SerializeField]
         private int              _score;
@@ -27,9 +29,10 @@ namespace UnityInvader
         [SerializeField]
         private long _normalShotEndCount;
 
-        private float _waveClearElapsed;
-        private float _playerDeadElapsed;
-        private bool  _initialized;
+        private PlayerInputReader _input;
+        private float             _waveClearElapsed;
+        private float             _playerDeadElapsed;
+        private bool              _initialized;
 
         // Provisional death wait; exact animation/video timing is a later task.
         private const float PlayerDeadDelay = 0.5f;
@@ -52,6 +55,7 @@ namespace UnityInvader
 
         private void OnEnable()
         {
+            _input = new PlayerInputReader();
             if (_initialized)
             {
                 ApplyPlayingState();
@@ -65,17 +69,33 @@ namespace UnityInvader
 
         private void Update()
         {
+            if (_initialized)
+            {
+                _player.SetInput(_input.Read());
+            }
             UpdateWaveClear();
             UpdatePlayerDead();
         }
 
         private void OnDisable()
         {
+            _input.Dispose();
+            _input = null;
             if (_initialized)
             {
                 _player.SetPlaying(false);
                 _formation.SetPlaying(false);
                 SetShieldsPlaying(false);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_initialized)
+            {
+                _player.HitAccepted -= NotifyPlayerHit;
+                _playerShot.FlightEnded -= NotifyNormalPlayerShotEnded;
+                _playerShot.UfoDefeated -= NotifyUfoDefeated;
             }
         }
 
@@ -133,15 +153,17 @@ namespace UnityInvader
 
         private void InitializeGameplay()
         {
-            if (_player == null || _formation == null || _shields == null || _shields.Length != 4 ||
+            if (_player == null || _playerShot == null || _formation == null || _shields == null || _shields.Length != 4 ||
                 System.Array.Exists(_shields, inShield => inShield == null))
             {
-                Debug.LogError("Arcade requires Component Gameplay and Configure Shields references.", this);
+                Debug.LogError("Arcade requires Player, normal PlayerShot, Formation and four Shield references.", this);
                 enabled = false;
                 return;
             }
-            _player.Initialize();
-            _formation.Initialize(this);
+            _formation.Initialize(this, _player);
+            _player.HitAccepted += NotifyPlayerHit;
+            _playerShot.FlightEnded += NotifyNormalPlayerShotEnded;
+            _playerShot.UfoDefeated += NotifyUfoDefeated;
             _initialized = true;
             ChangeState(_developmentStartPlaying ? GameState.Playing : _currentState);
         }

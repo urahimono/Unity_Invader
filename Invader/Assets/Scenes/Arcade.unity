@@ -522,6 +522,7 @@ MonoBehaviour:
   _currentState: 0
   _player: {fileID: 1668351246}
   _formation: {fileID: 805784278}
+  _playerShot: {fileID: 984733095}
   _shields:
   - {fileID: 868436402}
   - {fileID: 95418054}
@@ -597,7 +598,6 @@ MonoBehaviour:
   - {fileID: 1420704182, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   - {fileID: -1863489634, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   _aliveCount: 0
-  _player: {fileID: 1668351247}
   _rollingShot: {fileID: 1150688045}
   _plungerShot: {fileID: 1114205932}
   _squigglyShot: {fileID: 1644986078}
@@ -1012,10 +1012,6 @@ PrefabInstance:
       propertyPath: _shot
       value: 
       objectReference: {fileID: 984733095}
-    - target: {fileID: 5253637110638915733, guid: f4880c4db70e45c4483fca151e42d0be, type: 3}
-      propertyPath: _driver
-      value:
-      objectReference: {fileID: 788391821}
     - target: {fileID: 6512685292238339368, guid: f4880c4db70e45c4483fca151e42d0be, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -1072,11 +1068,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f294f985e4cd47b59fb7a46c7bfe751b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.Player
---- !u!4 &1668351247 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 6512685292238339368, guid: f4880c4db70e45c4483fca151e42d0be, type: 3}
-  m_PrefabInstance: {fileID: 1668351245}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1906968457
 PrefabInstance:
   m_ObjectHideFlags: 0

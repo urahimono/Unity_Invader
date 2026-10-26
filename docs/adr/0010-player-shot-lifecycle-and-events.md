@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-25
+- Partially superseded by: [ADR-0011](0011-player-dependencies.md)（PlayerのDriver参照・入力所有・通常弾イベント接続のみ）
 - Supersedes: [ADR-0008](0008-component-gameplay.md)のPlayerShotの飛行状態・結果通知に関する部分のみ
 
 ## Context
@@ -14,7 +15,7 @@ PlayerShotのRigidbody2DとRenderer参照はPrefab保存時に設定します。
 
 弾はFlightEnded・UfoDefeatedを順に発行し、通知先を保持しません。通常弾の所有者Playerは既存の一度だけのInitializeでDriverの履歴・得点処理を購読し、OnDestroyで解除します。B弾の所有者DebugCarpetBombはプール生成時にUFO通知だけを購読し、OnDestroyで解除します。Pause時は購読を保持し、進行停止中に完了する最終撃破の通知順も維持します。
 
-PlayerのGameplayDriver直接参照と、PlayerがPlayerShotのイベントをDriverの通知メソッドへ接続する配置は、今回の変更範囲を絞るための暫定対応です。推奨する完成形ではなく、被弾通知を含むPlayerの依存関係は次のIssueで改めて設計・修正します。
+PlayerのGameplayDriver直接参照と、PlayerがPlayerShotのイベントをDriverの通知メソッドへ接続する配置は、今回の変更範囲を絞るための暫定対応です。推奨する完成形ではありません。この暫定対応はIssue #85 / [ADR-0011](0011-player-dependencies.md)で解消済みです。以下を含む本ADRのPlayer接続の記述はIssue #83時点の判断記録です。
 
 ## Consequences
 

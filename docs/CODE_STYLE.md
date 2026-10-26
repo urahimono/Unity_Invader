@@ -36,7 +36,7 @@ Component間の参照保持は一律に禁止せず、次の依存方向に従�
 - 具体的な命中対象へのTryReceiveHit等の操作は、上位管理者への結果通知と区別します。他者の内部状態の直接書き換えや、管理対象をGetterで辿る操作は認めません。
 - 依存方向を守るためだけに、不必要なInterfaceやManagerを追加しません。
 
-上記のPlayingの責務は現在構造の説明です。PlayerやFormation等に残る上位への直接依存を推奨する規約ではありません。Issue #83の適用範囲と暫定構造は [ARCHITECTURE.md](ARCHITECTURE.md)・[ADR-0010](adr/0010-player-shot-lifecycle-and-events.md) を参照してください。
+上記のPlayingの責務は現在構造の説明です。Formation等に残る上位への直接依存を推奨する規約ではありません。Issue #83/#85の適用範囲と現在構造は [ARCHITECTURE.md](ARCHITECTURE.md)・[ADR-0010](adr/0010-player-shot-lifecycle-and-events.md) を参照してください。
 
 位置はTransform/Rigidbody2D、Invaderの生死はGameObject有効状態を正として、旧モデルや表示スナップショットに二重保持しません。PlayerShotの飛行状態はInFlightを唯一の正とし、待機中もGameObjectを有効に保ちます。Formationの生存数など、責務に必要な集計値は保持できます。描画は個体Component自身で反映でき、Driver→表示専用ControllerへのPushを必須としません。表示を分離する場合は、不変の値をPushする方式も使えます。
 
@@ -77,11 +77,11 @@ shot.FlightEnded += driver.NotifyNormalPlayerShotEnded;
 shot.UfoDefeated += driver.NotifyUfoDefeated;
 ```
 
-この例は結果イベントの購読を示すもので、PlayerがDriverを参照して接続する配置を推奨するものではありません。現行のPlayerによる接続はIssue #83の暫定対応であり、次のIssueで依存関係を設計・修正します。
+この例は結果イベントの購読を示すもので、PlayerがDriverを参照して接続する配置を推奨するものではありません。Issue #85で暫定接続を解消し、Driverが通常弾を明示的に参照して直接購読します。PlayerはPlayerInputStateの値だけを受け取り、被弾をHitAcceptedで通知します。Playerが直接操作するゲーム内ComponentはPlayerShotだけです。
 
 UFO命中では弾を消費してFlightEndedを通知してからUfoDefeatedを通知します。通常弾は終了履歴を先に更新し、B弾はUfoDefeatedだけ購読して履歴を変えません。Invader.TryReceiveHit等の具体的な命中操作までイベントへ置き換える必要はありません。
 
-同時1発・入力の再押下条件はPlayer側へ置きます。弾は自身の飛行中の再発射を拒否しますが、複数インスタンスの利用は制限しません。Issue #83ではPlayerShot周辺に限って適用し、既存のPlayer被弾・Formation通知は変更しません。
+同時1発・入力の再押下条件はPlayer側へ置きます。弾は自身の飛行中の再発射を拒否しますが、複数インスタンスの利用は制限しません。Issue #83ではPlayerShot周辺に適用し、Issue #85ではPlayerの入力・被弾通知とEnemyShot/Formationからの最小Interface接続へ適用しました。FormationのDriver通知は今回変更しません。
 
 ### Editor検証用API
 

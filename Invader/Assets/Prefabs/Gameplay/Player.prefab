@@ -107,7 +107,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.Player
   _shot: {fileID: 0}
-  _driver: {fileID: 0}
+  _renderer: {fileID: 3702090395396139954}
+  _hitCollider: {fileID: 52830945373732770}
 --- !u!61 &52830945373732770
 BoxCollider2D:
   m_ObjectHideFlags: 0

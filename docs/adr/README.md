@@ -28,6 +28,8 @@ ADR（Architecture Decision Record）は、重要なArchitecture判断と、そ�
 | [0009](0009-enemy-shot-phases.md) | 敵弾だけをFormationの60Hz種類別phaseで進め、移動・count・衝突はEnemyShotが所有 |
 | [0010](0010-player-shot-lifecycle-and-events.md) | PlayerShotの構成済み参照・独立した飛行状態・所有側による結果イベント購読 |
 
+| [0011](0011-player-dependencies.md) | Playerへ入力値を渡し、Driverが被弾・通常弾イベントを直接購読。被弾受付と位置取得を最小Interfaceに限定 |
+
 ## 初期記録の根拠
 
 [Issue #15](https://github.com/urahimono/Unity_Invader/issues/15) とNotionの [Unity設計](https://www.notion.so/3ff4f337d5bf814eaa3dd6871eab5160) の確定判断を、Phase 3完了コードと照合しました。Notionには古い暫定案と未実装の責務図も含まれます。現行構造はコードを優先し、ADRには採用理由だけを要約しています。ADR-0005は [PR #13](https://github.com/urahimono/Unity_Invader/pull/13) のレビュー対応を根拠にしています。各ADRは過去会話や外部資料を開かなくても判断の要旨を読めるようにします。

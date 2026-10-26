@@ -28,10 +28,19 @@ namespace UnityInvader.Editor
             {
                 throw new InvalidOperationException("Arcade must contain one Player and GameplayDriver.");
             }
-            var data                                          = new SerializedObject(players[0]);
-            data.FindProperty("_driver").objectReferenceValue = drivers[0];
-            data.ApplyModifiedPropertiesWithoutUndo();
-            var driverData                             = new SerializedObject(drivers[0]);
+            var shots = UnityEngine.Object.FindObjectsByType<PlayerShot>(FindObjectsInactive.Include);
+            if (shots.Length != 1)
+            {
+                throw new InvalidOperationException("Arcade must contain one normal PlayerShot.");
+            }
+            var playerData = new SerializedObject(players[0]);
+            playerData.FindProperty("_shot").objectReferenceValue = shots[0];
+            playerData.ApplyModifiedPropertiesWithoutUndo();
+            PrefabUtility.RecordPrefabInstancePropertyModifications(players[0]);
+            PrefabUtility.RemoveUnusedOverrides(new[] { players[0].gameObject }, InteractionMode.AutomatedAction);
+            var driverData = new SerializedObject(drivers[0]);
+            driverData.FindProperty("_player").objectReferenceValue = players[0];
+            driverData.FindProperty("_playerShot").objectReferenceValue = shots[0];
             driverData.FindProperty("_lives").intValue = 3;
             driverData.ApplyModifiedPropertiesWithoutUndo();
             if (EditorSceneManager.SaveScene(scene) == false)
@@ -39,7 +48,7 @@ namespace UnityInvader.Editor
                 throw new InvalidOperationException("Could not save Player Hit references in Arcade.");
             }
             AssetDatabase.SaveAssets();
-            Debug.Log("PLAYER_HIT_SETUP_PASS: Player collider, Arcade driver reference and three initial lives saved.");
+            Debug.Log("PLAYER_HIT_SETUP_PASS: Player collider, saved component references and Driver Player/normal shot references and three initial lives saved.");
         }
 
         internal static void ConfigurePrefab()
@@ -64,6 +73,10 @@ namespace UnityInvader.Editor
                     collider.size   = renderer.sprite.bounds.size;
                     collider.offset = renderer.sprite.bounds.center;
                 }
+                var data = new SerializedObject(instance.GetComponent<Player>());
+                data.FindProperty("_renderer").objectReferenceValue = renderer;
+                data.FindProperty("_hitCollider").objectReferenceValue = collider;
+                data.ApplyModifiedPropertiesWithoutUndo();
                 collider.isTrigger = true;
                 collider.enabled   = false;
                 if (PrefabUtility.SaveAsPrefabAsset(instance, PrefabPath) == null)

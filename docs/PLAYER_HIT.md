@@ -2,6 +2,8 @@
 
 以下はIssue #61時点の実装・検証記録です。現在はIssue #63でLives・復帰・GameOverを追加しており、PlayerDeadで停止し続ける挙動から変更しています。現在の仕様は [Lives・復帰](LIVES.md) を参照してください。
 
+Issue #85ではEnemyShot→IHitReceiver→Player、Player.HitAccepted event→Driverへ通知経路を変更し、PlayerのDriver参照を削除しました。以下の直接参照・設定手順はIssue #61当時の記録です。現在構造は [Architecture](ARCHITECTURE.md) を参照してください。
+
 ## 作業状態
 
 PR #60マージ済みのdevelop（7fa5425）を基準に実装しました。2026-10-25に今回の実行承認を受け、隔離プロジェクトコピーのUnity 6000.6.4f1非表示バッチでPlayer Prefab・Arcadeを保存し、コンパイルと実Trigger確認に成功しました。既存Editor・GUI・Windows入力は操作していません。

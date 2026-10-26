@@ -101,7 +101,6 @@ namespace UnityInvader.Editor
             var playerData                  = new SerializedObject(playerObject.GetComponent<Player>());
 
             playerData.FindProperty("_shot").objectReferenceValue   = shotObject.GetComponent<PlayerShot>();
-            playerData.FindProperty("_driver").objectReferenceValue = drivers[0];
             playerData.ApplyModifiedPropertiesWithoutUndo();
 
             var formationObject = new GameObject("InvaderFormation");
@@ -123,6 +122,7 @@ namespace UnityInvader.Editor
             formationData.ApplyModifiedPropertiesWithoutUndo();
             var driverData = new SerializedObject(drivers[0]);
 
+            driverData.FindProperty("_playerShot").objectReferenceValue = shotObject.GetComponent<PlayerShot>();
             driverData.FindProperty("_player").objectReferenceValue    = playerObject.GetComponent<Player>();
             driverData.FindProperty("_formation").objectReferenceValue = formation;
             driverData.FindProperty("_score").intValue                 = 0;
@@ -134,7 +134,7 @@ namespace UnityInvader.Editor
             {
                 camera.gameObject.AddComponent<ArcadeViewport>();
             }
-            RollingEnemyShotSetup.ConfigureInScene(scene, formation, playerObject.transform);
+            RollingEnemyShotSetup.ConfigureInScene(scene, formation);
             PlungerEnemyShotSetup.ConfigureInScene(scene, formation);
             SquigglyEnemyShotSetup.ConfigureInScene(scene, formation);
             UfoSetup.ConfigureInScene(scene, formation);

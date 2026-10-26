@@ -403,7 +403,7 @@ namespace UnityInvader.Editor
 
         private static bool ReceivePlayerHit()
         {
-            return (bool)typeof(Player).GetMethod("TryReceiveHit", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_player, null);
+            return ((IHitReceiver)_player).TryReceiveHit();
         }
 
         private static bool TryMuzzle(out Vector2 outPosition)
