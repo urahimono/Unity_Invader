@@ -146,7 +146,7 @@ namespace UnityInvader
                 return;
             }
             _resolvingHit = true;
-            if (inReceiver.TryReceiveHit())
+            if (inReceiver.TryReceiveHit(this))
             {
                 ResetFlight();
             }

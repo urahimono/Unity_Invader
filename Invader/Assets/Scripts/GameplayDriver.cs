@@ -95,7 +95,6 @@ namespace UnityInvader
             {
                 _player.HitAccepted -= NotifyPlayerHit;
                 _playerShot.FlightEnded -= NotifyNormalPlayerShotEnded;
-                _playerShot.UfoDefeated -= NotifyUfoDefeated;
             }
         }
 
@@ -141,14 +140,15 @@ namespace UnityInvader
             _normalShotEndCount++;
         }
 
-        internal void NotifyUfoDefeated()
+        internal void NotifyUfoDefeated(Component inSource)
         {
             if (isActiveAndEnabled == false || _currentState != GameState.Playing)
             {
                 return;
             }
-            // Called after the impacting shot's completion, matching pointer advance before 0711.
-            _score += _ufoScores[(int)(_normalShotEndCount % _ufoScores.Length)];
+            // The receiver notifies before FlightEnded. Preview its increment for scoring only.
+            long endCount = _normalShotEndCount + (inSource == _playerShot ? 1L : 0L);
+            _score += _ufoScores[(int)(endCount % _ufoScores.Length)];
         }
 
         private void InitializeGameplay()
@@ -163,7 +163,6 @@ namespace UnityInvader
             _formation.Initialize(this, _player);
             _player.HitAccepted += NotifyPlayerHit;
             _playerShot.FlightEnded += NotifyNormalPlayerShotEnded;
-            _playerShot.UfoDefeated += NotifyUfoDefeated;
             _initialized = true;
             ChangeState(_developmentStartPlaying ? GameState.Playing : _currentState);
         }

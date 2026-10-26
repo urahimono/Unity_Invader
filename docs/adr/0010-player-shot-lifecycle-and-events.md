@@ -6,6 +6,8 @@
 - Partially superseded by: [ADR-0012](0012-player-shot-unity-state.md)（飛行状態と進行可否の表現）
 - Supersedes: [ADR-0008](0008-component-gameplay.md)のPlayerShotの飛行状態・結果通知に関する部分のみ
 
+- Partially superseded by: [ADR-0013](0013-hit-receivers-and-ufo-scoring.md)（命中契約・UFO撃破通知と得点順）
+
 ## Context
 
 Issue #83では、構成済みPrefabからTryLaunchだけで使えるAPIと管理者を知らない個体をPlayerShotで試します。従来は非アクティブPrefabのAwakeが遅延し、複数箇所の参照取得とInitialize/SetPlayingが必要でした。通常弾かどうかとDriver参照も弾が保持していました。

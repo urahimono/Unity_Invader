@@ -1,10 +1,11 @@
+using System;
 using UnityEngine;
 
 namespace UnityInvader
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D))]
-    public sealed class Ufo : MonoBehaviour
+    public sealed class Ufo : MonoBehaviour, IHitReceiver
     {
         [SerializeField]
         private SpriteRenderer _renderer;
@@ -13,6 +14,8 @@ namespace UnityInvader
         private BoxCollider2D _hitCollider;
         private bool          _playing;
         private int           _direction;
+
+        public event Action<Component> Defeated;
 
         internal bool InFlight => gameObject.activeSelf;
 
@@ -46,6 +49,18 @@ namespace UnityInvader
             {
                 _body.simulated = false;
             }
+        }
+
+        public bool TryReceiveHit(Component inSource)
+        {
+            if (_playing == false || isActiveAndEnabled == false || _hitCollider.enabled == false)
+            {
+                return false;
+            }
+            // Consume before notifying; later Trigger callbacks cannot award this UFO again.
+            ResetFlight();
+            Defeated?.Invoke(inSource);
+            return true;
         }
 
         internal bool TryLaunch(bool inMovingRight)
@@ -96,17 +111,6 @@ namespace UnityInvader
                 return;
             }
             _body.MovePosition(position);
-        }
-
-        internal bool TryReceiveHit()
-        {
-            if (_playing == false || isActiveAndEnabled == false || _hitCollider.enabled == false)
-            {
-                return false;
-            }
-            // Consumes this UFO immediately; later Trigger callbacks cannot award it again.
-            ResetFlight();
-            return true;
         }
 
         private void CacheComponents()

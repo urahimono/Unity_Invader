@@ -13,7 +13,6 @@ namespace UnityInvader
         private Rigidbody2D    _body;
 
         public event Action FlightEnded;
-        public event Action UfoDefeated;
 
         public  const float Width  = 1f;
         public  const float Height = 4f;
@@ -110,14 +109,9 @@ namespace UnityInvader
             {
                 return;
             }
-            if (inOther.TryGetComponent<Invader>(out var invader) && invader.TryReceiveHit())
+            if (inOther.TryGetComponent<IHitReceiver>(out var receiver) && receiver.TryReceiveHit(this))
             {
                 FinishFlight();
-            }
-            else if (inOther.TryGetComponent<Ufo>(out var ufo) && ufo.TryReceiveHit())
-            {
-                FinishFlight();
-                UfoDefeated?.Invoke();
             }
         }
     }

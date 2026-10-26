@@ -30,6 +30,7 @@ namespace UnityInvader.Editor
                 body.simulated = false;
                 ((SpriteRenderer)data.FindProperty("_renderer").objectReferenceValue).enabled = false;
                 contents.SetActive(false);
+                contents.layer = GameplayCollisionSetup.PlayerShotLayer;
                 PrefabUtility.SaveAsPrefabAsset(contents, path);
             }
             finally
@@ -138,6 +139,7 @@ namespace UnityInvader.Editor
             PlungerEnemyShotSetup.ConfigureInScene(scene, formation);
             SquigglyEnemyShotSetup.ConfigureInScene(scene, formation);
             UfoSetup.ConfigureInScene(scene, formation);
+            GameplayCollisionSetup.ConfigureInScene(scene);
             // Finish preparation and reference wiring before destroying any existing gameplay object.
             foreach (var root in oldRoots)
             {
@@ -160,6 +162,7 @@ namespace UnityInvader.Editor
                 return existing;
             }
             var instance = new GameObject("Player");
+            instance.layer = GameplayCollisionSetup.PlayerLayer;
             try
             {
                 instance.AddComponent<Player>();
@@ -190,6 +193,7 @@ namespace UnityInvader.Editor
                 return existing;
             }
             var instance = new GameObject("Invader");
+            instance.layer = GameplayCollisionSetup.InvaderLayer;
             try
             {
                 var invader                                         = instance.AddComponent<Invader>();
@@ -216,6 +220,7 @@ namespace UnityInvader.Editor
                 return existing;
             }
             var instance = new GameObject("PlayerShot");
+            instance.layer = GameplayCollisionSetup.PlayerShotLayer;
             instance.SetActive(false);
             try
             {

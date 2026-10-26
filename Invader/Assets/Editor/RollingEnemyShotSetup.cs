@@ -78,6 +78,7 @@ namespace UnityInvader.Editor
                 return existing; // Preserve Inspector adjustments on subsequent configuration runs.
             }
             var instance = new GameObject("EnemyShot");
+            instance.layer = GameplayCollisionSetup.EnemyShotLayer;
             try
             {
                 var shot           = instance.AddComponent<EnemyShot>();
