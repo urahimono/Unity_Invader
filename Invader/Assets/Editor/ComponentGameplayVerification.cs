@@ -30,8 +30,15 @@ namespace UnityInvader.Editor
             Require(players[0].TryGetComponent<BoxCollider2D>(out var playerCollider) && playerCollider.isTrigger, "Player hit trigger.");
             var shotBody = shots[0].GetComponent<Rigidbody2D>();
             var collider = shots[0].GetComponent<BoxCollider2D>();
-            Require(shots[0].gameObject.activeSelf && new SerializedObject(shots[0]).FindProperty("_body").objectReferenceValue == shotBody,
-                "PlayerShot must remain active with its body reference saved in the prefab.");
+            Require((EditorApplication.isPlaying || shots[0].gameObject.activeSelf == false) && new SerializedObject(shots[0]).FindProperty("_body").objectReferenceValue == shotBody,
+                "PlayerShot must start inactive with its body reference saved in the prefab.");
+            var shotRenderer = new SerializedObject(shots[0]).FindProperty("_renderer").objectReferenceValue as SpriteRenderer;
+            Require(shotRenderer != null, "Saved PlayerShot renderer reference.");
+            if (EditorApplication.isPlaying == false)
+            {
+                Require(shots[0].enabled && shotBody.simulated == false && shotRenderer.enabled == false,
+                    "Idle PlayerShot must be ready with physics and rendering stopped.");
+            }
             Require(shotBody.bodyType == RigidbodyType2D.Dynamic && shotBody.gravityScale == 0f && shotBody.linearDamping == 0f, "Shot body settings.");
             Require(collider.isTrigger && Vector2.Distance(collider.size, new Vector2(1f, 4f) * ArcadeViewport.UnitsPerPixel) < 1e-6f, "Shot trigger dimensions.");
             Require(formations[0].GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Kinematic, "Formation body must be kinematic.");

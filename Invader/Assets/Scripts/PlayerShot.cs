@@ -12,14 +12,8 @@ namespace UnityInvader
         [SerializeField]
         private Rigidbody2D    _body;
 
-        private bool _playing = true;
-        private bool _inFlight;
-        private bool _resolvingHit;
-
         public event Action FlightEnded;
         public event Action UfoDefeated;
-
-        public bool InFlight => _inFlight;
 
         public  const float Width  = 1f;
         public  const float Height = 4f;
@@ -51,34 +45,30 @@ namespace UnityInvader
 
         public bool TryLaunch(Vector2 inPosition)
         {
-            if (_playing == false || isActiveAndEnabled == false || InFlight)
+            if (enabled == false || gameObject.activeSelf ||
+                (transform.parent != null && transform.parent.gameObject.activeInHierarchy == false))
             {
                 return false;
             }
             _body.position     = inPosition;
             transform.position = inPosition;
-            _resolvingHit      = false;
-            _inFlight          = true;
-            ApplyPlayingState();
+            gameObject.SetActive(true);
             return true;
         }
 
         internal void SetPlaying(bool inPlaying)
         {
-            _playing = inPlaying;
-            ApplyPlayingState();
+            enabled = inPlaying;
         }
 
         internal void ResetFlight()
         {
-            _resolvingHit = false;
-            _inFlight     = false;
-            ApplyPlayingState();
+            gameObject.SetActive(false);
         }
 
         private void ApplyPlayingState()
         {
-            bool playing         = _playing && isActiveAndEnabled && InFlight;
+            bool playing         = isActiveAndEnabled;
             _renderer.enabled    = playing;
             _body.simulated      = playing;
             _body.linearVelocity = playing ? Vector2.up * Speed : Vector2.zero;
@@ -86,7 +76,7 @@ namespace UnityInvader
 
         private void CheckScreenExit()
         {
-            if (_playing && InFlight && _body.position.y >= ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel)
+            if (_body.position.y >= ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel)
             {
                 FinishFlight();
             }
@@ -94,10 +84,6 @@ namespace UnityInvader
 
         private bool TryHitShield()
         {
-            if (_playing == false || InFlight == false || isActiveAndEnabled == false || _resolvingHit)
-            {
-                return false;
-            }
             var center = _body.position + Vector2.up * (Height * 0.5f * ArcadeViewport.UnitsPerPixel);
             var size   = new Vector2(Width, Height) * ArcadeViewport.UnitsPerPixel;
             if (Shield.TryAbsorbShot(center, center + _body.linearVelocity * Time.fixedDeltaTime, size, true))
@@ -110,7 +96,7 @@ namespace UnityInvader
 
         private void FinishFlight()
         {
-            if (InFlight == false)
+            if (gameObject.activeSelf == false)
             {
                 return;
             }
@@ -120,11 +106,10 @@ namespace UnityInvader
 
         private void ResolveHit(Collider2D inOther)
         {
-            if (_playing == false || InFlight == false || isActiveAndEnabled == false || _resolvingHit)
+            if (isActiveAndEnabled == false)
             {
                 return;
             }
-            _resolvingHit = true;
             if (inOther.TryGetComponent<Invader>(out var invader) && invader.TryReceiveHit())
             {
                 FinishFlight();
@@ -134,7 +119,6 @@ namespace UnityInvader
                 FinishFlight();
                 UfoDefeated?.Invoke();
             }
-            _resolvingHit = false;
         }
     }
 }

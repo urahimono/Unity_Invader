@@ -1,8 +1,9 @@
 # ADR-0010: PlayerShotの構成済み参照と結果イベント
 
-- Status: Accepted
+- Status: Partially Superseded
 - Date: 2026-10-25
 - Partially superseded by: [ADR-0011](0011-player-dependencies.md)（PlayerのDriver参照・入力所有・通常弾イベント接続のみ）
+- Partially superseded by: [ADR-0012](0012-player-shot-unity-state.md)（飛行状態と進行可否の表現）
 - Supersedes: [ADR-0008](0008-component-gameplay.md)のPlayerShotの飛行状態・結果通知に関する部分のみ
 
 ## Context

@@ -127,6 +127,7 @@ namespace UnityInvader
                 _shots[index] = shot;
                 shot.UfoDefeated += _driver.NotifyUfoDefeated;
             }
+            ShuffleLanes();
             return true;
         }
 
@@ -135,20 +136,16 @@ namespace UnityInvader
             int launched = 0;
             foreach (var shot in _shots)
             {
-                if (shot.InFlight)
-                {
-                    continue;
-                }
-                if (_laneIndex >= LaneCount)
-                {
-                    ShuffleLanes();
-                }
                 float x      = 2f + _lanes[_laneIndex] * 10f - ArcadeViewport.ScreenWidth / 2f;
                 var position = new Vector2(x, 8f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
                 if (shot.TryLaunch(position))
                 {
                     _laneIndex++;
                     launched++;
+                    if (_laneIndex >= LaneCount)
+                    {
+                        ShuffleLanes();
+                    }
                 }
                 if (launched >= BurstSize)
                 {
@@ -182,7 +179,7 @@ namespace UnityInvader
             }
             foreach (var shot in _shots)
             {
-                if (shot != null && shot.InFlight)
+                if (shot != null)
                 {
                     shot.ResetFlight();
                 }
