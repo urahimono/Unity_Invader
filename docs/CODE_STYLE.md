@@ -38,7 +38,7 @@ Component間の参照保持は一律に禁止せず、次の依存方向に従�
 
 上記のPlayingの責務は現在構造の説明です。Formation等に残る上位への直接依存を推奨する規約ではありません。Issue #83/#85の適用範囲と現在構造は [ARCHITECTURE.md](ARCHITECTURE.md)・[ADR-0010](adr/0010-player-shot-lifecycle-and-events.md) を参照してください。
 
-位置はTransform/Rigidbody2D、Invaderの生死はGameObject有効状態を正として、旧モデルや表示スナップショットに二重保持しません。PlayerShotの飛行状態はInFlightを唯一の正とし、待機中もGameObjectを有効に保ちます。Formationの生存数など、責務に必要な集計値は保持できます。描画は個体Component自身で反映でき、Driver→表示専用ControllerへのPushを必須としません。表示を分離する場合は、不変の値をPushする方式も使えます。
+位置はTransform/Rigidbody2D、Invaderの生死はGameObject有効状態を正として、旧モデルや表示スナップショットに二重保持しません。PlayerShotの飛行状態はGameObject.activeSelf、進行可否はMonoBehaviour.enabledを正とし、待機・終了時はInactiveにします。物理・表示・速度はこの状態から導出し、独自boolで複製しません。Playerは入力受付時の同時1発制限に必要な射撃枠を所有し、発射成功・FlightEnded・Respawnで更新します。Formationの生存数など、責務に必要な集計値は保持できます。描画は個体Component自身で反映でき、Driver→表示専用ControllerへのPushを必須としません。表示を分離する場合は、不変の値をPushする方式も使えます。
 
 `int`・`bool`・enum等の値の取得は、責務に必要な範囲で可能です。公開Getter一般を禁止するものではありません。ゲーム進行を外部へ任意に変更させるpublic APIや、将来用途だけのManager・Interface・イベントバスは追加しません。
 

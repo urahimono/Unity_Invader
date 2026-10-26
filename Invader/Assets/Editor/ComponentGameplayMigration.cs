@@ -29,7 +29,7 @@ namespace UnityInvader.Editor
                 data.ApplyModifiedPropertiesWithoutUndo();
                 body.simulated = false;
                 ((SpriteRenderer)data.FindProperty("_renderer").objectReferenceValue).enabled = false;
-                contents.SetActive(true);
+                contents.SetActive(false);
                 PrefabUtility.SaveAsPrefabAsset(contents, path);
             }
             finally
@@ -216,6 +216,7 @@ namespace UnityInvader.Editor
                 return existing;
             }
             var instance = new GameObject("PlayerShot");
+            instance.SetActive(false);
             try
             {
                 var shot                                            = instance.AddComponent<PlayerShot>();

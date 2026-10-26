@@ -55,8 +55,8 @@ flowchart TD
 | DebugCarpetBomb | Editor/Development Build限定のB長押し入力、専用PlayerShot 96発の遅延生成・再利用、23レーンの一巡シャッフル。DriverのState/Waveを読み、非Playing・Driver無効・Wave変更・自身の無効化で専用弾を回収。生成時にUfoDefeatedだけを購読しOnDestroyで解除、通常終了履歴は購読しない。命中・Score・全滅・Wave進行は既存Componentへ任せる。製品ビルドにも型とScene参照は残すが入力・生成処理は含めない |
 | DebugFormationSpeed | Formationと同じGameObjectでF長押しを読み、Editor/Development Build限定の内部操作で移動経過時間の倍率を10/1へ設定。FixedUpdate実行順-100でFormationより先に反映し、自身またはFormation無効時は1へ戻す。製品ビルドにも型は残すが入力・倍率処理は含めない |
 | DebugStatusOverlay | ArcadeのDriverと同じGameObjectで、State・Lives・Wave・Scoreの読み取り専用enum/intを描画時に取得。状態の複製や進行操作を行わず、非Playingでも表示。OnGUIによる開発用表示はEditor/Development Buildのみ有効で、Componentの型は製品ビルドにも残す |
-| Player | 受け取った入力値と発射受付、同時1発・release/再押下ゲート。Transformで移動し被弾受理後にHitAcceptedを発行。IHitReceiverとIPositionProviderを実装。直接操作するゲーム内ComponentはPlayerShotだけ。復帰時に自身の位置・受理/発射ゲートと自機弾を初期化 |
-| PlayerShot | 構成済みRigidbody2D/Renderer、Trigger、唯一の飛行状態_inFlight。Invader/Ufoへ命中を依頼し成立後に消費。上端・Shield吸収・命中でFlightEndedを一度通知し、UFOなら続いてUfoDefeated。通知先・通常弾の区別は知らない。ResetFlightは通知なしの中断 |
+| Player | 受け取った入力値と発射受付、同時1発の射撃枠・release/再押下ゲート。発射成功で枠を占有し、FlightEndedで解放。Transformで移動し被弾受理後にHitAcceptedを発行。IHitReceiverとIPositionProviderを実装。直接操作するゲーム内ComponentはPlayerShotだけ。復帰時に自身の位置・受理/発射ゲートと自機弾を初期化 |
+| PlayerShot | 構成済みRigidbody2D/Renderer、Trigger。飛行状態はGameObject.activeSelf、進行可否はMonoBehaviour.enabled。Invader/Ufoへ命中を依頼し成立後に消費。上端・Shield吸収・命中でFlightEndedを一度通知し、UFOなら続いてUfoDefeated。通知先・通常弾の区別は知らない。ResetFlightは通知なしの中断 |
 | Invader | GameObjectの有効状態による生死、Spriteの2コマ、被弾反応、所属Formationへの一度だけの通知 |
 | InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、集団移動の方向/周期/アニメ位相、生存数の集計。敵弾/UFOの60Hz時計・種類別phase、3種の発射元/Reload制御。UFOの下降条件・出現カウンタ・開始待ち・Squiggly共有枠。通知からDriverへ得点・全滅を伝える |
 | EnemyShot | Kinematic Rigidbody2D、移動step countと速度区分。Formationのphaseから1stepを受け、既存Shield判定と移動を実行。TriggerでPlayerへ被弾受付を依頼し、成立時または画面下端で非アクティブ化して再利用 |
@@ -71,14 +71,14 @@ flowchart TD
 
 Player、Shot、InvaderのPrefabを `Assets/Prefabs/Gameplay/` にEditor APIで生成します。PlayerのShot参照はArcadeのPrefab instance overrideです。ShotはPlayerの子にせず、発射後のXがPlayerの移動へ追従しないようにします。
 
-Issue #83でPlayerShot Prefabは有効状態に変更しました。Rigidbody2DとRenderer参照はEditor保存時に設定済みで、実行時のGetComponent/CacheComponents/Initializeはありません。OnEnableは待機/飛行と進行可否から表示・物理を適用するだけです。待機時もGameObjectは有効、InFlight（_inFlight）が飛行状態の唯一の正です。停止しても占有を保持し、自然終了・強制中断で占有を解除します。GameObject有効状態から飛行中かどうかを推測しません。設定の更新は既存EditorコードのConfigure PlayerShot Prefabで行えます。
+Issue #87でPlayerShot PrefabとArcadeの通常弾はInactiveへ変更しました。Rigidbody2DとRenderer参照はEditor保存時に設定済みで、実行時のGetComponent/CacheComponents/Initializeはありません。GameObject.activeSelfが飛行状態、MonoBehaviour.enabledが進行可否の正です。OnEnable/OnDisableで表示・物理・速度を導出します。PauseはActiveのままenabled=falseにして占有・位置を保持し、Resumeで継続します。自然終了・ResetFlightはInactiveへ戻します。Inactiveな親階層への発射は拒否します。設定更新はConfigure PlayerShot Prefabで行えます。
 
 ```csharp
 var shot = Instantiate(shotPrefab);
 shot.TryLaunch(position);
 ```
 
-この利用例に購読者・Driverや準備呼出順は不要です。通常ゲームのPlayerは進行に応じてSetPlayingで明示的に停止/再開します。B弾はTryLaunchで発射しResetFlightで回収するだけです。DriverとDebugCarpetBombは所有期間中購読を保持するため、一時停止やWaveClearへ遷移した命中処理の途中でも自然終了通知を取りこぼしません。詳しい判断と残る依存は [ADR-0010](adr/0010-player-shot-lifecycle-and-events.md) を参照してください。
+この利用例に購読者・Driverや準備呼出順は不要です。通常ゲームのPlayerは進行に応じてSetPlayingで明示的に停止/再開します。B弾はTryLaunchで発射しResetFlightで回収するだけです。PlayerはAwakeでFlightEndedを一度購読しOnDestroyで解除します。入力時点の射撃枠を判断し、飛行中の押下は予約しません。RespawnのResetFlightは無通知なので射撃枠も明示的に解放します。B弾はTryLaunchの成否でプールを探し、発射成功でのみレーンを消費します。初回のプール生成時にレーンをシャッフルし、以後は一巡の最後の発射成功時に次巡を準備します。DriverとDebugCarpetBombは所有期間中購読を保持するため、一時停止やWaveClearへ遷移した命中処理の途中でも自然終了通知を取りこぼしません。通知の判断履歴は [ADR-0010](adr/0010-player-shot-lifecycle-and-events.md)、現在の状態表現は [ADR-0012](adr/0012-player-shot-unity-state.md) を参照してください。
 
 Issue #85でPlayerのDriver参照とイベント接続の中継を解消しました。Driverは通常PlayerShotをSceneで明示的に参照し、StartでPlayer.HitAccepted・FlightEnded・UfoDefeatedを一度購読、OnDestroyで解除します。PauseやDisableでは解除しません。PlayerInputReaderはDriverのOnEnableで生成、OnDisableでDisposeし、Updateで取得したPlayerInputStateだけをPlayer.SetInputへ渡します。PlayerはFixedUpdateまで短い発射入力を保持します。停止・無効化では未処理の入力値・発射予約だけを破棄し、射撃受付状態（_fireReady）は保持します。WaveClear・Pauseからの再開時に新たなreleaseを一律には要求しません。Respawn時は_fireReady=falseとし、Playing中のrelease→再押下を必要とします。
 
@@ -107,7 +107,7 @@ Unityの既存Fixed Timestep（0.02秒）を使い、ProjectSettingsは変更し
 - Formation左上初期位置：(32,208)、間隔16px、Colliderは16×8px。Spriteは既存480×241/PPU30の約16×8.03pxの比率を維持。
 - Score：Top=30、Middle=20、Bottom=10。55体の合計は990。Driverが通知の受理時に加算する。HUDは未実装。
 
-Shotが処理中ガードを立ててInvaderに命中を依頼し、Invaderは受理時に直ちにGameObjectを無効化して通知します。Shotも命中成立後にInFlightをfalseにして表示・物理を停止するため、同じ弾の後続通知や同じ個体への別弾は再撃破・再加点しません。最終撃破の通知でDriverは即座に全Componentを停止しますが、その命中のFlightEnded通知は完了します。
+ShotはInvaderへ同期的に命中を依頼し、Invaderは受理時に直ちにGameObjectを無効化して通知します。成立後にShotを非アクティブにしてFlightEndedを通知するため、後続Triggerは受け付けません。Invader→Formation→Driverは停止・加点を行うだけで命中処理へ同期再入しないため、独自の処理中フラグはありません。最終撃破でDriverがenabled=falseへ変更しても、進行中のFlightEndedは完了します。UFOは続けてUfoDefeatedを通知します。
 
 隣接2体への同時接触は最大1体だけを撃破しますが、どちらが選ばれるかは保証しません。旧独自判定の下段→上段・左→右の優先順位は再現しません。Discrete Triggerと固定物理stepを使うため、高速化時のすり抜け・接触境界の差はローカルで確認が必要です。移動速度・初期位置・WaveClearの1秒等は既存の暫定値を継承しています。
 

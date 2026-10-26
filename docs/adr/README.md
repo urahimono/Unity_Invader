@@ -30,6 +30,8 @@ ADR（Architecture Decision Record）は、重要なArchitecture判断と、そ�
 
 | [0011](0011-player-dependencies.md) | Playerへ入力値を渡し、Driverが被弾・通常弾イベントを直接購読。被弾受付と位置取得を最小Interfaceに限定 |
 
+| [0012](0012-player-shot-unity-state.md) | PlayerShotの飛行・進行可否をUnityの有効状態へ統合し、Playerが入力時点の射撃枠を所有 |
+
 ## 初期記録の根拠
 
 [Issue #15](https://github.com/urahimono/Unity_Invader/issues/15) とNotionの [Unity設計](https://www.notion.so/3ff4f337d5bf814eaa3dd6871eab5160) の確定判断を、Phase 3完了コードと照合しました。Notionには古い暫定案と未実装の責務図も含まれます。現行構造はコードを優先し、ADRには採用理由だけを要約しています。ADR-0005は [PR #13](https://github.com/urahimono/Unity_Invader/pull/13) のレビュー対応を根拠にしています。各ADRは過去会話や外部資料を開かなくても判断の要旨を読めるようにします。

@@ -19,6 +19,7 @@ namespace UnityInvader
         private bool             _pendingFire;
         private bool             _fireReady = true;
         private bool             _hitAccepted;
+        private bool             _shotOccupied;
 
         public event Action HitAccepted;
 
@@ -33,6 +34,7 @@ namespace UnityInvader
             {
                 throw new InvalidOperationException("Player requires saved PlayerShot, renderer and hit collider references. Configure Player Hit first.");
             }
+            _shot.FlightEnded += ReleaseShot;
         }
 
         private void OnEnable()
@@ -53,6 +55,11 @@ namespace UnityInvader
             {
                 ApplyPlayingState();
             }
+        }
+
+        private void OnDestroy()
+        {
+            _shot.FlightEnded -= ReleaseShot;
         }
 
         public bool TryReceiveHit()
@@ -82,6 +89,7 @@ namespace UnityInvader
         {
             SetPlaying(false);
             _shot.ResetFlight();
+            ReleaseShot();
             transform.position = new Vector3((112f - ArcadeViewport.ScreenWidth / 2f) * ArcadeViewport.UnitsPerPixel,
                 (24f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel, transform.position.z);
             _hitAccepted       = false;
@@ -107,10 +115,15 @@ namespace UnityInvader
             }
             _fireReady = false;
             // Presses while the single shot is occupied are consumed, not queued for later.
-            if (_shot.InFlight == false)
+            if (_shotOccupied == false)
             {
                 _pendingFire = true;
             }
+        }
+
+        private void ReleaseShot()
+        {
+            _shotOccupied = false;
         }
 
         private void ApplyPlayingState()
@@ -133,8 +146,8 @@ namespace UnityInvader
             transform.position = position;
             if (_pendingFire)
             {
-                _pendingFire = false;
-                _shot.TryLaunch((Vector2)position + Vector2.up * (8f * ArcadeViewport.UnitsPerPixel));
+                _pendingFire  = false;
+                _shotOccupied = _shot.TryLaunch((Vector2)position + Vector2.up * (8f * ArcadeViewport.UnitsPerPixel));
             }
         }
     }

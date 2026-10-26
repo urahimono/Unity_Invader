@@ -240,7 +240,7 @@ namespace UnityInvader.Editor
                         return;
                     }
                     Require(AliveCount() == 54 && DriverValue("_score") == 1000, "Existing PlayerShot Physics2D hit/score regression.");
-                    Require(_playerShot.InFlight == false, "Existing PlayerShot was not consumed.");
+                    Require(_playerShot.gameObject.activeSelf == false, "Existing PlayerShot was not consumed.");
                     Debug.Log("ROLLING_ENEMY_SHOT_PLAY_PASS: launch/normal/fast/pause/bottom/source/Wave reuse and existing PlayerShot contact.");
                     ArmPlayerDeath();
                     break;
@@ -294,7 +294,7 @@ namespace UnityInvader.Editor
                     Require(DriverValue("_currentState") == (int)GameState.Playing && DriverValue("_lives") == 3 - _deaths, "Remaining lives must resume directly into Playing.");
                     Require(Vector2.Distance(_player.transform.position, new Vector2(0f, -1.04f)) < 1e-5f, "Respawn at (112,24) logical pixels.");
                     Require(_player.GetComponent<BoxCollider2D>().enabled && _player.GetComponent<SpriteRenderer>().enabled && PrivateValue<bool>(_player, "_hitAccepted") == false, "Respawn must restore Player display/hit detection.");
-                    Require(_playerShot.InFlight == false && _enemyShot.gameObject.activeSelf == false, "Respawn must clear both old flights.");
+                    Require(_playerShot.gameObject.activeSelf == false && _enemyShot.gameObject.activeSelf == false, "Respawn must clear both old flights.");
                     SetKeys(Key.RightArrow, Key.Space);
                     _startTime = Time.time;
                     _stage     = 10;
@@ -304,8 +304,8 @@ namespace UnityInvader.Editor
                     {
                         return;
                     }
-                    Require(_player.transform.position.x > 0.03f && PrivateValue<PlayerInputState>(_player, "_inputState").Fire && _playerShot.InFlight == false,
-                        $"Movement must resume; held fire must not shoot. x={_player.transform.position.x}, shot={_playerShot.InFlight}, right={PrivateValue<PlayerInputState>(_player, "_inputState").Right}, fire={PrivateValue<PlayerInputState>(_player, "_inputState").Fire}");
+                    Require(_player.transform.position.x > 0.03f && PrivateValue<PlayerInputState>(_player, "_inputState").Fire && _playerShot.gameObject.activeSelf == false,
+                        $"Movement must resume; held fire must not shoot. x={_player.transform.position.x}, shot={_playerShot.gameObject.activeSelf}, right={PrivateValue<PlayerInputState>(_player, "_inputState").Right}, fire={PrivateValue<PlayerInputState>(_player, "_inputState").Fire}");
                     Require(_enemyShot.gameObject.activeSelf == false, "No stale enemy shot may hit a new life.");
                     SetKeys();
                     _startTime = Time.time;
@@ -325,7 +325,7 @@ namespace UnityInvader.Editor
                     {
                         return;
                     }
-                    Require(_playerShot.InFlight, "Release and a fresh press must fire after respawn.");
+                    Require(_playerShot.gameObject.activeSelf, "Release and a fresh press must fire after respawn.");
                     SetKeys();
                     Debug.Log($"LIVES_CHECK_PASS: respawn {_deaths}; preserved rack/score/wave; position/collider/movement/fire gate restored.");
                     if (_deaths == 1)
@@ -397,7 +397,7 @@ namespace UnityInvader.Editor
         {
             VerifyFormationPreserved();
             Require(_player.transform.position == _playerPosition && _player.GetComponent<BoxCollider2D>().enabled == false && _player.GetComponent<SpriteRenderer>().enabled == false, "Dead Player must stay still/hidden with collider disabled.");
-            Require(_playerShot.InFlight && _playerShot.GetComponent<Rigidbody2D>().simulated == false && Vector2.Distance(_playerShotPosition, _playerShot.GetComponent<Rigidbody2D>().position) < 1e-6f, "Old PlayerShot must stay paused until respawn cleanup.");
+            Require(_playerShot.gameObject.activeSelf && _playerShot.GetComponent<Rigidbody2D>().simulated == false && Vector2.Distance(_playerShotPosition, _playerShot.GetComponent<Rigidbody2D>().position) < 1e-6f, "Old PlayerShot must stay paused until respawn cleanup.");
             Require(_playerShot.TryLaunch(Vector2.zero) == false && _enemyShot.gameObject.activeSelf == false && _enemyShot.GetComponent<Rigidbody2D>().simulated == false, "Death/GameOver must stop shots.");
         }
 
