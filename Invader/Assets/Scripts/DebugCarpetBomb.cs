@@ -60,21 +60,6 @@ namespace UnityInvader
             ClearShots();
         }
 
-        private void OnDestroy()
-        {
-            if (_shots == null)
-            {
-                return;
-            }
-            foreach (var shot in _shots)
-            {
-                if (shot != null)
-                {
-                    shot.UfoDefeated -= _driver.NotifyUfoDefeated;
-                }
-            }
-        }
-
         private bool IsPlaying()
         {
             return _driver != null && _driver.isActiveAndEnabled && _driver.CurrentState == GameState.Playing;
@@ -125,7 +110,6 @@ namespace UnityInvader
                 var shot      = Instantiate(_shotPrefab, transform);
                 shot.name     = $"Debug PlayerShot {index}";
                 _shots[index] = shot;
-                shot.UfoDefeated += _driver.NotifyUfoDefeated;
             }
             ShuffleLanes();
             return true;

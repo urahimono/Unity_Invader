@@ -104,7 +104,7 @@ GameObject:
   - component: {fileID: 20285263180087447}
   - component: {fileID: 7403380397049536677}
   - component: {fileID: 5744344303797989677}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: PlungerEnemyShot
   m_TagString: Untagged
   m_Icon: {fileID: 0}

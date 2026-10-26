@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5017243223546700808}
   - component: {fileID: 5653188241898610063}
   - component: {fileID: 5587491230900039926}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: SquigglyEnemyShot
   m_TagString: Untagged
   m_Icon: {fileID: 0}

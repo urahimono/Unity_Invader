@@ -1,8 +1,10 @@
 # ADR-0012: PlayerShotの飛行・進行可否をUnityの有効状態へ統合
 
-- Status: Accepted
+- Status: Partially Superseded
 - Date: 2026-10-26
 - Supersedes: [ADR-0010](0010-player-shot-lifecycle-and-events.md)の飛行状態と進行可否の表現のみ
+
+- Partially superseded by: [ADR-0013](0013-hit-receivers-and-ufo-scoring.md)（命中契約・UFO撃破通知と得点順）
 
 ## Context
 

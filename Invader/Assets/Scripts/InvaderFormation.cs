@@ -93,6 +93,14 @@ namespace UnityInvader
             }
         }
 
+        private void OnDestroy()
+        {
+            if (_ufo != null)
+            {
+                _ufo.Defeated -= NotifyUfoDefeated;
+            }
+        }
+
         internal void Initialize(GameplayDriver inDriver, IPositionProvider inPlayer)
         {
             if (_invaderPrefab == null || _frames.Length != 6 || Array.Exists(_frames, inFrame => inFrame == null))
@@ -107,6 +115,7 @@ namespace UnityInvader
             _player = inPlayer;
             _driver = inDriver;
             _body   = GetComponent<Rigidbody2D>();
+            _ufo.Defeated += NotifyUfoDefeated;
             CreateInvaders();
             BeginWave();
         }
@@ -167,6 +176,11 @@ namespace UnityInvader
             // Clear all slots without resetting the rack, column pointers or movement state.
             ResetEnemyShots();
             ResetUfo();
+        }
+
+        private void NotifyUfoDefeated(Component inSource)
+        {
+            _driver.NotifyUfoDefeated(inSource);
         }
 
         private void CreateInvaders()

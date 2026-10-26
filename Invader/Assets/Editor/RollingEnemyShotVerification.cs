@@ -403,7 +403,7 @@ namespace UnityInvader.Editor
 
         private static bool ReceivePlayerHit()
         {
-            return ((IHitReceiver)_player).TryReceiveHit();
+            return ((IHitReceiver)_player).TryReceiveHit(_enemyShot);
         }
 
         private static bool TryMuzzle(out Vector2 outPosition)
@@ -416,7 +416,7 @@ namespace UnityInvader.Editor
 
         private static void Defeat(Invader inInvader)
         {
-            Require((bool)typeof(Invader).GetMethod("TryReceiveHit", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(inInvader, null), "Fixture defeat was rejected.");
+            Require(((IHitReceiver)inInvader).TryReceiveHit(_playerShot), "Fixture defeat was rejected.");
         }
 
         private static int AliveCount()

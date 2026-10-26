@@ -60,6 +60,7 @@ namespace UnityInvader.Editor
             var instance = PrefabUtility.LoadPrefabContents(PrefabPath);
             try
             {
+                instance.layer = GameplayCollisionSetup.PlayerLayer;
                 var renderer = instance.GetComponent<SpriteRenderer>();
                 if (instance.GetComponent<Player>() == null || renderer == null || renderer.sprite == null)
                 {

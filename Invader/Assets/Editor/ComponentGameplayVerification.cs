@@ -45,6 +45,16 @@ namespace UnityInvader.Editor
             var formationData = new SerializedObject(formations[0]);
             var ufos          = roots.SelectMany(inRoot => inRoot.GetComponentsInChildren<Ufo>(true)).ToArray();
             Require(ufos.Length == 1 && formationData.FindProperty("_ufo").objectReferenceValue == ufos[0], "Single UFO and Formation reference.");
+            Require(players[0].gameObject.layer == GameplayCollisionSetup.PlayerLayer &&
+                shots[0].gameObject.layer == GameplayCollisionSetup.PlayerShotLayer &&
+                ufos[0].gameObject.layer == GameplayCollisionSetup.InvaderLayer &&
+                ((Invader)formationData.FindProperty("_invaderPrefab").objectReferenceValue).gameObject.layer == GameplayCollisionSetup.InvaderLayer,
+                "Saved player/projectile/Invader/UFO layers.");
+            Require(Physics2D.GetIgnoreLayerCollision(GameplayCollisionSetup.PlayerShotLayer, GameplayCollisionSetup.PlayerLayer) &&
+                Physics2D.GetIgnoreLayerCollision(GameplayCollisionSetup.EnemyShotLayer, GameplayCollisionSetup.InvaderLayer) &&
+                Physics2D.GetIgnoreLayerCollision(GameplayCollisionSetup.PlayerShotLayer, GameplayCollisionSetup.InvaderLayer) == false &&
+                Physics2D.GetIgnoreLayerCollision(GameplayCollisionSetup.EnemyShotLayer, GameplayCollisionSetup.PlayerLayer) == false,
+                "Friendly contacts excluded; opposing contacts enabled.");
             Require(ufos[0].GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Kinematic &&
                 ufos[0].GetComponent<BoxCollider2D>().isTrigger && ufos[0].GetComponent<SpriteRenderer>().sprite != null,
                 "UFO physics and sprite settings.");
@@ -55,6 +65,7 @@ namespace UnityInvader.Editor
                 rolling != squiggly && plunger != squiggly, "Three independent enemy shot slots.");
             foreach (var enemyShot in new[] { rolling, plunger, squiggly })
             {
+                Require(enemyShot.gameObject.layer == GameplayCollisionSetup.EnemyShotLayer, "Saved enemy projectile layer.");
                 Require(enemyShot.gameObject.scene == scene, "EnemyShot belongs to Arcade.");
                 Require(enemyShot.GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Kinematic &&
                     enemyShot.GetComponent<BoxCollider2D>().isTrigger, "EnemyShot physics settings.");

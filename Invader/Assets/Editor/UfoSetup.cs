@@ -75,6 +75,7 @@ namespace UnityInvader.Editor
                 throw new InvalidOperationException("UFO requires the generated sprite and existing unlit material.");
             }
             var root = new GameObject("Ufo");
+            root.layer = GameplayCollisionSetup.InvaderLayer;
             try
             {
                 var ufo            = root.AddComponent<Ufo>();

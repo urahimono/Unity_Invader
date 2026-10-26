@@ -1,8 +1,10 @@
 # ADR-0011: Playerの入力値・被弾イベントと最小Interface
 
-- Status: Accepted
+- Status: Partially Superseded
 - Date: 2026-10-26
 - Supersedes: [ADR-0010](0010-player-shot-lifecycle-and-events.md)のPlayerのDriver参照・入力所有・通常弾イベント接続のみ
+
+- Partially superseded by: [ADR-0013](0013-hit-receivers-and-ufo-scoring.md)（命中契約・UFO撃破通知と得点順）
 
 ## Context
 

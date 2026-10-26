@@ -4,7 +4,7 @@ namespace UnityInvader
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(BoxCollider2D))]
-    public sealed class Invader : MonoBehaviour
+    public sealed class Invader : MonoBehaviour, IHitReceiver
     {
         [SerializeField]
         private SpriteRenderer _renderer;
@@ -14,6 +14,18 @@ namespace UnityInvader
         private Sprite           _frameA;
         private Sprite           _frameB;
         private int              _score;
+
+        public bool TryReceiveHit(Component inSource)
+        {
+            if (isActiveAndEnabled == false || _collider.enabled == false)
+            {
+                return false;
+            }
+            // Active state also rejects later queued contacts with this individual.
+            gameObject.SetActive(false);
+            _formation.NotifyDefeated(this, _score);
+            return true;
+        }
 
         internal void Initialize(InvaderFormation inFormation, Sprite inFrameA, Sprite inFrameB, int inScore)
         {
@@ -48,18 +60,6 @@ namespace UnityInvader
                 return;
             }
             Shield.ErodeByInvader(_collider.bounds, inMovement);
-        }
-
-        internal bool TryReceiveHit()
-        {
-            if (isActiveAndEnabled == false || _collider.enabled == false)
-            {
-                return false;
-            }
-            // Active state is the single source of individual life, including queued trigger callbacks.
-            gameObject.SetActive(false);
-            _formation.NotifyDefeated(this, _score);
-            return true;
         }
     }
 }
