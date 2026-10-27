@@ -6,6 +6,8 @@
 
 - Partially superseded by: [ADR-0013](0013-hit-receivers-and-ufo-scoring.md)（命中契約・UFO撃破通知と得点順）
 
+- Partially superseded by: [ADR-0014](0014-player-shot-results-and-scoring.md)（通常弾の結果通知・履歴所有・加点順）
+
 ## Context
 
 Issue #83でPlayerShotは管理者を知らずに動作するようになりましたが、PlayerがDriverを保持し、入力取得と通常弾イベントの接続を担う暫定構造が残っていました。Issue #85ではPlayerが直接操作するゲーム内ComponentをPlayerShotだけに限定します。

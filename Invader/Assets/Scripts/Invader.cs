@@ -13,7 +13,8 @@ namespace UnityInvader
         private Collider2D       _collider;
         private Sprite           _frameA;
         private Sprite           _frameB;
-        private int              _score;
+
+        public HitTargetType TargetType { get; private set; }
 
         public bool TryReceiveHit(Component inSource)
         {
@@ -23,17 +24,17 @@ namespace UnityInvader
             }
             // Active state also rejects later queued contacts with this individual.
             gameObject.SetActive(false);
-            _formation.NotifyDefeated(this, _score);
+            _formation.NotifyDefeated(this, inSource);
             return true;
         }
 
-        internal void Initialize(InvaderFormation inFormation, Sprite inFrameA, Sprite inFrameB, int inScore)
+        internal void Initialize(InvaderFormation inFormation, Sprite inFrameA, Sprite inFrameB, HitTargetType inTargetType)
         {
             _formation = inFormation;
             _collider  = GetComponent<Collider2D>();
             _frameA    = inFrameA;
             _frameB    = inFrameB;
-            _score     = inScore;
+            TargetType = inTargetType;
         }
 
         internal void BeginWave()

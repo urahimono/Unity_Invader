@@ -1,8 +1,10 @@
 # ADR-0013: 命中受理の統一とUFO自身からの撃破通知
 
-- Status: Accepted
+- Status: Partially Superseded
 - Date: 2026-10-27
 - Supersedes: ADR-0010/0011/0012のPlayerShot.UfoDefeatedによる通知・得点順のみ
+
+- Partially superseded by: [ADR-0014](0014-player-shot-results-and-scoring.md)（通常弾の結果通知・履歴所有・加点順）
 
 ## Context
 

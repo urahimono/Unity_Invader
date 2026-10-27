@@ -14,8 +14,6 @@ namespace UnityInvader
         [SerializeField]
         private InvaderFormation _formation;
         [SerializeField]
-        private PlayerShot       _playerShot;
-        [SerializeField]
         private Shield[]         _shields      = new Shield[4];
         [SerializeField]
         private int              _score;
@@ -25,9 +23,6 @@ namespace UnityInvader
         [SerializeField]
         [Min(0)]
         private int              _lives        = 3;
-
-        [SerializeField]
-        private long _normalShotEndCount;
 
         private PlayerInputReader _input;
         private float             _waveClearElapsed;
@@ -51,7 +46,7 @@ namespace UnityInvader
         public int Score      => _score;
         public int WaveNumber => _waveNumber;
 
-        internal bool UfoMovesRight => (_normalShotEndCount & 1L) != 0;
+        internal bool UfoMovesRight => (_player.NormalShotEndCount & 1L) != 0;
 
         private void OnEnable()
         {
@@ -73,6 +68,7 @@ namespace UnityInvader
             {
                 _player.SetInput(_input.Read());
             }
+            TryEnterWaveClear();
             UpdateWaveClear();
             UpdatePlayerDead();
         }
@@ -94,22 +90,18 @@ namespace UnityInvader
             if (_initialized)
             {
                 _player.HitAccepted -= NotifyPlayerHit;
-                _playerShot.FlightEnded -= NotifyNormalPlayerShotEnded;
+                _player.ShotResolved -= NotifyShotResolved;
             }
         }
 
-        internal void NotifyInvaderDefeated(int inScore, bool inWaveCleared)
+        // Temporary compatibility for DebugCarpetBomb, which owns its shots outside Player.
+        internal void NotifyDebugShotHit(Component inSource, HitTargetType inTargetType)
         {
-            if (isActiveAndEnabled == false || _currentState != GameState.Playing)
+            if (_player.OwnsShot(inSource))
             {
                 return;
             }
-            _score += inScore;
-            if (inWaveCleared)
-            {
-                _waveClearElapsed = 0f;
-                ChangeState(GameState.WaveClear);
-            }
+            NotifyShotResolved(inTargetType);
         }
 
         internal void NotifyPlayerHit()
@@ -133,36 +125,52 @@ namespace UnityInvader
             ChangeState(GameState.GameOver);
         }
 
-        internal void NotifyNormalPlayerShotEnded()
+        private void NotifyShotResolved(HitTargetType inTargetType)
         {
-            // A final Invader hit may already have changed State to WaveClear.
-            // Only natural completions call here; forced ResetFlight never does.
-            _normalShotEndCount++;
-        }
-
-        internal void NotifyUfoDefeated(Component inSource)
-        {
-            if (isActiveAndEnabled == false || _currentState != GameState.Playing)
+            if (_initialized == false || isActiveAndEnabled == false || _currentState != GameState.Playing)
             {
                 return;
             }
-            // The receiver notifies before FlightEnded. Preview its increment for scoring only.
-            long endCount = _normalShotEndCount + (inSource == _playerShot ? 1L : 0L);
-            _score += _ufoScores[(int)(endCount % _ufoScores.Length)];
+            switch (inTargetType)
+            {
+                case HitTargetType.InvaderTop:
+                    _score += 30;
+                    break;
+                case HitTargetType.InvaderMiddle:
+                    _score += 20;
+                    break;
+                case HitTargetType.InvaderBottom:
+                    _score += 10;
+                    break;
+                case HitTargetType.Ufo:
+                    _score += _ufoScores[(int)(_player.NormalShotEndCount % _ufoScores.Length)];
+                    break;
+            }
+            TryEnterWaveClear();
+        }
+
+        private void TryEnterWaveClear()
+        {
+            if (_initialized == false || isActiveAndEnabled == false || _currentState != GameState.Playing || _formation.IsCleared == false)
+            {
+                return;
+            }
+            _waveClearElapsed = 0f;
+            ChangeState(GameState.WaveClear);
         }
 
         private void InitializeGameplay()
         {
-            if (_player == null || _playerShot == null || _formation == null || _shields == null || _shields.Length != 4 ||
+            if (_player == null || _formation == null || _shields == null || _shields.Length != 4 ||
                 System.Array.Exists(_shields, inShield => inShield == null))
             {
-                Debug.LogError("Arcade requires Player, normal PlayerShot, Formation and four Shield references.", this);
+                Debug.LogError("Arcade requires Player, Formation and four Shield references.", this);
                 enabled = false;
                 return;
             }
             _formation.Initialize(this, _player);
             _player.HitAccepted += NotifyPlayerHit;
-            _playerShot.FlightEnded += NotifyNormalPlayerShotEnded;
+            _player.ShotResolved += NotifyShotResolved;
             _initialized = true;
             ChangeState(_developmentStartPlaying ? GameState.Playing : _currentState);
         }
@@ -177,7 +185,7 @@ namespace UnityInvader
             if (_waveClearElapsed + 1e-7f >= 1f)
             {
                 _formation.BeginWave();
-                _normalShotEndCount = 0; // ROM 09FD copies the mirror, including 208D/208F.
+                _player.ResetShotHistory(); // ROM 09FD copies the mirror, including 208D/208F.
                 foreach (var shield in _shields)
                 {
                     shield.BeginWave();

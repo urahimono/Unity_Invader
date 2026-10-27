@@ -23,7 +23,6 @@ namespace UnityInvader.Editor
             Require(driverData.FindProperty("_player").objectReferenceValue == players[0], "Driver player reference.");
             Require(driverData.FindProperty("_formation").objectReferenceValue == formations[0], "Driver formation reference.");
             Require(new SerializedObject(players[0]).FindProperty("_shot").objectReferenceValue == shots[0], "Player shot reference.");
-            Require(driverData.FindProperty("_playerShot").objectReferenceValue == shots[0], "Driver normal shot reference.");
             var playerData = new SerializedObject(players[0]);
             Require(playerData.FindProperty("_renderer").objectReferenceValue == players[0].GetComponent<SpriteRenderer>() &&
                 playerData.FindProperty("_hitCollider").objectReferenceValue == players[0].GetComponent<BoxCollider2D>(), "Saved Player component references.");

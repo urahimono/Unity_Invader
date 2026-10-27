@@ -416,7 +416,8 @@ namespace UnityInvader.Editor
 
         private static void Defeat(Invader inInvader)
         {
-            Require(((IHitReceiver)inInvader).TryReceiveHit(_playerShot), "Fixture defeat was rejected.");
+            // Fixture-only non-normal source: no PlayerShot completion is executed here.
+            Require(((IHitReceiver)inInvader).TryReceiveHit(_enemyShot), "Fixture defeat was rejected.");
         }
 
         private static int AliveCount()

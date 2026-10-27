@@ -14,6 +14,9 @@ namespace UnityInvader
         [SerializeField]
         private BoxCollider2D  _hitCollider;
 
+        [SerializeField]
+        private long _normalShotEndCount;
+
         private PlayerInputState _inputState;
         private bool             _playing;
         private bool             _pendingFire;
@@ -22,6 +25,11 @@ namespace UnityInvader
         private bool             _shotOccupied;
 
         public event Action HitAccepted;
+        public event Action<HitTargetType> ShotResolved;
+
+        public HitTargetType TargetType => HitTargetType.Player;
+
+        public long NormalShotEndCount => _normalShotEndCount;
 
         public Vector2 Position => transform.position;
 
@@ -34,7 +42,7 @@ namespace UnityInvader
             {
                 throw new InvalidOperationException("Player requires saved PlayerShot, renderer and hit collider references. Configure Player Hit first.");
             }
-            _shot.FlightEnded += ReleaseShot;
+            _shot.FlightEnded += ResolveShot;
         }
 
         private void OnEnable()
@@ -59,7 +67,7 @@ namespace UnityInvader
 
         private void OnDestroy()
         {
-            _shot.FlightEnded -= ReleaseShot;
+            _shot.FlightEnded -= ResolveShot;
         }
 
         public bool TryReceiveHit(Component inSource)
@@ -72,6 +80,16 @@ namespace UnityInvader
             SetPlaying(false);
             HitAccepted?.Invoke();
             return true;
+        }
+
+        internal bool OwnsShot(Component inSource)
+        {
+            return inSource == _shot;
+        }
+
+        internal void ResetShotHistory()
+        {
+            _normalShotEndCount = 0;
         }
 
         internal void SetPlaying(bool inPlaying)
@@ -119,6 +137,13 @@ namespace UnityInvader
             {
                 _pendingFire = true;
             }
+        }
+
+        private void ResolveShot(HitTargetType inTargetType)
+        {
+            ReleaseShot();
+            _normalShotEndCount++;
+            ShotResolved?.Invoke(inTargetType);
         }
 
         private void ReleaseShot()
