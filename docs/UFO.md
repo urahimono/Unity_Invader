@@ -11,15 +11,15 @@
 
 ## 通常射撃終了履歴と得点
 
-GameplayDriverの`_normalShotEndCount`を唯一の履歴として保持し、方向は偶奇、得点表位置は`count % 15`から導出します。表位置や方向用カウンタを別に複製しません。初期履歴は0で、ROM mirrorの得点ポインタ`1D54`先頭に対応します。
+Playerの`_normalShotEndCount`を唯一の履歴として保持し、読み取り専用のNormalShotEndCountを提供します。Driverは方向を偶奇、得点表位置をcount % 15から導出し、得点表そのものを所有します。方向・表位置の独立カウンタは持ちません。初期履歴は0です。
 
-Issue #89ではPlayerShotはIHitReceiverへ命中元thisを渡し、受理後に自然終了FlightEndedを通知するだけです。UfoはInactive化してDefeated(source)を発行し、所属Formationが購読してDriverへ転送します。Driverは通常弾なら終了予定分+1を得点添字だけに反映し、実際の履歴は従来どおり通常弾FlightEnded購読で一度だけ進めます。B弾なら添字補正・履歴加算はありません。Invader命中、Shield吸収、画面上端、UFO命中で履歴が進み、発射・Pause・死亡後の強制回収・B弾では進みません。弾自身はUFO・通常弾/B弾・得点を知りません。
+PlayerShotはIHitReceiver.TryReceiveHit(this)成立後にTargetTypeを取得し、自身をInactive化してFlightEnded(HitTargetType)を通知します。Playerは射撃枠解放・履歴更新を完了してShotResolvedを発行し、Driverはその時点の履歴で加点します。Invader命中、Shield吸収、上端、UFO命中で履歴が進み、発射・Pause・強制回収・死亡復帰・B弾では進みません。Shield吸収・上端の通知種別はNoneで加点しません。弾は得点表・Driver・通常弾/B弾の識別を持ちません。
 
 使用する先頭15値（点）は次のとおりです。ROM `1D54〜1D63`には16値ありますが、`044C〜0451`のwrapで16番目の50は通常使用しません。
 
 `100, 50, 50, 100, 150, 100, 100, 50, 300, 100, 100, 100, 50, 150, 100`
 
-ROMではUFO命中を`1579〜157E`でフラグ化し、自機弾の終了処理`0436〜045A`で表が進み、その後のUFO処理`070C〜0714`で表を読みます。本実装は爆発待ちを省略し、**UFOの命中成立→終了予定分を反映した表で即加点→当たったPlayerShotの自然終了で実履歴を更新**の順です。得点値と最終履歴は従来と同じです。通常弾なら、終了前の履歴0で撃破すると終了後1の50点、履歴7で撃破すると終了後8の300点です。B弾は履歴を動かさないので、履歴0なら100点です。
+ROMではUFO命中を1579〜157Eでフラグ化し、弾終了処理で表を進めた後にUFO処理で得点を読みます。本実装は爆発待ちを省略し、**UFO命中成立→弾の自然終了→Playerの履歴更新→Driverの得点確定**の順です。終了予定分+1補正はありません。通常弾は履歴0→1で50点、7→8で300点です。B弾は既存Ufo.Defeated→Formation→Driverを暫定利用し、Player.OwnsShotで通常弾の二重加点を防ぎます。B弾では履歴を進めず、現在履歴0なら100点、8なら300点です。この暫定経路の再設計は別作業です。
 
 Ufoは自身の有効状態・Colliderで一度だけ被弾を受理し、直ちに解除します。PlayerShotも自身を消費して後続Triggerを拒否します。加点はGameplayDriverだけが行い、UFOはInvader生存数・WaveClearに関与しません。加点後、次の敵弾試行から既存のScore依存Reloadへ反映されます。Editor/Development BuildのDebugStatusOverlayへScoreを1行追加しました。
 

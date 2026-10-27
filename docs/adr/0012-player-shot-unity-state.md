@@ -6,6 +6,8 @@
 
 - Partially superseded by: [ADR-0013](0013-hit-receivers-and-ufo-scoring.md)（命中契約・UFO撃破通知と得点順）
 
+- Partially superseded by: [ADR-0014](0014-player-shot-results-and-scoring.md)（通常弾の結果通知・履歴所有・加点順）
+
 ## Context
 
 Issue #87ではUnityが保持する状態と独自boolの二重管理をなくします。構成済みInactive PrefabからInstantiate→TryLaunchだけで発射できるAPI、入力受付と通知順は維持します。

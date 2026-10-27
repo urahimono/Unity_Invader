@@ -43,6 +43,8 @@ namespace UnityInvader
         private float _debugMovementMultiplier = 1f;
 #endif
 
+        internal bool IsCleared => _aliveCount == 0;
+
         public  const    int           Rows       = 5;
         public  const    int           Columns    = 11;
         public  const    int           Spacing    = 16;
@@ -158,7 +160,7 @@ namespace UnityInvader
             ApplyPlayingState();
         }
 
-        internal void NotifyDefeated(Invader inInvader, int inScore)
+        internal void NotifyDefeated(Invader inInvader, Component inSource)
         {
             if (_playing == false || isActiveAndEnabled == false || _invaders.Contains(inInvader) == false)
             {
@@ -168,7 +170,8 @@ namespace UnityInvader
             _rollingShot.SetFast(_aliveCount <= 8);
             _plungerShot.SetFast(_aliveCount <= 8);
             _squigglyShot.SetFast(_aliveCount <= 8);
-            _driver.NotifyInvaderDefeated(inScore, _aliveCount == 0);
+            // Temporary scoring path for B shots; normal shots score after Player updates history.
+            _driver.NotifyDebugShotHit(inSource, inInvader.TargetType);
         }
 
         internal void PreparePlayerRespawn()
@@ -180,21 +183,23 @@ namespace UnityInvader
 
         private void NotifyUfoDefeated(Component inSource)
         {
-            _driver.NotifyUfoDefeated(inSource);
+            // Temporary scoring path for B shots, whose lifecycle is outside Player.
+            _driver.NotifyDebugShotHit(inSource, HitTargetType.Ufo);
         }
 
         private void CreateInvaders()
         {
             for (int row = 0; row < Rows; row++)
             {
-                int type  = row == 0 ? 0 : row < 3 ? 1 : 2;
-                int score = type == 0 ? 30 : type == 1 ? 20 : 10;
+                int type       = row == 0 ? 0 : row < 3 ? 1 : 2;
+                var targetType = type == 0 ? HitTargetType.InvaderTop :
+                    type == 1 ? HitTargetType.InvaderMiddle : HitTargetType.InvaderBottom;
                 for (int column = 0; column < Columns; column++)
                 {
                     var invader                     = Instantiate(_invaderPrefab, transform);
                     invader.name                    = $"Invader ({row},{column})";
                     invader.transform.localPosition = new Vector3(column * Spacing, -row * Spacing, 0f) * ArcadeViewport.UnitsPerPixel;
-                    invader.Initialize(this, _frames[type * 2], _frames[type * 2 + 1], score);
+                    invader.Initialize(this, _frames[type * 2], _frames[type * 2 + 1], targetType);
                     _invaders.Add(invader);
                 }
             }

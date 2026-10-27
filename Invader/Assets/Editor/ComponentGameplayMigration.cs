@@ -123,7 +123,6 @@ namespace UnityInvader.Editor
             formationData.ApplyModifiedPropertiesWithoutUndo();
             var driverData = new SerializedObject(drivers[0]);
 
-            driverData.FindProperty("_playerShot").objectReferenceValue = shotObject.GetComponent<PlayerShot>();
             driverData.FindProperty("_player").objectReferenceValue    = playerObject.GetComponent<Player>();
             driverData.FindProperty("_formation").objectReferenceValue = formation;
             driverData.FindProperty("_score").intValue                 = 0;

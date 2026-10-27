@@ -1,8 +1,10 @@
 # ADR-0008: PlayingをComponent・Physics2D中心へ移行する
 
-- Status: Accepted（PlayerShotの飛行状態・結果通知のみ[ADR-0010](0010-player-shot-lifecycle-and-events.md)で更新）
+- Status: Partially Superseded（PlayerShotの飛行状態・結果通知のみ[ADR-0010](0010-player-shot-lifecycle-and-events.md)で更新）
 - Date: 2026-10-25
 - Supersedes: [ADR-0002](0002-logical-coordinate-system.md)の座標変換・位置の正、[ADR-0003](0003-60hz-logical-tick.md)、[ADR-0004](0004-unity-game-logic-boundary.md)、[ADR-0005](0005-playing-controller-owns-clock.md)、[ADR-0007](0007-push-display-and-encapsulation.md)
+
+- Partially superseded by: [ADR-0014](0014-player-shot-results-and-scoring.md)（最終撃破の得点・WaveClear確定順）
 
 ## Context
 

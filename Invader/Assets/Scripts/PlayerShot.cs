@@ -12,7 +12,7 @@ namespace UnityInvader
         [SerializeField]
         private Rigidbody2D    _body;
 
-        public event Action FlightEnded;
+        public event Action<HitTargetType> FlightEnded;
 
         public  const float Width  = 1f;
         public  const float Height = 4f;
@@ -93,14 +93,14 @@ namespace UnityInvader
             return false;
         }
 
-        private void FinishFlight()
+        private void FinishFlight(HitTargetType inTargetType = HitTargetType.None)
         {
             if (gameObject.activeSelf == false)
             {
                 return;
             }
             ResetFlight();
-            FlightEnded?.Invoke();
+            FlightEnded?.Invoke(inTargetType);
         }
 
         private void ResolveHit(Collider2D inOther)
@@ -111,7 +111,7 @@ namespace UnityInvader
             }
             if (inOther.TryGetComponent<IHitReceiver>(out var receiver) && receiver.TryReceiveHit(this))
             {
-                FinishFlight();
+                FinishFlight(receiver.TargetType);
             }
         }
     }

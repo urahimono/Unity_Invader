@@ -17,6 +17,8 @@ namespace UnityInvader
 
         public event Action<Component> Defeated;
 
+        public HitTargetType TargetType => HitTargetType.Ufo;
+
         internal bool InFlight => gameObject.activeSelf;
 
         // Provisional centered rectangle and lane, not ROM sprite/coordinate geometry.

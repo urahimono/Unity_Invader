@@ -522,7 +522,6 @@ MonoBehaviour:
   _currentState: 0
   _player: {fileID: 1668351246}
   _formation: {fileID: 805784278}
-  _playerShot: {fileID: 984733095}
   _shields:
   - {fileID: 868436402}
   - {fileID: 95418054}
@@ -531,7 +530,6 @@ MonoBehaviour:
   _score: 0
   _waveNumber: 1
   _lives: 3
-  _normalShotEndCount: 0
   _developmentStartPlaying: 1
 --- !u!114 &788391822
 MonoBehaviour:

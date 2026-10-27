@@ -1,0 +1,27 @@
+# ADR-0014: 通常弾の結果・履歴をPlayerで確定してから加点する
+
+- Status: Accepted
+- Date: 2026-10-27
+- Supersedes: ADR-0011/0012のDriverによる通常弾購読・履歴所有、ADR-0013の通常弾の加点通知経路・終了予定分補正、およびADR-0008の最終撃破時の加点・全滅通知順のみ
+
+## Context
+
+Issue #97では、Playerが通常弾を管理する一方でDriverも弾を参照・購読する依存を整理します。UFO受理中の加点には弾終了予定分+1の補正が必要でした。通常弾の履歴と結果を所有者で確定してから通知し、得点とWaveClearの順を追いやすくします。B弾はDebugCarpetBombが所有しており、今回再設計しません。
+
+## Decision
+
+IHitReceiverはTryReceiveHit(Component)を維持し、読み取り専用TargetTypeを追加します。Invaderは初期化時の種別、PlayerとUfoは自身の種別を返します。PlayerShotは受理後に種別を取得し、Inactive化してFlightEnded(HitTargetType)を通知します。Shield吸収と上端はNone、ResetFlightは無通知です。弾は得点・所有者の種類を知りません。
+
+Playerは直接管理する通常弾だけを購読し、射撃枠解放→終了回数加算→ShotResolvedを発行します。終了回数は読み取り専用の値で公開し、OwnsShot(Component)で参照を公開せず所有関係を問い合わせ可能にします。Pause・強制回収・死亡復帰は履歴を進めず、次WaveはDriverからPlayer.ResetShotHistoryで0へ戻します。
+
+DriverはPlayerの結果を購読し、Invaderの30/20/10点または自身が所有する既存UFO15値表から加点します。UFOはPlayerの更新済み履歴を参照し、+1補正はありません。方向も同じ履歴の偶奇を使用します。DriverはPlayerShot参照・履歴の複製を持ちません。
+
+Invaderは自身をInactive化し、Formationが既存_aliveCountを減らします。IsClearedはこの値だけから導出します。Driver.TryEnterWaveClearは有効・初期化済み・PlayingかつIsClearedの場合だけ遷移し、加点後とUpdateから呼びます。予約フラグや新しい生存カウンタは追加しません。
+
+B弾については、既存のInvader→FormationおよびUfo.Defeated→FormationからDriverへの通知を暫定的に維持します。DriverはPlayer.OwnsShotで通常弾を除外し、通常弾以外だけ加点後に全滅判定します。B弾のUFO得点は現在のPlayer履歴を用い、履歴を進めません。既存レイヤー制限により実際の敵弾はこの撃破通知経路へ入りません。新規Manager・Interface・中継層は追加しません。
+
+## Consequences
+
+通常弾では受信側の生存数更新から弾終了・Playerの履歴更新・Driverの加点までが同じ同期呼び出し内で完了し、その後にWaveClearへ移ります。従来は受信側内でWaveClearへ移ってから弾が終了していました。次のPhysics2D Trigger処理までに停止する点は維持し、先に成立したPlayer被弾や侵攻を既存Stateガードで優先します。コールバック順自体を新たに規定しません。通知経路外の全滅はUpdateで補完します。
+
+通常弾の得点がFormationの同期通知に依存しなくなり、UFOの予定分補正を廃止できます。B弾だけは受信側通知中に加点・WaveClearが確定する暫定的な非対称性を残します。GameObjectの親子関係と通常弾の論理的所有は別です。既存ADR本文は当時の判断記録として維持します。

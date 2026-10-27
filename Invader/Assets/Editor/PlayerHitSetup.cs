@@ -40,7 +40,6 @@ namespace UnityInvader.Editor
             PrefabUtility.RemoveUnusedOverrides(new[] { players[0].gameObject }, InteractionMode.AutomatedAction);
             var driverData = new SerializedObject(drivers[0]);
             driverData.FindProperty("_player").objectReferenceValue = players[0];
-            driverData.FindProperty("_playerShot").objectReferenceValue = shots[0];
             driverData.FindProperty("_lives").intValue = 3;
             driverData.ApplyModifiedPropertiesWithoutUndo();
             if (EditorSceneManager.SaveScene(scene) == false)
@@ -48,7 +47,7 @@ namespace UnityInvader.Editor
                 throw new InvalidOperationException("Could not save Player Hit references in Arcade.");
             }
             AssetDatabase.SaveAssets();
-            Debug.Log("PLAYER_HIT_SETUP_PASS: Player collider, saved component references and Driver Player/normal shot references and three initial lives saved.");
+            Debug.Log("PLAYER_HIT_SETUP_PASS: Player collider, saved component references and Driver Player reference and three initial lives saved.");
         }
 
         internal static void ConfigurePrefab()
