@@ -51,7 +51,7 @@ namespace UnityInvader
             }
         }
 
-        public bool TryReceiveHit(Component inSource)
+        public bool TryReceiveHit(in HitInfo inHit)
         {
             if (_playing == false || isActiveAndEnabled == false || _hitCollider.enabled == false)
             {
@@ -59,7 +59,7 @@ namespace UnityInvader
             }
             // Consume before notifying; later Trigger callbacks cannot award this UFO again.
             ResetFlight();
-            Defeated?.Invoke(inSource);
+            Defeated?.Invoke(inHit.Source);
             return true;
         }
 

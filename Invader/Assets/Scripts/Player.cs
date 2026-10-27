@@ -62,7 +62,7 @@ namespace UnityInvader
             _shot.FlightEnded -= ReleaseShot;
         }
 
-        public bool TryReceiveHit(Component inSource)
+        public bool TryReceiveHit(in HitInfo inHit)
         {
             if (_playing == false || isActiveAndEnabled == false || _hitAccepted || _hitCollider.enabled == false)
             {

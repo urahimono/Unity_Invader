@@ -403,7 +403,10 @@ namespace UnityInvader.Editor
 
         private static bool ReceivePlayerHit()
         {
-            return ((IHitReceiver)_player).TryReceiveHit(_enemyShot);
+            var position = _enemyShot.GetComponent<Rigidbody2D>().position;
+            var hit      = new HitInfo(_enemyShot, position, position,
+                new Vector2(EnemyShot.Width, EnemyShot.Height) * ArcadeViewport.UnitsPerPixel, Vector2.down);
+            return ((IHitReceiver)_player).TryReceiveHit(in hit);
         }
 
         private static bool TryMuzzle(out Vector2 outPosition)
@@ -416,7 +419,10 @@ namespace UnityInvader.Editor
 
         private static void Defeat(Invader inInvader)
         {
-            Require(((IHitReceiver)inInvader).TryReceiveHit(_playerShot), "Fixture defeat was rejected.");
+            var center = _playerShot.GetComponent<Rigidbody2D>().position + Vector2.up * (PlayerShot.Height * 0.5f * ArcadeViewport.UnitsPerPixel);
+            var hit    = new HitInfo(_playerShot, center, center,
+                new Vector2(PlayerShot.Width, PlayerShot.Height) * ArcadeViewport.UnitsPerPixel, Vector2.up);
+            Require(((IHitReceiver)inInvader).TryReceiveHit(in hit), "Fixture defeat was rejected.");
         }
 
         private static int AliveCount()

@@ -5,7 +5,7 @@ namespace UnityInvader
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(SpriteRenderer), typeof(BoxCollider2D))]
-    public sealed class Shield : MonoBehaviour
+    public sealed class Shield : MonoBehaviour, ISweptHitReceiver
     {
         private SpriteRenderer _renderer;
         private BoxCollider2D  _collider;
@@ -85,35 +85,19 @@ namespace UnityInvader
             }
         }
 
-        // Shield-only broad phase + pixel narrow phase for the existing vertical projectiles.
-        // No scene registry, per-pixel colliders, or replacement projectile movement is needed.
-        internal static bool TryAbsorbShot(Vector2 inStart, Vector2 inEnd, Vector2 inSize, bool inFromBelow)
+        public bool TryReceiveHit(in HitInfo inHit)
         {
-            var center = (inStart + inEnd) * 0.5f;
-            var size   = inSize + new Vector2(Mathf.Abs(inEnd.x - inStart.x), Mathf.Abs(inEnd.y - inStart.y));
-            var filter = new ContactFilter2D { useTriggers = true };
-            int count  = Physics2D.OverlapBox(center, size, 0f, filter, _candidates);
-            Shield nearest        = null;
-            Vector2Int impact     = default;
-            float nearestDistance = float.PositiveInfinity;
-            for (int index = 0; index < count; index++)
-            {
-                if (_candidates[index].TryGetComponent<Shield>(out var shield) &&
-                    shield.TryFindImpact(inStart, inEnd, inSize, inFromBelow, out var pixel, out float distance) &&
-                    distance < nearestDistance)
-                {
-                    nearest         = shield;
-                    impact          = pixel;
-                    nearestDistance = distance;
-                }
-            }
-            _candidates.Clear();
-            if (nearest == null)
+            if (TryFindShotImpact(in inHit, out var pixel, out _) == false)
             {
                 return false;
             }
-            nearest.Carve(impact, inFromBelow);
+            Carve(pixel, inHit.Direction.y > 0f);
             return true;
+        }
+
+        public bool TryGetHitDistance(in HitInfo inHit, out float outDistance)
+        {
+            return TryFindShotImpact(in inHit, out _, out outDistance);
         }
 
         internal static void ErodeByInvader(Bounds inStartBounds, Vector2 inMovement)
@@ -132,6 +116,19 @@ namespace UnityInvader
                 }
             }
             _candidates.Clear();
+        }
+
+        private bool TryFindShotImpact(in HitInfo inHit, out Vector2Int outPixel, out float outDistance)
+        {
+            outPixel    = default;
+            outDistance = 0f;
+            // Existing pixel scan supports vertical projectiles only.
+            if (inHit.Direction.x != 0f || inHit.Direction.y == 0f)
+            {
+                return false;
+            }
+            return TryFindImpact(inHit.Start, inHit.End, inHit.Size, inHit.Direction.y > 0f,
+                out outPixel, out outDistance);
         }
 
         private void InitializePixels()
