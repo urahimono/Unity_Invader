@@ -28,13 +28,12 @@ Issue #57 / ADR-0008に基づき、PlayingはComponent・Physics2D中心に構�
 - Invaderは自身の被弾・撃破・表示を担当し、Formationへ一度だけ通知します。
 - Formationは個体の配置・集団移動・生存数を集計し、Driverへ得点・全滅を通知します。Driver/Formationへ独自AABB判定を持ち込みません。
 
-Component間の参照保持は一律に禁止せず、次の依存方向に従います。
+今後の依存関係は、[設計原則の「責務境界に沿った依存関係」](PROJECT_PRINCIPLES.md#責務境界に沿った依存関係)に基づいて判断します。C#での適用では次を守ります。
 
-- 上位の管理者は、自分の管理する下位Componentを参照し、用途の明確な操作を依頼できます。SerializeFieldや初期化引数も、この方向で必要な参照を渡すために使えます。
+- 管理者が責務上必要なComponentを直接参照する場合、SerializeFieldや初期化引数で参照を渡せます。ただし、参照を設定できることだけを理由に管理対象の内部Componentへ依存しません。
 - 下位Componentが、通知のために上位管理者を直接保持・検索したり、初期化引数等で注入されたりすることは禁止します。
-- 下位から上位への結果通知はC#のevent/delegateを基本とし、所有・管理側が購読と解除を担当します。通知には必要最小限の事実を渡します。
+- 下位から上位への結果通知はC#のevent/delegateを基本とし、原則として直接管理する側が購読と解除を担当します。通知には必要最小限の事実を渡します。
 - 具体的な命中対象へのTryReceiveHit等の操作は、上位管理者への結果通知と区別します。他者の内部状態の直接書き換えや、管理対象をGetterで辿る操作は認めません。
-- 依存方向を守るためだけに、不必要なInterfaceやManagerを追加しません。
 
 上記のPlayingの責務は現在構造の説明です。Formation等に残る上位への直接依存を推奨する規約ではありません。Issue #83/#85の適用範囲と現在構造は [ARCHITECTURE.md](ARCHITECTURE.md)・[ADR-0010](adr/0010-player-shot-lifecycle-and-events.md) を参照してください。
 
@@ -65,19 +64,19 @@ shot.TryLaunch(position);
 
 停止・再開・強制中断は意味のある個別操作として残せますが、初回発射や再利用の準備として必須にしません。PlayerShotのSetPlaying(false)はゲーム進行による明示的な停止で、ResetFlightは通知なしの中断です。
 
-下位Componentは管理者を保持・検索・引数注入しません。終了・命中結果は必要な事実だけをeventで通知し、所有側が生成・接続時に購読して破棄時に解除します。一時停止を購読解除の理由にせず、通知途中で状態が変わる場合の順序も維持します。
+購読は生成・接続時に行い、破棄時に同じdelegateで解除します。一時停止を購読解除の理由にせず、通知途中で状態が変わる場合も必要な結果を取りこぼさないようにします。
 
 ```csharp
 // PlayerShot内。強制中断はこの通知を発生させない。
 public event Action FlightEnded;
 
-// 上位の所有・管理側で購読し、破棄時に同じdelegateを -= する。
+// 現在の実装におけるDriverの直接購読（今後の推奨配置を示す例ではない）。
 shot.FlightEnded += driver.NotifyNormalPlayerShotEnded;
 ```
 
-この例は結果イベントの購読を示すもので、PlayerがDriverを参照して接続する配置を推奨するものではありません。Issue #85で暫定接続を解消し、Driverが通常弾を明示的に参照して直接購読します。PlayerはPlayerInputStateの値だけを受け取り、被弾をHitAcceptedで通知します。Playerが直接操作するゲーム内ComponentはPlayerShotだけです。
+この例と次の段落は現在の実装状態の説明です。Issue #85でPlayerがDriverを参照して接続する暫定構造を解消し、現在はDriverが通常弾を明示的に参照して直接購読します。PlayerはPlayerInputStateの値だけを受け取り、被弾をHitAcceptedで通知します。Playerが直接操作するゲーム内ComponentはPlayerShotだけです。DriverがPlayer管理下の通常弾を直接参照・購読する構造は後続作業で見直します。今回の原則追加では変更せず、今後の設計では上記の責務境界を基準に判断します。
 
-IHitReceiver.TryReceiveHit(Component inSource)は命中元を最小限の事実として渡します。UFOのDefeated通知は所属Formationが購読してDriverへ転送し、弾にUFO固有イベントを置きません。通知がFlightEndedより先に届くため、Driverは通常弾なら得点添字だけ終了予定分+1を反映します。実履歴はFlightEndedだけで更新し、B弾では進めません。友軍誤射の対象制限は保存済みPhysics2Dレイヤー設定で行い、弾同士の具体型依存を追加しません。
+現在、IHitReceiver.TryReceiveHit(Component inSource)は命中元を最小限の事実として渡します。UFOのDefeated通知は所属Formationが購読してDriverへ転送し、弾にUFO固有イベントを置きません。通知がFlightEndedより先に届くため、Driverは通常弾なら得点添字だけ終了予定分+1を反映します。実履歴はFlightEndedだけで更新し、B弾では進めません。これは [ADR-0013](adr/0013-hit-receivers-and-ufo-scoring.md) に記録された現行の通知順序契約であり、今後も下位の通知順序に上位のルールを依存させることを推奨するものではありません。見直す際は設計原則に従い、通知内容・確定タイミング・責務分担を検討します。友軍誤射の対象制限は保存済みPhysics2Dレイヤー設定で行い、弾同士の具体型依存を追加しません。
 
 同時1発・入力の再押下条件はPlayer側へ置きます。弾は自身の飛行中の再発射を拒否しますが、複数インスタンスの利用は制限しません。Issue #83ではPlayerShot周辺に適用し、Issue #85ではPlayerの入力・被弾通知とEnemyShot/Formationからの最小Interface接続へ適用しました。FormationのDriver通知は今回変更しません。
 
@@ -90,6 +89,14 @@ IHitReceiver.TryReceiveHit(Component inSource)は命中元を最小限の事実�
 
 ### レビュー時の確認
 
+クラス図と対応するコードを照合し、既存の確認事項に加えて責務・管理関係に沿った依存かを確認します。
+
+- 各クラスの依存先は、そのクラスの責務に必要な対象か。
+- 管理対象の内部Componentを、管理者を飛び越えて参照・操作・購読していないか。
+- 上位クラスが下位Componentの実装詳細・通知順序を知る必要が生じていないか。必要な順序には、確定タイミングと保証する担当の契約があるか。
+- 所有者による操作API・結果通知で自然な依存関係にできないか。
+- 抽象化やイベント中継の追加で、逆に実装や処理の追跡が複雑になっていないか。
+- 例外的な直接依存に、責務上の理由があるか。
 - 内部の可変オブジェクトやコレクションを返していないか。
 - 他クラスの内部構造を辿る操作がないか。
 - 検出、個体の反応、集団の集計、全体進行が担当ごとに分かれているか。
