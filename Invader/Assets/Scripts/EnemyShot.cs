@@ -35,7 +35,10 @@ namespace UnityInvader
 
         private void OnTriggerEnter2D(Collider2D inOther)
         {
-            ResolveHit(inOther);
+            if (inOther.TryGetComponent<IHitReceiver>(out var receiver))
+            {
+                ResolveHit(receiver);
+            }
         }
 
         private void OnDisable()
@@ -122,9 +125,8 @@ namespace UnityInvader
         {
             var position = _body.position;
             position.y -= (_fast ? 5f : 4f) * ArcadeViewport.UnitsPerPixel;
-            var hit = new HitInfo(this, _body.position, position,
-                new Vector2(Width, Height) * ArcadeViewport.UnitsPerPixel, Vector2.down);
-            if (ProjectileHitDetector.TryResolveSwept(in hit))
+            if (Shield.TryAbsorbShot(_body.position, position,
+                new Vector2(Width, Height) * ArcadeViewport.UnitsPerPixel, false))
             {
                 ResetFlight();
                 return;
@@ -137,17 +139,14 @@ namespace UnityInvader
             _body.MovePosition(position);
         }
 
-        private void ResolveHit(Collider2D inOther)
+        private void ResolveHit(IHitReceiver inReceiver)
         {
             if (_playing == false || isActiveAndEnabled == false || _resolvingHit)
             {
                 return;
             }
             _resolvingHit = true;
-            var position = _body.position;
-            var hit      = new HitInfo(this, position, position,
-                new Vector2(Width, Height) * ArcadeViewport.UnitsPerPixel, Vector2.down);
-            if (ProjectileHitDetector.TryResolveTrigger(inOther, in hit))
+            if (inReceiver.TryReceiveHit(this))
             {
                 ResetFlight();
             }

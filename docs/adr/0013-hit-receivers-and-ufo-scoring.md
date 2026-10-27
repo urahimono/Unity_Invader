@@ -1,7 +1,6 @@
 # ADR-0013: 命中受理の統一とUFO自身からの撃破通知
 
-- Status: Partially Superseded
-- Partially superseded by: [ADR-0014](0014-shield-hit-receiver.md)（命中引数とShield例外のみ）
+- Status: Accepted
 - Date: 2026-10-27
 - Supersedes: ADR-0010/0011/0012のPlayerShot.UfoDefeatedによる通知・得点順のみ
 
