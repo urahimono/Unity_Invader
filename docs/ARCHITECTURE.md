@@ -28,8 +28,8 @@ flowchart TD
     Player -->|TryLaunch / SetPlaying / ResetFlight| Shot[PlayerShot: Rigidbody2D / Trigger / 消費]
     Driver -->|通常弾参照・event購読| Shot
     Physics[Unity Physics2D] -->|OnTriggerEnter2D| Shot
-    Shot -->|IHitReceiver.TryReceiveHit(in HitInfo)| Invader[Invader: 個体の被弾・撃破・表示]
-    Shot -->|IHitReceiver.TryReceiveHit(in HitInfo)| Ufo[Ufo: 移動・被弾・解除]
+    Shot -->|IHitReceiver.TryReceiveHit(this)| Invader[Invader: 個体の被弾・撃破・表示]
+    Shot -->|IHitReceiver.TryReceiveHit(this)| Ufo[Ufo: 移動・被弾・解除]
     Shot -.->|通常弾event: Driverが直接購読| Driver
     Bomb[DebugCarpetBomb] -->|TryLaunchのみ| Shot
     Ufo -.->|Defeated(source)を購読| Formation
@@ -41,10 +41,8 @@ flowchart TD
     EnemyShot -->|Trigger / IHitReceiver.TryReceiveHit| Player
     Player -.->|HitAccepted event| Driver
     Formation -->|IPositionProvider.Position| Player
-    Shot -->|HitInfo / 移動区間| HitDetector[ProjectileHitDetector]
-    EnemyShot -->|HitInfo / 移動区間| HitDetector
-    HitDetector -->|距離照会 / IHitReceiverによる命中受付| SweptReceiver[ISweptHitReceiver]
-    Shield[Shield: 残存画素・局所破壊・描画] -.->|実装| SweptReceiver
+    Shot -->|Physics2D領域検索 / 移動区間の画素判定| Shield[Shield: 残存画素・局所破壊・描画]
+    EnemyShot -->|Physics2D領域検索 / 移動区間の画素判定| Shield
     Driver -->|SetPlaying / 次WaveのBeginWave| Shield
     Formation -->|各移動ステップの侵食依頼| Invader
     Invader -->|生存個体のColliderと移動量| Shield
@@ -53,15 +51,15 @@ flowchart TD
 | Component | 所有する責務・状態 |
 | --- | --- |
 | GameplayDriver | 入力Readerの生成・破棄とUpdateでの入力取得、Playerへの値渡し、Player被弾と通常PlayerShotイベントの直接購読。現在State、Score、Wave番号、Lives、通常PlayerShot終了履歴。履歴からUFO方向と15周期の得点表位置を導出。WaveClearの暫定1秒待機とPlayerDeadの暫定0.5秒待機。次Wave・復帰/GameOverを管理 |
-| Shield | 各基の画素占有を所有し、描画・穴通過・方向別局所破壊を担当。弾の共通命中受付では残存画素の距離照会・判定・消去を担当。弾の領域検索はProjectileHitDetector、Invader Colliderのswept bounds検索はShieldが担当。死亡・停止時は保持、次Waveで初期画像から復元 |
+| Shield | 各基の画素占有を所有し、描画・穴通過・方向別局所破壊を担当。弾の移動区間とInvader Colliderのswept boundsを既存Triggerで検索し、残存画素を判定・消去。死亡・停止時は保持、次Waveで初期画像から復元 |
 | DebugCarpetBomb | Editor/Development Build限定のB長押し入力、専用PlayerShot 96発の遅延生成・再利用、23レーンの一巡シャッフル。DriverのState/Waveを読み、非Playing・Driver無効・Wave変更・自身の無効化で専用弾を回収。弾イベントは購読せず、通常終了履歴にも加算しない。命中・Score・全滅・Wave進行は既存Componentへ任せる。製品ビルドにも型とScene参照は残すが入力・生成処理は含めない |
 | DebugFormationSpeed | Formationと同じGameObjectでF長押しを読み、Editor/Development Build限定の内部操作で移動経過時間の倍率を10/1へ設定。FixedUpdate実行順-100でFormationより先に反映し、自身またはFormation無効時は1へ戻す。製品ビルドにも型は残すが入力・倍率処理は含めない |
 | DebugStatusOverlay | ArcadeのDriverと同じGameObjectで、State・Lives・Wave・Scoreの読み取り専用enum/intを描画時に取得。状態の複製や進行操作を行わず、非Playingでも表示。OnGUIによる開発用表示はEditor/Development Buildのみ有効で、Componentの型は製品ビルドにも残す |
 | Player | 受け取った入力値と発射受付、同時1発の射撃枠・release/再押下ゲート。発射成功で枠を占有し、FlightEndedで解放。Transformで移動し被弾受理後にHitAcceptedを発行。IHitReceiverとIPositionProviderを実装。直接操作するゲーム内ComponentはPlayerShotだけ。復帰時に自身の位置・受理/発射ゲートと自機弾を初期化 |
-| PlayerShot | 構成済みRigidbody2D/Renderer、Trigger。飛行状態はGameObject.activeSelf、進行可否はMonoBehaviour.enabled。IHitReceiverへHitInfoを渡し、成立後に消費。上端・Shield吸収・命中でFlightEndedを一度通知。具体的な命中対象・得点は知らない。通知先・通常弾の区別は知らない。ResetFlightは通知なしの中断 |
+| PlayerShot | 構成済みRigidbody2D/Renderer、Trigger。飛行状態はGameObject.activeSelf、進行可否はMonoBehaviour.enabled。IHitReceiverへ命中元thisを渡し、成立後に消費。上端・Shield吸収・命中でFlightEndedを一度通知。具体的な命中対象・得点は知らない。通知先・通常弾の区別は知らない。ResetFlightは通知なしの中断 |
 | Invader | GameObjectの有効状態による生死、Spriteの2コマ、被弾反応、所属Formationへの一度だけの通知 |
 | InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、集団移動の方向/周期/アニメ位相、生存数の集計。敵弾/UFOの60Hz時計・種類別phase、3種の発射元/Reload制御。UFOの下降条件・出現カウンタ・開始待ち・Squiggly共有枠。通知からDriverへ得点・全滅を伝える |
-| EnemyShot | Kinematic Rigidbody2D、移動step countと速度区分。Formationのphaseから1stepを受け、ProjectileHitDetectorへ移動区間を渡してから移動を実行。TriggerでPlayerへ被弾受付を依頼し、成立時または画面下端で非アクティブ化して再利用 |
+| EnemyShot | Kinematic Rigidbody2D、移動step countと速度区分。Formationのphaseから1stepを受け、既存Shield判定と移動を実行。TriggerでPlayerへ被弾受付を依頼し、成立時または画面下端で非アクティブ化して再利用 |
 | Ufo | Kinematic Rigidbody2D、飛行方向、Sprite/Collider。共有phaseから2px移動を受け、退出・被弾で解除。IHitReceiverで命中を受理し、Defeated(source)を所属Formationへ通知。飛行中はGameObject有効状態を正とし、独立時計やScoreを所有しない |
 | ArcadeViewport | 224:256の表示領域と論理px→Unity単位の倍率 |
 
@@ -144,7 +142,3 @@ Formationの既存phase 2をSquigglyと共有し、下降後の出現カウン�
 旧モデル・旧Push専用のEditor検証と旧設定ツールは削除しました。代わりに接続・物理設定・Missing Script・Play中の55体と生存集計を確認する `Verify Component Gameplay Setup`、Editor限定の一時停止/再開メニュー、READMEの最小限の操作確認を用意しています。接続チェックは衝突やWave進行の成功を意味しません。
 
 Scene/Prefab移行・Unityコンパイル・Play動作の実行状況はPR本文を参照してください。独立PoC [Physics2DProbe](../Invader/Assets/Prototypes/Physics2DProbe/README.md) は今回変更せず、本編から参照しません。
-
-## Shieldの共通命中受付（Issue #91）
-
-PlayerShot / EnemyShotはShield具体型を参照せず、非MonoBehaviourのProjectileHitDetectorへHitInfoを渡します。通常対象は従来のOnTriggerEnter2DからIHitReceiverへ転送します。ISweptHitReceiverはTrigger転送から除外し、移動予定区間のOverlapBoxで検索します。副作用のない距離照会後、最短の1候補だけへTryReceiveHitを呼び、Shield自身が画素を再確認して破壊します。画素・マスク・Texture更新・Wave復元はShieldに残します。Invaderの侵食経路は変更しません。詳細は[ADR-0014](adr/0014-shield-hit-receiver.md)。

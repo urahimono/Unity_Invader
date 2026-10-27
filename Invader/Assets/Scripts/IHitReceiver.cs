@@ -1,7 +1,9 @@
+using UnityEngine;
+
 namespace UnityInvader
 {
     public interface IHitReceiver
     {
-        bool TryReceiveHit(in HitInfo inHit);
+        bool TryReceiveHit(Component inSource);
     }
 }
