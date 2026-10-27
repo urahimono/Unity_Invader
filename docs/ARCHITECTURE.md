@@ -41,8 +41,10 @@ flowchart TD
     EnemyShot -->|Trigger / IHitReceiver.TryReceiveHit| Player
     Player -.->|HitAccepted event| Driver
     Formation -->|IPositionProvider.Position| Player
-    Shot -->|ProjectileHitDetector / ISweptHitReceiver / IHitReceiver| Shield[Shield: 残存画素・局所破壊・描画]
-    EnemyShot -->|ProjectileHitDetector / ISweptHitReceiver / IHitReceiver| Shield
+    Shot -->|HitInfo / 移動区間| HitDetector[ProjectileHitDetector]
+    EnemyShot -->|HitInfo / 移動区間| HitDetector
+    HitDetector -->|距離照会 / IHitReceiverによる命中受付| SweptReceiver[ISweptHitReceiver]
+    Shield[Shield: 残存画素・局所破壊・描画] -.->|実装| SweptReceiver
     Driver -->|SetPlaying / 次WaveのBeginWave| Shield
     Formation -->|各移動ステップの侵食依頼| Invader
     Invader -->|生存個体のColliderと移動量| Shield
