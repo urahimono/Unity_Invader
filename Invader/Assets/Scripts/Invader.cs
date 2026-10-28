@@ -9,10 +9,16 @@ namespace UnityInvader
     {
         [SerializeField]
         private SpriteRenderer _renderer;
+        [SerializeField]
+        private Sprite[]       _topFrames;
+        [SerializeField]
+        private Sprite[]       _middleFrames;
+        [SerializeField]
+        private Sprite[]       _bottomFrames;
 
         private Collider2D _collider;
-        private Sprite     _frameA;
-        private Sprite     _frameB;
+        private Sprite[]   _animationFrames;
+        private int        _frameIndex;
 
         public event Action<Invader, Component> Defeated;
 
@@ -30,18 +36,38 @@ namespace UnityInvader
             return true;
         }
 
-        internal void Initialize(Sprite inFrameA, Sprite inFrameB, HitTargetType inTargetType)
+        internal void Initialize(InvaderType inType)
         {
-            _collider  = GetComponent<Collider2D>();
-            _frameA    = inFrameA;
-            _frameB    = inFrameB;
-            TargetType = inTargetType;
+            _collider = GetComponent<Collider2D>();
+            switch (inType)
+            {
+                case InvaderType.Top:
+                    _animationFrames = _topFrames;
+                    TargetType       = HitTargetType.InvaderTop;
+                    break;
+                case InvaderType.Middle:
+                    _animationFrames = _middleFrames;
+                    TargetType       = HitTargetType.InvaderMiddle;
+                    break;
+                case InvaderType.Bottom:
+                    _animationFrames = _bottomFrames;
+                    TargetType       = HitTargetType.InvaderBottom;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(inType), inType, "Unknown Invader type.");
+            }
+            if (_animationFrames == null || _animationFrames.Length == 0 ||
+                Array.Exists(_animationFrames, inFrame => inFrame == null))
+            {
+                throw new InvalidOperationException("Invader requires non-empty Sprite frames for its type. Configure Invader Animation first.");
+            }
         }
 
         internal void BeginWave()
         {
             gameObject.SetActive(true);
-            ApplyAnimation(false);
+            _frameIndex      = 0;
+            _renderer.sprite = _animationFrames[_frameIndex];
         }
 
         internal void SetPlaying(bool inPlaying)
@@ -50,9 +76,10 @@ namespace UnityInvader
             _collider.enabled = inPlaying && isActiveAndEnabled;
         }
 
-        internal void ApplyAnimation(bool inFrameB)
+        internal void AdvanceAnimation()
         {
-            _renderer.sprite = inFrameB ? _frameB : _frameA;
+            _frameIndex      = (_frameIndex + 1) % _animationFrames.Length;
+            _renderer.sprite = _animationFrames[_frameIndex];
         }
 
         internal void ErodeShields(Vector2 inMovement)
