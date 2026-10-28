@@ -13,6 +13,8 @@ namespace UnityInvader
         private BoxCollider2D _hitCollider;
         private bool          _playing;
         private int           _direction;
+        private int           _ticksRemaining;
+        private bool          _pending;
 
         public HitTargetType TargetType => HitTargetType.Ufo;
 
@@ -23,6 +25,8 @@ namespace UnityInvader
         public  const float Height  = 8f;
         private const float LaneY   = (232f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
         private const float Outside = (ArcadeViewport.ScreenWidth / 2f + Width / 2f) * ArcadeViewport.UnitsPerPixel;
+
+        private const int ReloadTicks = 0x0600;
 
         private void Awake()
         {
@@ -85,6 +89,48 @@ namespace UnityInvader
         internal void ResetFlight()
         {
             gameObject.SetActive(false);
+        }
+
+        internal void ResetCycle()
+        {
+            ResetFlight();
+            _ticksRemaining = ReloadTicks;
+            _pending        = false;
+        }
+
+        internal void TickCountdown(bool inHasDescended)
+        {
+            if (inHasDescended == false)
+            {
+                return;
+            }
+            // 0913..092D checks zero before decrementing; reload also consumes one tick.
+            // Called while inactive too: waiting UFOs still count each shared clock tick.
+            if (_ticksRemaining == 0)
+            {
+                _ticksRemaining = ReloadTicks;
+                _pending        = true;
+            }
+            _ticksRemaining--;
+        }
+
+        internal bool ProcessPhase(bool inCanLaunch, bool inMovingRight)
+        {
+            if (InFlight)
+            {
+                AdvanceStep();
+                return true;
+            }
+            if (_pending && inCanLaunch)
+            {
+                if (TryLaunch(inMovingRight))
+                {
+                    _pending = false;
+                }
+                // An eligible attempt consumes the shared phase even if launch fails.
+                return true;
+            }
+            return false;
         }
 
         internal void PreparePhysicsStep()

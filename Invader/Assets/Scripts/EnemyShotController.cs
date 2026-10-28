@@ -35,11 +35,9 @@ namespace UnityInvader
         [NonSerialized]
         private float               _spacing;
         [NonSerialized]
-        private Func<bool>          _tryProcessUfoPhase;
+        private Func<bool, bool>     _tryProcessUfoPhase;
         [NonSerialized]
         private Action              _tickUfoCountdown;
-
-        internal bool IsSquigglyInFlight => _shots[Squiggly].InFlight;
 
         private const int Rolling  = 0;
         private const int Plunger  = 1;
@@ -55,20 +53,20 @@ namespace UnityInvader
         private static readonly int[] _reloadRates     = { 0x30, 0x10, 0x0B, 0x08, 0x07 };
 
         internal void Initialize(Func<int, Vector2?> inGetColumnMuzzle, Func<int> inGetScore, int inColumns, float inSpacing,
-            Func<bool> inTryProcessUfoPhase, Action inTickUfoCountdown)
+            Func<bool, bool> inTryProcessUfoPhase, Action inTickUfoCountdown)
         {
             if (_rollingShot == null || _plungerShot == null || _squigglyShot == null ||
                 _rollingShot == _plungerShot || _rollingShot == _squigglyShot || _plungerShot == _squigglyShot)
             {
                 throw new ArgumentException("Three independent enemy shots are required.");
             }
-            _shots             = new[] { _rollingShot, _plungerShot, _squigglyShot };
-            _getColumnMuzzle   = inGetColumnMuzzle ?? throw new ArgumentNullException(nameof(inGetColumnMuzzle));
-            _getScore          = inGetScore ?? throw new ArgumentNullException(nameof(inGetScore));
-            _columns           = inColumns;
-            _spacing           = inSpacing;
-            _tryProcessUfoPhase= inTryProcessUfoPhase ?? throw new ArgumentNullException(nameof(inTryProcessUfoPhase));
-            _tickUfoCountdown  = inTickUfoCountdown ?? throw new ArgumentNullException(nameof(inTickUfoCountdown));
+            _shots              = new[] { _rollingShot, _plungerShot, _squigglyShot };
+            _getColumnMuzzle    = inGetColumnMuzzle ?? throw new ArgumentNullException(nameof(inGetColumnMuzzle));
+            _getScore           = inGetScore ?? throw new ArgumentNullException(nameof(inGetScore));
+            _columns            = inColumns;
+            _spacing            = inSpacing;
+            _tryProcessUfoPhase = inTryProcessUfoPhase ?? throw new ArgumentNullException(nameof(inTryProcessUfoPhase));
+            _tickUfoCountdown   = inTickUfoCountdown ?? throw new ArgumentNullException(nameof(inTickUfoCountdown));
         }
 
         internal void Update(Vector2 inPlayerPosition, Vector2 inFormationPosition, int inAliveCount)
@@ -87,7 +85,7 @@ namespace UnityInvader
                         ProcessPlunger(inAliveCount);
                         break;
                     case 2:
-                        if (_tryProcessUfoPhase() == false)
+                        if (_tryProcessUfoPhase(_shots[Squiggly].InFlight == false) == false)
                         {
                             ProcessSquiggly();
                         }

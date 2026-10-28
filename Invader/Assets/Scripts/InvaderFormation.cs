@@ -25,8 +25,6 @@ namespace UnityInvader
         private float               _elapsed;
         private int                 _direction = 1;
         private bool                _playing;
-        private int                 _ufoTicksRemaining;
-        private bool                _ufoPending;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private float _debugMovementMultiplier = 1f;
@@ -45,10 +43,9 @@ namespace UnityInvader
         private const    float         MaximumX   = (ArcadeViewport.ScreenWidth / 2f - CellSize / 2f - (Columns - 1) * Spacing) * ArcadeViewport.UnitsPerPixel;
         private readonly List<Invader> _invaders  = new List<Invader>();
 
-        private const int   UfoReloadTicks = 0x0600;
-        private const float FirstWaveY    = (208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
+        private const float FirstWaveY = (208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
         // Provisional sprite-center anchor, not the ROM's rotated drawing coordinate.
-        private const float InvasionY = (40f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
+        private const float InvasionY  = (40f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
 
         private void OnEnable()
         {
@@ -119,7 +116,7 @@ namespace UnityInvader
             _direction           = 1;
             _enemyShots.BeginWave();
             _enemyShots.ResetClock();
-            ResetUfo();
+            _ufo.ResetCycle();
 
             var initialPosition = new Vector2(32f - ArcadeViewport.ScreenWidth / 2f,
                 208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
@@ -162,7 +159,7 @@ namespace UnityInvader
             // Clear all slots without resetting the rack, column pointers or movement state.
             _enemyShots.ResetFlights();
             _enemyShots.ResetClock();
-            ResetUfo();
+            _ufo.ResetCycle();
         }
 
         private void CreateInvaders()
@@ -263,45 +260,16 @@ namespace UnityInvader
             _enemyShots.Update(_player.Position, _body.position, _aliveCount);
         }
 
-        private void ResetUfo()
-        {
-            _ufo.ResetFlight();
-            _ufoTicksRemaining = UfoReloadTicks;
-            _ufoPending        = false;
-        }
-
         private void TickUfoCountdown()
         {
-            if (_body.position.y >= FirstWaveY - 1e-6f)
-            {
-                return;
-            }
-            // 0913..092D checks zero before decrementing; reload also consumes one tick.
-            if (_ufoTicksRemaining == 0)
-            {
-                _ufoTicksRemaining = UfoReloadTicks;
-                _ufoPending        = true;
-            }
-            _ufoTicksRemaining--;
+            _ufo.TickCountdown(_body.position.y < FirstWaveY - 1e-6f);
         }
 
-        private bool TryProcessUfoPhase()
+        private bool TryProcessUfoPhase(bool inSquigglyIdle)
         {
-            if (_ufo.InFlight)
-            {
-                _ufo.AdvanceStep();
-                return true;
-            }
-            if (_ufoPending && _aliveCount >= 8 && _enemyShots.IsSquigglyInFlight == false)
-            {
-                bool movingRight = (_getNormalShotEndCount() & 1L) != 0;
-                if (_ufo.TryLaunch(movingRight))
-                {
-                    _ufoPending = false;
-                }
-                return true;
-            }
-            return false;
+            bool canLaunch   = _aliveCount >= 8 && inSquigglyIdle;
+            bool movingRight = (_getNormalShotEndCount() & 1L) != 0;
+            return _ufo.ProcessPhase(canLaunch, movingRight);
         }
 
         private Vector2? GetColumnMuzzle(int inColumn)

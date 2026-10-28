@@ -25,9 +25,11 @@ ROMではUFO命中を1579〜157Eでフラグ化し、弾終了処理で表を進
 
 Ufoは自身の有効状態・Colliderで一度だけ被弾を受理し、直ちに解除します。PlayerShotも自身を消費して後続Triggerを拒否します。加点はGameplayDriverだけが行い、UFOはInvader生存数・WaveClearに関与しません。加点後、次の敵弾試行から既存のScore依存Reloadへ反映されます。Editor/Development BuildのDebugStatusOverlayへScoreを1行追加しました。
 
+Issue #118でUfoにResetCycle・TickCountdown・ProcessPhaseを集約しました。Formationは下降状態・8体以上か・発進方向を提供し、Controllerはphase 2でSquigglyが空いているかをbool値で渡します。ProcessPhaseの戻り値は発進成功ではなくphase消費を表し、飛行中と開始条件が揃った発進試行ではtrueです。発進失敗時はpendingを保持し、成功時だけ解除します。Pauseは位置・方向・pending・残カウントを保持し、Wave/自機復帰だけResetCycleで飛行解除・pending解除・0x0600初期化を行います。撃破・画面退出のResetFlightでは出現サイクルを変えません。新しい保存フィールドや参照は追加していません。
+
 ## 時間・座標・状態のUnity近似
 
-- 出現カウンタはFormationが所有し、EnemyShotControllerの60Hz仮想tick処理後・phase進行前のコールバックで進めます（Issue #116）。`0x0600`は約25.6秒相当ですが、0判定tickと次のphase 2までの待ちを含み、原作ビーム別ISR・実秒・動画テンポとの一致は未確認です。ゲーム開始直後から秒数タイマーを回す実装ではありません。
+- 出現カウンタと出現待ちはUfoが所有します（Issue #118）。EnemyShotControllerの60Hz仮想tick処理後・phase進行前のコールバックで、Formationが下降条件を値で渡し、Inactive中もUfo.TickCountdownを進めます。`0x0600`は約25.6秒相当ですが、0判定tickと次のphase 2までの待ちを含み、原作ビーム別ISR・実秒・動画テンポとの一致は未確認です。ゲーム開始直後から秒数タイマーを回す実装ではありません。
 - 下降条件は現在のFormation基準（上段中心が論理y=208）からの相対下降に対応付けています。ROMの`refAlienYr < 0x78`を現行編隊座標へ写した近似であり、基準個体の絶対座標がROMと同じという意味ではありません。
 - UFO移動はphase 2、3tickに1stepで2px、平均40px/秒相当です。Physics2Dは従来の0.02秒刻みとMovePositionを使用します。F倍率は編隊移動だけで、UFOカウンタ・移動・Player・待機時間・グローバル時間を変えません。ただしFで編隊が早く下降すれば、カウンタ開始条件には早く到達します。
 - レーン中心y=232、当たり判定24×8px、出現中心x=-12/236、反対側へ全体が抜ける境界で解除します。ROMの`29/E0`等の座標をそのまま転用せず、現224×256画面の外から入って外へ出るよう配置した暫定値です。SpriteはEditorコードで自作した赤い簡易機体です。抽出素材は追加しません。
