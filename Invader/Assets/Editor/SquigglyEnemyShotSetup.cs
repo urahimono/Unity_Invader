@@ -44,7 +44,7 @@ namespace UnityInvader.Editor
                 throw new InvalidOperationException("Squiggly setup is an edit-time operation.");
             }
             var data    = new SerializedObject(inFormation);
-            var rolling = data.FindProperty("_rollingShot").objectReferenceValue as EnemyShot;
+            var rolling = data.FindProperty("_enemyShots").FindPropertyRelative("_rollingShot").objectReferenceValue as EnemyShot;
             if (rolling == null)
             {
                 throw new InvalidOperationException("Configure Rolling EnemyShot first.");
@@ -66,7 +66,7 @@ namespace UnityInvader.Editor
                     PrefabUtility.UnloadPrefabContents(root);
                 }
             }
-            var shot = data.FindProperty("_squigglyShot").objectReferenceValue as EnemyShot;
+            var shot = data.FindProperty("_enemyShots").FindPropertyRelative("_squigglyShot").objectReferenceValue as EnemyShot;
             if (shot == null)
             {
                 // The migration menu replaces Formation but keeps existing enemy shot roots.
@@ -78,7 +78,7 @@ namespace UnityInvader.Editor
                 }
                 shot = existing.Length == 1 ? existing[0] : null;
             }
-            var plunger = data.FindProperty("_plungerShot").objectReferenceValue as EnemyShot;
+            var plunger = data.FindProperty("_enemyShots").FindPropertyRelative("_plungerShot").objectReferenceValue as EnemyShot;
             if (shot == rolling || shot == plunger || (shot != null && shot.gameObject.scene != inScene))
             {
                 throw new InvalidOperationException("Squiggly must have its own slot in the target Scene.");
@@ -88,7 +88,7 @@ namespace UnityInvader.Editor
                 shot = ((GameObject)PrefabUtility.InstantiatePrefab(prefab, inScene)).GetComponent<EnemyShot>();
             }
             shot.gameObject.SetActive(false);
-            data.FindProperty("_squigglyShot").objectReferenceValue = shot;
+            data.FindProperty("_enemyShots").FindPropertyRelative("_squigglyShot").objectReferenceValue = shot;
             data.ApplyModifiedPropertiesWithoutUndo();
         }
     }

@@ -14,17 +14,13 @@ namespace UnityInvader
         private int     _aliveCount;
 
         [SerializeField]
-        private EnemyShot _rollingShot;
-        [SerializeField]
-        private EnemyShot _plungerShot;
-        [SerializeField]
-        private EnemyShot _squigglyShot;
-        [SerializeField]
         private Ufo       _ufo;
+
+        [SerializeField]
+        private EnemyShotController _enemyShots = new EnemyShotController();
 
         private IPositionProvider   _player;
         private Func<long>          _getNormalShotEndCount;
-        private EnemyShotController _enemyShots;
         private Rigidbody2D         _body;
         private float               _elapsed;
         private int                 _direction = 1;
@@ -108,16 +104,14 @@ namespace UnityInvader
             {
                 throw new InvalidOperationException("Formation requires its Invader prefab.");
             }
-            if (inPlayer == null || _rollingShot == null || _plungerShot == null || _squigglyShot == null || _ufo == null ||
-                _rollingShot == _plungerShot || _rollingShot == _squigglyShot || _plungerShot == _squigglyShot)
+            if (inPlayer == null || _ufo == null || _enemyShots == null)
             {
-                throw new InvalidOperationException("Formation requires three independent enemy shots and UFO. Run Configure UFO.");
+                throw new InvalidOperationException("Formation requires Player position, EnemyShotController and UFO. Configure Arcade first.");
             }
             _player               = inPlayer;
             _getNormalShotEndCount = inGetNormalShotEndCount;
-            _body                 = GetComponent<Rigidbody2D>();
-            _enemyShots            = new EnemyShotController(_rollingShot, _plungerShot, _squigglyShot,
-                GetColumnMuzzle, inGetScore, Columns, Spacing * ArcadeViewport.UnitsPerPixel);
+            _enemyShots.Initialize(GetColumnMuzzle, inGetScore, Columns, Spacing * ArcadeViewport.UnitsPerPixel);
+            _body = GetComponent<Rigidbody2D>();
             CreateInvaders();
             BeginWave();
         }

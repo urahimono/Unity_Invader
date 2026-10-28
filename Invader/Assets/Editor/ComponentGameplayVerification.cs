@@ -41,7 +41,23 @@ namespace UnityInvader.Editor
             Require(shotBody.bodyType == RigidbodyType2D.Dynamic && shotBody.gravityScale == 0f && shotBody.linearDamping == 0f, "Shot body settings.");
             Require(collider.isTrigger && Vector2.Distance(collider.size, new Vector2(1f, 4f) * ArcadeViewport.UnitsPerPixel) < 1e-6f, "Shot trigger dimensions.");
             Require(formations[0].GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Kinematic, "Formation body must be kinematic.");
-            var formationData = new SerializedObject(formations[0]);
+            var formationData  = new SerializedObject(formations[0]);
+            var controllerData = formationData.FindProperty("_enemyShots");
+            Require(controllerData != null && controllerData.hasVisibleChildren && controllerData.displayName == "Enemy Shots",
+                "Inspector must show the inline Enemy Shots foldout.");
+            string[] shotNames  = { "_rollingShot", "_plungerShot", "_squigglyShot" };
+            var controllerChild = controllerData.Copy();
+            bool hasChild       = controllerChild.Next(true);
+            int serializedCount = 0;
+            while (hasChild && controllerChild.depth > controllerData.depth)
+            {
+                Require(shotNames.Contains(controllerChild.name) && controllerChild.propertyType == SerializedPropertyType.ObjectReference,
+                    "Only the three EnemyShot references may be serialized in Controller.");
+                serializedCount++;
+                hasChild = controllerChild.Next(false);
+            }
+            Require(serializedCount == 3 && shotNames.All(inName => formationData.FindProperty(inName) == null),
+                "Controller owns exactly three saved references; Formation has no legacy shot fields.");
             var ufos          = roots.SelectMany(inRoot => inRoot.GetComponentsInChildren<Ufo>(true)).ToArray();
             Require(ufos.Length == 1 && formationData.FindProperty("_ufo").objectReferenceValue == ufos[0], "Single UFO and Formation reference.");
             Require(players[0].gameObject.layer == GameplayCollisionSetup.PlayerLayer &&
@@ -57,9 +73,9 @@ namespace UnityInvader.Editor
             Require(ufos[0].GetComponent<Rigidbody2D>().bodyType == RigidbodyType2D.Kinematic &&
                 ufos[0].GetComponent<BoxCollider2D>().isTrigger && ufos[0].GetComponent<SpriteRenderer>().sprite != null,
                 "UFO physics and sprite settings.");
-            var rolling       = formationData.FindProperty("_rollingShot").objectReferenceValue as EnemyShot;
-            var plunger       = formationData.FindProperty("_plungerShot").objectReferenceValue as EnemyShot;
-            var squiggly      = formationData.FindProperty("_squigglyShot").objectReferenceValue as EnemyShot;
+            var rolling       = formationData.FindProperty("_enemyShots").FindPropertyRelative("_rollingShot").objectReferenceValue as EnemyShot;
+            var plunger       = formationData.FindProperty("_enemyShots").FindPropertyRelative("_plungerShot").objectReferenceValue as EnemyShot;
+            var squiggly      = formationData.FindProperty("_enemyShots").FindPropertyRelative("_squigglyShot").objectReferenceValue as EnemyShot;
             Require(rolling != null && plunger != null && squiggly != null && rolling != plunger &&
                 rolling != squiggly && plunger != squiggly, "Three independent enemy shot slots.");
             foreach (var enemyShot in new[] { rolling, plunger, squiggly })
