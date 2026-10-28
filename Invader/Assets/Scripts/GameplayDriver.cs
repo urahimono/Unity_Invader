@@ -46,8 +46,6 @@ namespace UnityInvader
         public int Score      => _score;
         public int WaveNumber => _waveNumber;
 
-        internal bool UfoMovesRight => (_player.NormalShotEndCount & 1L) != 0;
-
         private void OnEnable()
         {
             _input = new PlayerInputReader();
@@ -168,7 +166,7 @@ namespace UnityInvader
                 enabled = false;
                 return;
             }
-            _formation.Initialize(this, _player);
+            _formation.Initialize(this, _player, _player.GetNormalShotEndCount);
             _player.HitAccepted += NotifyPlayerHit;
             _player.ShotResolved += NotifyShotResolved;
             _initialized = true;

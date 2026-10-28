@@ -82,6 +82,11 @@ namespace UnityInvader
             return true;
         }
 
+        internal long GetNormalShotEndCount()
+        {
+            return NormalShotEndCount;
+        }
+
         internal bool OwnsShot(Component inSource)
         {
             return inSource == _shot;
