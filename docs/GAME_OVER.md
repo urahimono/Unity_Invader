@@ -16,7 +16,7 @@
 - Driver.NotifyInvadedは初期化済み・有効・Playing中だけ受理し、Lives=0、GameOverへ直接遷移します。通常NotifyPlayerHitと0.5秒の復帰待機は使いません。停止でFormationのPlayingがfalseになるため通知後の繰り返し移動・敵弾/UFO更新も止まります。Fの10倍速でも各ステップで判定します。
 - 既存ApplyPlayingStateで全体を停止し、Score/Wave・破壊済Shield・撃破済Invader・通常弾履歴を保持します。非Playingでの追加被弾・撃破・侵攻通知は受け付けません。高度なイベント優先順位は追加せず、先に受理された既存State遷移に従います。
 
-FormationのGameplayDriver参照と初期化引数は敵弾Reload用のScore取得に残っています。今回撤去したのは侵攻時の直接呼び出しであり、Driver依存の全面解消ではありません。
+Issue #110で敵弾Reload用Scoreの取得も読み取りコールバックへ変更し、FormationのGameplayDriver参照と型付き初期化引数を撤去しました。侵攻通知は引き続きInvadedイベントを使います。
 
 ## 対象外・未確認
 

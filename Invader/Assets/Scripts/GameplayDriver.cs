@@ -157,7 +157,7 @@ namespace UnityInvader
                 enabled = false;
                 return;
             }
-            _formation.Initialize(this, _player, _player.GetNormalShotEndCount);
+            _formation.Initialize(_player, _player.GetNormalShotEndCount, () => Score);
             _formation.Invaded += NotifyInvaded;
             _player.HitAccepted += NotifyPlayerHit;
             _player.ShotResolved += NotifyShotResolved;

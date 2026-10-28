@@ -77,6 +77,7 @@ namespace UnityInvader.Editor
             var ufo = (Ufo)Read(formation, "_ufo");
             inDriver.EditorSetState(GameState.Playing);
             VerifyUfoControl(inDriver, formation, player, shot, ufo);
+            VerifyScoreReload(inDriver, formation, enemies);
             var bomb = inDriver.GetComponent<DebugCarpetBomb>();
             Call(bomb, "UpdateBombardment");
             Call(bomb, "CreatePool");
@@ -168,6 +169,49 @@ namespace UnityInvader.Editor
             invaders[0].gameObject.SetActive(true);
             invaders[0].GetComponent<Collider2D>().enabled = true;
             Require(invaders[0].TryReceiveHit(debugShot), "Unsubscribed individual can accept a hit.");
+        }
+
+        private static void VerifyScoreReload(GameplayDriver inDriver, InvaderFormation inFormation, EnemyShot[] inEnemies)
+        {
+            Require(Read(inFormation, "_getScore") is Func<int> &&
+                typeof(InvaderFormation).GetFields(PrivateInstance).All(inField => inField.FieldType != typeof(GameplayDriver)),
+                "Formation has a score reader and no Driver field.");
+            try
+            {
+                typeof(InvaderFormation).GetMethod("Initialize", PrivateInstance).Invoke(inFormation, new object[] { null, null, null });
+                throw new InvalidOperationException("Null score reader must be rejected at initialization.");
+            }
+            catch (TargetInvocationException exception)
+            {
+                Require(exception.InnerException is ArgumentNullException argument && argument.ParamName == "inGetScore",
+                    "Null score reader validation precedes initialization.");
+            }
+            int initialScore = inDriver.Score;
+            int[] scores     = { 0, 299, 300, 1099, 1100, 2099, 2100, 3099, 3100, 9999, 10000 };
+            int[] rates      = { 48, 48, 16, 16, 11, 11, 8, 8, 7, 7, 7 };
+            for (int index = 0; index < scores.Length; index++)
+            {
+                Set(inDriver, "_score", scores[index]);
+                Call(inFormation, "PreparePlayerRespawn");
+                Set(inEnemies[0], "_stepCount", rates[index]);
+                Call(inFormation, "ProcessEnemyShot", inEnemies[1], inEnemies[0], inEnemies[2], 1);
+                Require(inEnemies[1].gameObject.activeSelf == false, "Reload requires strictly more than the boundary StepCount.");
+                Set(inEnemies[0], "_stepCount", rates[index] + 1);
+                Call(inFormation, "ProcessEnemyShot", inEnemies[1], inEnemies[0], inEnemies[2], 1);
+                Require(inEnemies[1].gameObject.activeSelf, "Actual firing uses current score's Reload rate and permits zero in the other slot.");
+            }
+            Set(inDriver, "_score", 299);
+            Call(inFormation, "PreparePlayerRespawn");
+            Set(inEnemies[0], "_stepCount", 17);
+            Call(inFormation, "ProcessEnemyShot", inEnemies[1], inEnemies[0], inEnemies[2], 1);
+            Require(inEnemies[1].gameObject.activeSelf == false, "Score 299 blocks StepCount 17.");
+            Call(inDriver, "NotifyShotResolved", HitTargetType.InvaderBottom);
+            Call(inFormation, "ProcessEnemyShot", inEnemies[1], inEnemies[0], inEnemies[2], 1);
+            Require(inDriver.Score == 309 && inEnemies[1].gameObject.activeSelf,
+                "Common scoring immediately changes the next firing decision through the original callback.");
+            Set(inDriver, "_score", initialScore);
+            Call(inFormation, "PreparePlayerRespawn");
+            Debug.Log("SCORE_READER_PASS: null validation, live callback, Reload boundaries, strict StepCount and score-change firing.");
         }
 
         private static void VerifyInvasion(GameplayDriver inDriver, InvaderFormation inFormation, Invader[] inInvaders,

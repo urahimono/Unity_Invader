@@ -24,7 +24,7 @@ namespace UnityInvader
 
         private IPositionProvider _player;
         private Func<long>        _getNormalShotEndCount;
-        private GameplayDriver    _driver;
+        private Func<int>         _getScore;
         private Rigidbody2D       _body;
         private float             _elapsed;
         private int               _direction = 1;
@@ -106,8 +106,12 @@ namespace UnityInvader
             }
         }
 
-        internal void Initialize(GameplayDriver inDriver, IPositionProvider inPlayer, Func<long> inGetNormalShotEndCount)
+        internal void Initialize(IPositionProvider inPlayer, Func<long> inGetNormalShotEndCount, Func<int> inGetScore)
         {
+            if (inGetScore == null)
+            {
+                throw new ArgumentNullException(nameof(inGetScore));
+            }
             if (inGetNormalShotEndCount == null)
             {
                 throw new ArgumentNullException(nameof(inGetNormalShotEndCount));
@@ -123,7 +127,7 @@ namespace UnityInvader
             }
             _player               = inPlayer;
             _getNormalShotEndCount = inGetNormalShotEndCount;
-            _driver               = inDriver;
+            _getScore             = inGetScore;
             _body                 = GetComponent<Rigidbody2D>();
             CreateInvaders();
             BeginWave();
@@ -390,7 +394,7 @@ namespace UnityInvader
             {
                 return;
             }
-            int reload = GetReloadRate(_driver.Score);
+            int reload = GetReloadRate(_getScore());
             if (CanReload(inOther1.StepCount, inOther2.StepCount, reload) == false)
             {
                 return;
