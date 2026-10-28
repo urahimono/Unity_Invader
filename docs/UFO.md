@@ -11,7 +11,9 @@
 
 ## 通常射撃終了履歴と得点
 
-Playerの`_normalShotEndCount`を唯一の履歴として保持し、読み取り専用のNormalShotEndCountを提供します。Driverは方向を偶奇、得点表位置をcount % 15から導出し、得点表そのものを所有します。方向・表位置の独立カウンタは持ちません。初期履歴は0です。
+Playerの`_normalShotEndCount`を唯一の履歴として保持し、読み取り専用のNormalShotEndCountを提供します。Formationは発進時の最新回数の偶奇から方向を判定し、Driverは得点表位置をcount % 15から導出して得点表そのものを所有します。方向・表位置の独立カウンタは持ちません。初期履歴は0です。
+
+Issue #103ではDriverのUfoMovesRightを削除しました。Driverは初期化時にPlayer.GetNormalShotEndCountのメソッドグループをFunc<long>としてFormationへ渡します。FormationはPlayerに束縛された関数から発進時に値を取得し、Driverを経由せず判定します。IPositionProviderはPositionのみの契約を維持します。出現待ち・Squiggly共有phase・停止/再開・Wave/死亡復帰の処理順は変更しません。
 
 PlayerShotはIHitReceiver.TryReceiveHit(this)成立後にTargetTypeを取得し、自身をInactive化してFlightEnded(HitTargetType)を通知します。Playerは射撃枠解放・履歴更新を完了してShotResolvedを発行し、Driverはその時点の履歴で加点します。Invader命中、Shield吸収、上端、UFO命中で履歴が進み、発射・Pause・強制回収・死亡復帰・B弾では進みません。Shield吸収・上端の通知種別はNoneで加点しません。弾は得点表・Driver・通常弾/B弾の識別を持ちません。
 

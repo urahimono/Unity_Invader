@@ -23,6 +23,7 @@ namespace UnityInvader
         private Ufo       _ufo;
 
         private IPositionProvider _player;
+        private Func<long>        _getNormalShotEndCount;
         private GameplayDriver    _driver;
         private Rigidbody2D       _body;
         private float             _elapsed;
@@ -107,8 +108,12 @@ namespace UnityInvader
             }
         }
 
-        internal void Initialize(GameplayDriver inDriver, IPositionProvider inPlayer)
+        internal void Initialize(GameplayDriver inDriver, IPositionProvider inPlayer, Func<long> inGetNormalShotEndCount)
         {
+            if (inGetNormalShotEndCount == null)
+            {
+                throw new ArgumentNullException(nameof(inGetNormalShotEndCount));
+            }
             if (_invaderPrefab == null)
             {
                 throw new InvalidOperationException("Formation requires its Invader prefab.");
@@ -118,9 +123,10 @@ namespace UnityInvader
             {
                 throw new InvalidOperationException("Formation requires three independent enemy shots and UFO. Run Configure UFO.");
             }
-            _player = inPlayer;
-            _driver = inDriver;
-            _body   = GetComponent<Rigidbody2D>();
+            _player               = inPlayer;
+            _getNormalShotEndCount = inGetNormalShotEndCount;
+            _driver               = inDriver;
+            _body                 = GetComponent<Rigidbody2D>();
             _ufo.Defeated += NotifyUfoDefeated;
             CreateInvaders();
             BeginWave();
@@ -368,7 +374,8 @@ namespace UnityInvader
             }
             if (_ufoPending && _aliveCount >= 8 && _squigglyShot.InFlight == false)
             {
-                if (_ufo.TryLaunch(_driver.UfoMovesRight))
+                bool movingRight = (_getNormalShotEndCount() & 1L) != 0;
+                if (_ufo.TryLaunch(movingRight))
                 {
                     _ufoPending = false;
                 }

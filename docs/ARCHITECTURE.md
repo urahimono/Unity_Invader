@@ -40,7 +40,7 @@ flowchart TD
     Formation -->|Squiggly共有phase / TryLaunch / AdvanceStep / SetPlaying| Ufo
     EnemyShot -->|Trigger / IHitReceiver.TryReceiveHit| Player
     Player -.->|HitAccepted event| Driver
-    Formation -->|IPositionProvider.Position| Player
+    Formation -->|IPositionProvider.Position / Playerに束縛したFuncで終了回数を取得| Player
     Shot -->|Physics2D領域検索 / 移動区間の画素判定| Shield[Shield: 残存画素・局所破壊・描画]
     EnemyShot -->|Physics2D領域検索 / 移動区間の画素判定| Shield
     Driver -->|SetPlaying / 次WaveのBeginWave| Shield
@@ -50,7 +50,7 @@ flowchart TD
 
 | Component | 所有する責務・状態 |
 | --- | --- |
-| GameplayDriver | 入力Readerと全体進行・State・Score・Wave・Livesを所有。PlayerのHitAcceptedとShotResolvedを購読し、更新済みの終了履歴からUFO得点・方向を導出。得点表を所有し、加点後とUpdateでFormation.IsClearedを確認。WaveClearの暫定1秒待機とPlayerDeadの暫定0.5秒待機を管理。PlayerShot参照・終了履歴は持たない |
+| GameplayDriver | 入力Readerと全体進行・State・Score・Wave・Livesを所有。PlayerのHitAcceptedとShotResolvedを購読し、更新済みの終了履歴からUFO得点を導出。得点表を所有し、加点後とUpdateでFormation.IsClearedを確認。WaveClearの暫定1秒待機とPlayerDeadの暫定0.5秒待機を管理。PlayerShot参照・終了履歴は持たない |
 | Shield | 各基の画素占有を所有し、描画・穴通過・方向別局所破壊を担当。弾の移動区間とInvader Colliderのswept boundsを既存Triggerで検索し、残存画素を判定・消去。死亡・停止時は保持、次Waveで初期画像から復元 |
 | DebugCarpetBomb | Editor/Development Build限定のB長押し入力、専用PlayerShot 96発の遅延生成・再利用、23レーンの一巡シャッフル。DriverのState/Waveを読み、非Playing・Driver無効・Wave変更・自身の無効化で専用弾を回収。弾イベントは購読せず、通常終了履歴にも加算しない。命中・Score・全滅・Wave進行は既存Componentへ任せる。製品ビルドにも型とScene参照は残すが入力・生成処理は含めない |
 | DebugFormationSpeed | Formationと同じGameObjectでF長押しを読み、Editor/Development Build限定の内部操作で移動経過時間の倍率を10/1へ設定。FixedUpdate実行順-100でFormationより先に反映し、自身またはFormation無効時は1へ戻す。製品ビルドにも型は残すが入力・倍率処理は含めない |
@@ -58,7 +58,7 @@ flowchart TD
 | Player | 入力値・移動・同時1発の射撃枠とrelease/再押下ゲート、通常弾の終了履歴を所有。FlightEndedで枠解放→履歴加算→ShotResolvedを通知。NormalShotEndCountは値のみ公開し、OwnsShotで所有関係を問い合わせ可能。次Waveで履歴リセット、死亡復帰では保持。HitAcceptedで被弾を通知。直接操作するゲーム内ComponentはPlayerShotだけ |
 | PlayerShot | 構成済みRigidbody2D/RendererとTrigger。GameObject.activeSelfが飛行状態、MonoBehaviour.enabledが進行可否。IHitReceiver.TryReceiveHit(this)成立後にTargetTypeを取得して消費し、FlightEnded(HitTargetType)を一度通知。Shield吸収・上端はNone、ResetFlightは無通知。得点表・通常弾/B弾の識別・Driver参照は持たない |
 | Invader | GameObjectの有効状態による生死、種類別Sprite配列・現在フレームindex・アニメ進行、種類から命中種別への対応付け、被弾反応。Inactive化後にDefeated(個体, 命中元)を一度だけ通知し、Formation参照は持たない |
-| InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、行からの種類選択・配置、集団移動の方向/周期・アニメ進行の共通タイミング、生存数の集計。敵弾/UFOの60Hz時計・種類別phase、3種の発射元/Reload制御。UFOの下降条件・出現カウンタ・開始待ち・Squiggly共有枠。既存_aliveCountからIsClearedを公開。B弾の得点だけ暫定的にDriverへ通知 |
+| InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、行からの種類選択・配置、集団移動の方向/周期・アニメ進行の共通タイミング、生存数の集計。敵弾/UFOの60Hz時計・種類別phase、3種の発射元/Reload制御。UFOの下降条件・出現カウンタ・開始待ち・Squiggly共有枠・発進時の最新通常弾終了回数による方向判定。既存_aliveCountからIsClearedを公開。B弾の得点だけ暫定的にDriverへ通知 |
 | EnemyShot | Kinematic Rigidbody2D、移動step countと速度区分。Formationのphaseから1stepを受け、既存Shield判定と移動を実行。TriggerでPlayerへ被弾受付を依頼し、成立時または画面下端で非アクティブ化して再利用 |
 | Ufo | Kinematic Rigidbody2D、飛行方向、Sprite/Collider。共有phaseから2px移動を受け、退出・被弾で解除。IHitReceiverで命中を受理し、Defeated(source)を所属Formationへ通知。飛行中はGameObject有効状態を正とし、独立時計やScoreを所有しない |
 | ArcadeViewport | 224:256の表示領域と論理px→Unity単位の倍率 |
@@ -143,7 +143,7 @@ EnemyShotは3つの独立したインスタンスで、発射時count=1・移動
 
 ### UFO（Issue #79）
 
-Formationの既存phase 2・下降条件・8体以上の開始条件は維持します。Ufoは移動・被弾・解除、Playerは通常弾終了履歴、Driverは得点表と加点を所有します。Ufo.DefeatedはFormationが購読し、通常弾以外のB弾用の暫定通知としてDriverへ伝えます。DriverはPlayer.OwnsShot(source)で通常弾を除外し、B弾は現在のPlayer履歴で加点します。B弾のInvader撃破も同じ暫定経路で加点後に全滅判定し、通常弾履歴は進めません。B弾の再設計・新規Managerは導入しません。詳細は [UFO](UFO.md) と [ADR-0014](adr/0014-player-shot-results-and-scoring.md) を参照してください。
+Formationの既存phase 2・下降条件・8体以上の開始条件は維持します。Ufoは移動・被弾・解除、Playerは通常弾終了履歴、Driverは得点表と加点を所有します。Issue #103では発進方向の判定もFormationへ移しました。Driverは初期化時にPlayer.GetNormalShotEndCountをFunc<long>として渡し、Formationは発進時にその最新値の偶奇を評価します。回数を複製せず、IPositionProviderはPositionのみの契約を維持します。既存責務内の整理に留まるため、新規ADRは追加しません。Ufo.DefeatedはFormationが購読し、通常弾以外のB弾用の暫定通知としてDriverへ伝えます。DriverはPlayer.OwnsShot(source)で通常弾を除外し、B弾は現在のPlayer履歴で加点します。B弾のInvader撃破も同じ暫定経路で加点後に全滅判定し、通常弾履歴は進めません。FormationのDriver参照はB弾加点・侵攻通知・敵弾Reload用Score参照のため維持します。B弾の再設計・新規Managerは導入しません。詳細は [UFO](UFO.md) と [ADR-0014](adr/0014-player-shot-results-and-scoring.md) を参照してください。
 
 旧モデル・旧Push専用のEditor検証と旧設定ツールは削除しました。代わりに接続・物理設定・Missing Script・Play中の55体と生存集計を確認する `Verify Component Gameplay Setup`、Editor限定の一時停止/再開メニュー、READMEの最小限の操作確認を用意しています。接続チェックは衝突やWave進行の成功を意味しません。
 

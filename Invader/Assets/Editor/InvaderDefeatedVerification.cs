@@ -77,6 +77,7 @@ namespace UnityInvader.Editor
             var ufo         = (Ufo)Read(formation, "_ufo");
             var ufoHandlers = Read(ufo, "Defeated");
             inDriver.EditorSetState(GameState.Playing);
+            VerifyUfoControl(inDriver, formation, player, shot, ufo);
             int score                        = inDriver.Score;
             int notifications                = 0;
             Component source                 = null;
@@ -113,6 +114,8 @@ namespace UnityInvader.Editor
             Call(inDriver, "UpdateWaveClear");
             Require(inDriver.WaveNumber == 2 && Alive(formation) == 55 && player.NormalShotEndCount == 0,
                 "Next wave reset.");
+            VerifyPendingUfoLaunch(formation, ufo, 0);
+            Call(formation, "PreparePlayerRespawn");
             InvaderAnimationVerification.VerifyFirstFrames(invaders);
             Require(invaders.SequenceEqual(formation.GetComponentsInChildren<Invader>(true)), "Reuse the same 55 instances.");
             Require(invaders.All(inInvader => ((Delegate)Read(inInvader, "Defeated")).GetInvocationList()
@@ -141,6 +144,89 @@ namespace UnityInvader.Editor
             invaders[0].gameObject.SetActive(true);
             invaders[0].GetComponent<Collider2D>().enabled = true;
             Require(invaders[0].TryReceiveHit(debugShot), "Unsubscribed individual can accept a hit.");
+        }
+
+        private static void VerifyUfoControl(GameplayDriver inDriver, InvaderFormation inFormation, Player inPlayer,
+            PlayerShot inShot, Ufo inUfo)
+        {
+            Require(ReferenceEquals(((Delegate)Read(inFormation, "_getNormalShotEndCount")).Target, inPlayer),
+                "History reader must be bound to Player, not Driver.");
+            for (int count = 0; count < 4; count++)
+            {
+                Require(inPlayer.NormalShotEndCount == count, "Use actual Player shot-end history.");
+                Call(inFormation, "PreparePlayerRespawn");
+                VerifyPendingUfoLaunch(inFormation, inUfo, count);
+                if (count < 3)
+                {
+                    Require(inShot.TryLaunch(Vector2.zero), "Launch normal shot for history update.");
+                    Call(inShot, "FinishFlight", HitTargetType.None);
+                    Require((int)Read(inUfo, "_direction") == (count % 2 == 1 ? 1 : -1),
+                        "Shot ending during flight does not reverse the current UFO.");
+                }
+            }
+
+            var position = inUfo.GetComponent<Rigidbody2D>().position;
+            int ticks    = (int)Read(inFormation, "_ufoTicksRemaining");
+            inDriver.EditorSetState(GameState.Attract);
+            Call(inFormation, "UpdateEnemyShots");
+            Require(inUfo.gameObject.activeSelf && inUfo.GetComponent<Rigidbody2D>().simulated == false &&
+                inUfo.GetComponent<Rigidbody2D>().position == position &&
+                (int)Read(inFormation, "_ufoTicksRemaining") == ticks && (int)Read(inFormation, "_shotPhase") == 0 &&
+                (double)Read(inFormation, "_shotTickElapsed") == 0d,
+                "Pause preserves UFO occupancy, position and countdown while resetting the shared clock.");
+            inDriver.EditorSetState(GameState.Playing);
+            Require(inUfo.GetComponent<Rigidbody2D>().simulated && (int)Read(inUfo, "_direction") == 1 &&
+                inPlayer.NormalShotEndCount == 3, "Resume preserves flight direction and history.");
+
+            Call(inFormation, "PreparePlayerRespawn");
+            var squiggly = (EnemyShot)Read(inFormation, "_squigglyShot");
+            Require((bool)typeof(EnemyShot).GetMethod("TryLaunch", PrivateInstance).Invoke(squiggly, new object[] { Vector2.zero }),
+                "Launch Squiggly before pending UFO.");
+            Set(inFormation, "_ufoPending", true);
+            Set(inFormation, "_shotPhase", 2);
+            Set(inFormation, "_shotTickElapsed", 0d);
+            Call(inFormation, "UpdateEnemyShots");
+            Require(inUfo.gameObject.activeSelf == false && (bool)Read(inFormation, "_ufoPending") &&
+                (int)Read(squiggly, "_stepCount") == 2, "Shared phase advances occupied Squiggly and leaves UFO pending.");
+            Call(squiggly, "ResetFlight");
+            VerifyPendingUfoLaunch(inFormation, inUfo, 3);
+            Set(inFormation, "_shotPhase", 2);
+            Set(inFormation, "_shotTickElapsed", 0d);
+            Call(inFormation, "UpdateEnemyShots");
+            Require(squiggly.gameObject.activeSelf == false, "UFO occupies the shared phase without launching Squiggly.");
+
+            int lives = inDriver.Lives;
+            Call(inDriver, "NotifyPlayerHit");
+            Set(inDriver, "_playerDeadElapsed", 0.5f);
+            Call(inDriver, "UpdatePlayerDead");
+            Require(inDriver.CurrentState == GameState.Playing && inPlayer.NormalShotEndCount == 3 &&
+                inUfo.gameObject.activeSelf == false && (bool)Read(inFormation, "_ufoPending") == false &&
+                (int)Read(inFormation, "_ufoTicksRemaining") == 0x0600, "Death/respawn resets UFO but retains Player history.");
+            VerifyPendingUfoLaunch(inFormation, inUfo, 3);
+            // Restore the fixture for the existing two-wave scoring checks below.
+            Set(inDriver, "_lives", lives);
+            Call(inPlayer, "ResetShotHistory");
+            Call(inFormation, "BeginWave");
+            Debug.Log("UFO_CONTROL_PASS: Player-bound live history 0..3, Formation launches, shared phase, pause/resume and death/respawn.");
+        }
+
+        private static void VerifyPendingUfoLaunch(InvaderFormation inFormation, Ufo inUfo, long inCount)
+        {
+            Set(inFormation, "_ufoPending", true);
+            Set(inFormation, "_shotPhase", 0);
+            Set(inFormation, "_shotTickElapsed", 0d);
+            Call(inFormation, "UpdateEnemyShots");
+            Require(inUfo.gameObject.activeSelf == false, "Phase 0 cannot launch UFO.");
+            Call(inFormation, "UpdateEnemyShots");
+            int direction = (inCount & 1L) != 0 ? 1 : -1;
+            Require(inUfo.gameObject.activeSelf && (int)Read(inUfo, "_direction") == direction &&
+                (bool)Read(inFormation, "_ufoPending") == false && (int)Read(inFormation, "_shotPhase") == 1,
+                "Phase 2 launches UFO using the latest Player count and consumes pending once.");
+        }
+
+        private static void Set(object inTarget, string inName, object inValue)
+        {
+            inTarget.GetType().GetField(inName, PrivateInstance).SetValue(inTarget, inValue);
         }
 
         private static void Hit(PlayerShot inShot, Invader inInvader)
