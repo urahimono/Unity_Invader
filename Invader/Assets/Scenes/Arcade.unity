@@ -588,13 +588,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.InvaderFormation
   _invaderPrefab: {fileID: 1458270863617279217, guid: 6a72d22b7079b5b46a7f03e5386f157f, type: 3}
-  _frames:
-  - {fileID: -506154701, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
-  - {fileID: -478699213, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
-  - {fileID: -1380865680, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
-  - {fileID: 1723599204, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
-  - {fileID: 1420704182, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
-  - {fileID: -1863489634, guid: 6466408b923d6d24aa3cd47511e9e0f8, type: 3}
   _aliveCount: 0
   _rollingShot: {fileID: 1150688045}
   _plungerShot: {fileID: 1114205932}

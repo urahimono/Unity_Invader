@@ -9,11 +9,9 @@ namespace UnityInvader
     public sealed class InvaderFormation : MonoBehaviour
     {
         [SerializeField]
-        private Invader  _invaderPrefab;
+        private Invader _invaderPrefab;
         [SerializeField]
-        private Sprite[] _frames = new Sprite[6];
-        [SerializeField]
-        private int      _aliveCount;
+        private int     _aliveCount;
 
         [SerializeField]
         private EnemyShot _rollingShot;
@@ -29,7 +27,6 @@ namespace UnityInvader
         private Rigidbody2D       _body;
         private float             _elapsed;
         private int               _direction = 1;
-        private bool              _frameB;
         private bool              _playing;
         private double            _shotTickElapsed;
         private int               _shotPhase;
@@ -112,9 +109,9 @@ namespace UnityInvader
 
         internal void Initialize(GameplayDriver inDriver, IPositionProvider inPlayer)
         {
-            if (_invaderPrefab == null || _frames.Length != 6 || Array.Exists(_frames, inFrame => inFrame == null))
+            if (_invaderPrefab == null)
             {
-                throw new InvalidOperationException("Formation requires its prefab and six frames. Migrate Arcade first.");
+                throw new InvalidOperationException("Formation requires its Invader prefab.");
             }
             if (inPlayer == null || _rollingShot == null || _plungerShot == null || _squigglyShot == null || _ufo == null ||
                 _rollingShot == _plungerShot || _rollingShot == _squigglyShot || _plungerShot == _squigglyShot)
@@ -133,7 +130,6 @@ namespace UnityInvader
         {
             _elapsed             = 0f;
             _direction           = 1;
-            _frameB              = false;
             _plungerColumnIndex  = 0; // Provisional: restart each Wave; preserve on death.
             _squigglyColumnIndex = 0;
             ResetEnemyShots();
@@ -198,15 +194,13 @@ namespace UnityInvader
         {
             for (int row = 0; row < Rows; row++)
             {
-                int type       = row == 0 ? 0 : row < 3 ? 1 : 2;
-                var targetType = type == 0 ? HitTargetType.InvaderTop :
-                    type == 1 ? HitTargetType.InvaderMiddle : HitTargetType.InvaderBottom;
+                var type = row == 0 ? InvaderType.Top : row < 3 ? InvaderType.Middle : InvaderType.Bottom;
                 for (int column = 0; column < Columns; column++)
                 {
                     var invader                     = Instantiate(_invaderPrefab, transform);
                     invader.name                    = $"Invader ({row},{column})";
                     invader.transform.localPosition = new Vector3(column * Spacing, -row * Spacing, 0f) * ArcadeViewport.UnitsPerPixel;
-                    invader.Initialize(_frames[type * 2], _frames[type * 2 + 1], targetType);
+                    invader.Initialize(type);
                     invader.Defeated += NotifyDefeated;
                     _invaders.Add(invader);
                 }
@@ -272,10 +266,9 @@ namespace UnityInvader
                 invader.ErodeShields(movement);
             }
             _body.position = position;
-            _frameB        = _frameB == false;
             foreach (var invader in _invaders)
             {
-                invader.ApplyAnimation(_frameB);
+                invader.AdvanceAnimation();
             }
             CheckInvasion(position);
         }

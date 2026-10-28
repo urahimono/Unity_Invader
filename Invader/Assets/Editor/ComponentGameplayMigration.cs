@@ -11,6 +11,31 @@ namespace UnityInvader.Editor
     {
         public const string PrefabPath = "Assets/Prefabs/Gameplay";
 
+        [MenuItem("Unity Invader/Configure Invader Animation")]
+        public static void ConfigureInvaderAnimation()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                throw new InvalidOperationException("Stop Play Mode before configuring Invader animation.");
+            }
+            if (Application.isBatchMode == false && EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo() == false)
+            {
+                return;
+            }
+            ConfigureInvaderPrefab();
+            var scene     = EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
+            var formation = scene.GetRootGameObjects().SelectMany(inRoot => inRoot.GetComponentsInChildren<InvaderFormation>(true)).Single();
+            // Reserialize this existing component to remove the obsolete Formation Sprite array.
+            // Do not recreate any scene object or change its references/settings.
+            EditorUtility.SetDirty(formation);
+            EditorSceneManager.MarkSceneDirty(scene);
+            if (EditorSceneManager.SaveScene(scene) == false)
+            {
+                throw new IOException("Could not save Arcade Invader animation settings.");
+            }
+            Debug.Log("INVADER_ANIMATION_CONFIGURATION_PASS: existing prefab configured and Arcade saved without regeneration.");
+        }
+
         [MenuItem("Unity Invader/Configure PlayerShot Prefab")]
         public static void ConfigurePlayerShotPrefab()
         {
@@ -83,7 +108,7 @@ namespace UnityInvader.Editor
             var oldRoots = scene.GetRootGameObjects().Where(inRoot =>
                 inRoot.name == "Player" || inRoot.name == "InvaderFormation" || inRoot.name == "PlayerShot").ToArray();
 
-            var invaderPrefab = CreateInvaderPrefab(ordered[0], material);
+            var invaderPrefab = CreateInvaderPrefab(ordered, material);
             var shotPrefab    = CreateShotPrefab(CreateShotSprite(), material);
             var playerPrefab  = CreatePlayerPrefab(playerSprite, material);
             PlayerHitSetup.ConfigurePrefab();
@@ -114,12 +139,6 @@ namespace UnityInvader.Editor
 
             formationData.FindProperty("_invaderPrefab").objectReferenceValue = invaderPrefab.GetComponent<Invader>();
 
-            var frameData       = formationData.FindProperty("_frames");
-            frameData.arraySize = ordered.Length;
-            for (int index = 0; index < ordered.Length; index++)
-            {
-                frameData.GetArrayElementAtIndex(index).objectReferenceValue = ordered[index];
-            }
             formationData.ApplyModifiedPropertiesWithoutUndo();
             var driverData = new SerializedObject(drivers[0]);
 
@@ -183,12 +202,50 @@ namespace UnityInvader.Editor
             }
         }
 
-        private static GameObject CreateInvaderPrefab(Sprite inSprite, Material inMaterial)
+        private static void ConfigureInvaderPrefab()
+        {
+            var frames     = AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Invader/InvaderSprites.png").OfType<Sprite>().ToArray();
+            string[] names = { "TopFrameA", "TopFrameB", "MiddleFrameA", "MiddleFrameB", "BottomFrameA", "BottomFrameB" };
+            var ordered    = names.Select(inName => frames.Single(inSprite => inSprite.name == inName)).ToArray();
+            string path    = PrefabPath + "/Invader.prefab";
+            var contents   = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                ConfigureInvaderFrames(contents.GetComponent<Invader>(), ordered);
+                PrefabUtility.SaveAsPrefabAsset(contents, path);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(contents);
+            }
+        }
+
+        private static void ConfigureInvaderFrames(Invader inInvader, Sprite[] inFrames)
+        {
+            var data             = new SerializedObject(inInvader);
+            string[] frameFields = { "_topFrames", "_middleFrames", "_bottomFrames" };
+            for (int type = 0; type < frameFields.Length; type++)
+            {
+                var frames = data.FindProperty(frameFields[type]);
+                // Preserve configured arrays, including animations with more than two frames.
+                if (frames.arraySize != 0)
+                {
+                    continue;
+                }
+                frames.arraySize = 2;
+                frames.GetArrayElementAtIndex(0).objectReferenceValue = inFrames[type * 2];
+                frames.GetArrayElementAtIndex(1).objectReferenceValue = inFrames[type * 2 + 1];
+            }
+            data.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static GameObject CreateInvaderPrefab(Sprite[] inFrames, Material inMaterial)
         {
             string path  = PrefabPath + "/Invader.prefab";
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (existing != null)
             {
+                ConfigureInvaderPrefab();
                 return existing;
             }
             var instance = new GameObject("Invader");
@@ -197,10 +254,12 @@ namespace UnityInvader.Editor
             {
                 var invader                                         = instance.AddComponent<Invader>();
                 instance.GetComponent<BoxCollider2D>().size         = new Vector2(16f, 8f) * ArcadeViewport.UnitsPerPixel;
-                var renderer                                        = CreateVisual(instance, inSprite, inMaterial, new Vector2(inSprite.bounds.size.x, inSprite.bounds.size.y));
+                var sprite                                          = inFrames[0];
+                var renderer                                        = CreateVisual(instance, sprite, inMaterial, new Vector2(sprite.bounds.size.x, sprite.bounds.size.y));
                 var data                                            = new SerializedObject(invader);
                 data.FindProperty("_renderer").objectReferenceValue = renderer;
                 data.ApplyModifiedPropertiesWithoutUndo();
+                ConfigureInvaderFrames(invader, inFrames);
                 return PrefabUtility.SaveAsPrefabAsset(instance, path);
             }
             finally

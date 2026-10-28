@@ -10,24 +10,36 @@ namespace UnityInvader.Editor
     [InitializeOnLoad]
     public static class InvaderDefeatedVerification
     {
+        private static double _startAfter;
+
         private const string       PendingKey      = "UnityInvader.InvaderDefeatedVerification";
         private const BindingFlags PrivateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
 
         static InvaderDefeatedVerification()
         {
+            _startAfter = EditorApplication.timeSinceStartup + 2d;
             EditorApplication.update += VerifyWhenPlaying;
         }
 
         // Batch entry: omit -quit so the domain reload and Play Mode can complete.
         public static void Run()
         {
-            EditorSceneManager.OpenScene("Assets/Scenes/Arcade.unity");
+            EditorSceneManager.OpenScene("Assets/Scenes/Bootstrap.unity");
             SessionState.SetBool(PendingKey, true);
-            EditorApplication.isPlaying = true;
+            _startAfter = EditorApplication.timeSinceStartup + 2d;
         }
 
         private static void VerifyWhenPlaying()
         {
+            // Batch startup can request another assembly reload after executeMethod returns.
+            // Let imports settle before Play so readonly runtime collections are not lost to that reload.
+            if (SessionState.GetBool(PendingKey, false) && EditorApplication.isPlayingOrWillChangePlaymode == false &&
+                EditorApplication.isCompiling == false && EditorApplication.isUpdating == false &&
+                EditorApplication.timeSinceStartup >= _startAfter)
+            {
+                EditorApplication.isPlaying = true;
+                return;
+            }
             if (SessionState.GetBool(PendingKey, false) == false || EditorApplication.isPlaying == false ||
                 EditorApplication.isCompiling || EditorApplication.isPlayingOrWillChangePlaymode == false)
             {
@@ -55,6 +67,7 @@ namespace UnityInvader.Editor
         private static void Verify(GameplayDriver inDriver)
         {
             ComponentGameplayVerification.Verify();
+            InvaderAnimationVerification.Verify();
             var formation = UnityEngine.Object.FindAnyObjectByType<InvaderFormation>();
             var player    = UnityEngine.Object.FindAnyObjectByType<Player>();
             var shot      = (PlayerShot)Read(player, "_shot");
@@ -100,6 +113,7 @@ namespace UnityInvader.Editor
             Call(inDriver, "UpdateWaveClear");
             Require(inDriver.WaveNumber == 2 && Alive(formation) == 55 && player.NormalShotEndCount == 0,
                 "Next wave reset.");
+            InvaderAnimationVerification.VerifyFirstFrames(invaders);
             Require(invaders.SequenceEqual(formation.GetComponentsInChildren<Invader>(true)), "Reuse the same 55 instances.");
             Require(invaders.All(inInvader => ((Delegate)Read(inInvader, "Defeated")).GetInvocationList()
                 .Count(inHandler => ReferenceEquals(inHandler.Target, formation)) == 1), "One Formation subscription after reuse.");
