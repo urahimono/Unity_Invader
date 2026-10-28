@@ -14,11 +14,15 @@ namespace UnityInvader
         private EnemyShot _squigglyShot;
 
         [NonSerialized]
-        private bool _rollingAttemptReady;
+        private bool   _rollingAttemptReady;
         [NonSerialized]
-        private int  _plungerColumnIndex;
+        private int    _plungerColumnIndex;
         [NonSerialized]
-        private int  _squigglyColumnIndex;
+        private int    _squigglyColumnIndex;
+        [NonSerialized]
+        private double _shotTickElapsed;
+        [NonSerialized]
+        private int    _shotPhase;
 
         [NonSerialized]
         private EnemyShot[]         _shots;
@@ -30,12 +34,18 @@ namespace UnityInvader
         private int                 _columns;
         [NonSerialized]
         private float               _spacing;
+        [NonSerialized]
+        private Func<bool>          _tryProcessUfoPhase;
+        [NonSerialized]
+        private Action              _tickUfoCountdown;
 
         internal bool IsSquigglyInFlight => _shots[Squiggly].InFlight;
 
         private const int Rolling  = 0;
         private const int Plunger  = 1;
         private const int Squiggly = 2;
+
+        private const double ShotTickPeriod = 1d / 60d;
 
         // ROM ColFireTable 0x1D00, indices 0x00..0x0F; one-based columns.
         private static readonly int[] _plungerColumns  = { 1, 7, 1, 1, 1, 4, 11, 1, 6, 3, 1, 1, 11, 9, 2, 8 };
@@ -44,18 +54,56 @@ namespace UnityInvader
         private static readonly int[] _reloadScoreMsb  = { 0x02, 0x10, 0x20, 0x30 };
         private static readonly int[] _reloadRates     = { 0x30, 0x10, 0x0B, 0x08, 0x07 };
 
-        internal void Initialize(Func<int, Vector2?> inGetColumnMuzzle, Func<int> inGetScore, int inColumns, float inSpacing)
+        internal void Initialize(Func<int, Vector2?> inGetColumnMuzzle, Func<int> inGetScore, int inColumns, float inSpacing,
+            Func<bool> inTryProcessUfoPhase, Action inTickUfoCountdown)
         {
             if (_rollingShot == null || _plungerShot == null || _squigglyShot == null ||
                 _rollingShot == _plungerShot || _rollingShot == _squigglyShot || _plungerShot == _squigglyShot)
             {
                 throw new ArgumentException("Three independent enemy shots are required.");
             }
-            _shots           = new[] { _rollingShot, _plungerShot, _squigglyShot };
-            _getColumnMuzzle = inGetColumnMuzzle ?? throw new ArgumentNullException(nameof(inGetColumnMuzzle));
-            _getScore        = inGetScore ?? throw new ArgumentNullException(nameof(inGetScore));
-            _columns         = inColumns;
-            _spacing         = inSpacing;
+            _shots             = new[] { _rollingShot, _plungerShot, _squigglyShot };
+            _getColumnMuzzle   = inGetColumnMuzzle ?? throw new ArgumentNullException(nameof(inGetColumnMuzzle));
+            _getScore          = inGetScore ?? throw new ArgumentNullException(nameof(inGetScore));
+            _columns           = inColumns;
+            _spacing           = inSpacing;
+            _tryProcessUfoPhase= inTryProcessUfoPhase ?? throw new ArgumentNullException(nameof(inTryProcessUfoPhase));
+            _tickUfoCountdown  = inTickUfoCountdown ?? throw new ArgumentNullException(nameof(inTickUfoCountdown));
+        }
+
+        internal void Update(Vector2 inPlayerPosition, Vector2 inFormationPosition, int inAliveCount)
+        {
+            _shotTickElapsed += Time.fixedDeltaTime;
+            while (_shotTickElapsed + 1e-7d >= ShotTickPeriod)
+            {
+                // Do not accumulate a negative rounding residue from the float fixed delta.
+                _shotTickElapsed = Math.Max(0d, _shotTickElapsed - ShotTickPeriod);
+                switch (_shotPhase)
+                {
+                    case 0:
+                        ProcessRolling(inPlayerPosition, inFormationPosition);
+                        break;
+                    case 1:
+                        ProcessPlunger(inAliveCount);
+                        break;
+                    case 2:
+                        if (_tryProcessUfoPhase() == false)
+                        {
+                            ProcessSquiggly();
+                        }
+                        break;
+                }
+                _tickUfoCountdown(); // ROM 007E: TimeToSaucer follows the object work.
+                // ROM task timer counts down: 0 (Rolling), 2 (Squiggly), 1 (Plunger).
+                _shotPhase = (_shotPhase + 2) % 3;
+            }
+        }
+
+        internal void ResetClock()
+        {
+            // Initial relative phase is a Unity approximation; do not catch up paused time.
+            _shotTickElapsed = 0d;
+            _shotPhase       = 0;
         }
 
         internal void PreparePhysicsStep()

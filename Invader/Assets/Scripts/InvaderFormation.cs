@@ -25,8 +25,6 @@ namespace UnityInvader
         private float               _elapsed;
         private int                 _direction = 1;
         private bool                _playing;
-        private double              _shotTickElapsed;
-        private int                 _shotPhase;
         private int                 _ufoTicksRemaining;
         private bool                _ufoPending;
 
@@ -47,8 +45,6 @@ namespace UnityInvader
         private const    float         MaximumX   = (ArcadeViewport.ScreenWidth / 2f - CellSize / 2f - (Columns - 1) * Spacing) * ArcadeViewport.UnitsPerPixel;
         private readonly List<Invader> _invaders  = new List<Invader>();
 
-        private const double ShotTickPeriod = 1d / 60d;
-
         private const int   UfoReloadTicks = 0x0600;
         private const float FirstWaveY    = (208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
         // Provisional sprite-center anchor, not the ROM's rotated drawing coordinate.
@@ -65,7 +61,7 @@ namespace UnityInvader
         private void FixedUpdate()
         {
             UpdateFormation();
-            UpdateEnemyShots();
+            UpdateAttacks();
         }
 
         private void OnDisable()
@@ -110,7 +106,8 @@ namespace UnityInvader
             }
             _player               = inPlayer;
             _getNormalShotEndCount = inGetNormalShotEndCount;
-            _enemyShots.Initialize(GetColumnMuzzle, inGetScore, Columns, Spacing * ArcadeViewport.UnitsPerPixel);
+            _enemyShots.Initialize(GetColumnMuzzle, inGetScore, Columns, Spacing * ArcadeViewport.UnitsPerPixel,
+                TryProcessUfoPhase, TickUfoCountdown);
             _body = GetComponent<Rigidbody2D>();
             CreateInvaders();
             BeginWave();
@@ -121,7 +118,7 @@ namespace UnityInvader
             _elapsed             = 0f;
             _direction           = 1;
             _enemyShots.BeginWave();
-            ResetShotClock();
+            _enemyShots.ResetClock();
             ResetUfo();
 
             var initialPosition = new Vector2(32f - ArcadeViewport.ScreenWidth / 2f,
@@ -145,7 +142,7 @@ namespace UnityInvader
             if (inPlaying == false)
             {
                 _elapsed = 0f;
-                ResetShotClock();
+                _enemyShots.ResetClock();
             }
             ApplyPlayingState();
         }
@@ -164,7 +161,7 @@ namespace UnityInvader
         {
             // Clear all slots without resetting the rack, column pointers or movement state.
             _enemyShots.ResetFlights();
-            ResetShotClock();
+            _enemyShots.ResetClock();
             ResetUfo();
         }
 
@@ -255,14 +252,7 @@ namespace UnityInvader
             }
         }
 
-        private void ResetShotClock()
-        {
-            // Initial relative phase is a Unity approximation; do not catch up paused time.
-            _shotTickElapsed = 0d;
-            _shotPhase       = 0;
-        }
-
-        private void UpdateEnemyShots()
+        private void UpdateAttacks()
         {
             if (_playing == false)
             {
@@ -270,27 +260,7 @@ namespace UnityInvader
             }
             _enemyShots.PreparePhysicsStep();
             _ufo.PreparePhysicsStep();
-            _shotTickElapsed += Time.fixedDeltaTime;
-            while (_shotTickElapsed + 1e-7d >= ShotTickPeriod)
-            {
-                // Do not accumulate a negative rounding residue from the float fixed delta.
-                _shotTickElapsed = Math.Max(0d, _shotTickElapsed - ShotTickPeriod);
-                switch (_shotPhase)
-                {
-                    case 0:
-                        _enemyShots.ProcessRolling(_player.Position, _body.position);
-                        break;
-                    case 1:
-                        _enemyShots.ProcessPlunger(_aliveCount);
-                        break;
-                    case 2:
-                        ProcessUfoOrSquiggly();
-                        break;
-                }
-                TickUfoCountdown(); // ROM 007E: TimeToSaucer follows the object work.
-                // ROM task timer counts down: 0 (Rolling), 2 (Squiggly), 1 (Plunger).
-                _shotPhase = (_shotPhase + 2) % 3;
-            }
+            _enemyShots.Update(_player.Position, _body.position, _aliveCount);
         }
 
         private void ResetUfo()
@@ -315,12 +285,12 @@ namespace UnityInvader
             _ufoTicksRemaining--;
         }
 
-        private void ProcessUfoOrSquiggly()
+        private bool TryProcessUfoPhase()
         {
             if (_ufo.InFlight)
             {
                 _ufo.AdvanceStep();
-                return;
+                return true;
             }
             if (_ufoPending && _aliveCount >= 8 && _enemyShots.IsSquigglyInFlight == false)
             {
@@ -329,9 +299,9 @@ namespace UnityInvader
                 {
                     _ufoPending = false;
                 }
-                return;
+                return true;
             }
-            _enemyShots.ProcessSquiggly();
+            return false;
         }
 
         private Vector2? GetColumnMuzzle(int inColumn)

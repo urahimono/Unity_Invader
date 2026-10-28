@@ -77,6 +77,7 @@ namespace UnityInvader.Editor
             var ufo = (Ufo)Read(formation, "_ufo");
             inDriver.EditorSetState(GameState.Playing);
             VerifyUfoControl(inDriver, formation, player, shot, ufo);
+            VerifyAttackClock(formation, ufo);
             VerifyScoreReload(inDriver, formation, enemies);
             VerifyEnemyShotController(inDriver, formation, invaders, enemies);
             var bomb = inDriver.GetComponent<DebugCarpetBomb>();
@@ -179,7 +180,7 @@ namespace UnityInvader.Editor
             Call(inFormation, "BeginWave");
             for (int phase = 0; phase < 4; phase++)
             {
-                Set(inFormation, "_shotTickElapsed", 0d);
+                Set(Read(inFormation, "_enemyShots"), "_shotTickElapsed", 0d);
                 if (phase >= 2)
                 {
                     foreach (var shot in inEnemies.Where(inShot => inShot.gameObject.activeSelf))
@@ -187,8 +188,8 @@ namespace UnityInvader.Editor
                         Set(shot, "_stepCount", 49);
                     }
                 }
-                Call(inFormation, "UpdateEnemyShots");
-                Require((int)Read(inFormation, "_shotPhase") == new[] { 2, 1, 0, 2 }[phase], "Shared phase order 0/2/1/0.");
+                Call(inFormation, "UpdateAttacks");
+                Require((int)Read(Read(inFormation, "_enemyShots"), "_shotPhase") == new[] { 2, 1, 0, 2 }[phase], "Shared phase order 0/2/1/0.");
                 Require(inEnemies.Count(inShot => inShot.gameObject.activeSelf) == Math.Min(phase, 3), "Rolling skips first attempt; each later phase launches its type.");
             }
             Call(controller, "SetFast", true);
@@ -464,11 +465,11 @@ namespace UnityInvader.Editor
             var position = inUfo.GetComponent<Rigidbody2D>().position;
             int ticks    = (int)Read(inFormation, "_ufoTicksRemaining");
             inDriver.EditorSetState(GameState.Attract);
-            Call(inFormation, "UpdateEnemyShots");
+            Call(inFormation, "UpdateAttacks");
             Require(inUfo.gameObject.activeSelf && inUfo.GetComponent<Rigidbody2D>().simulated == false &&
                 inUfo.GetComponent<Rigidbody2D>().position == position &&
-                (int)Read(inFormation, "_ufoTicksRemaining") == ticks && (int)Read(inFormation, "_shotPhase") == 0 &&
-                (double)Read(inFormation, "_shotTickElapsed") == 0d,
+                (int)Read(inFormation, "_ufoTicksRemaining") == ticks && (int)Read(Read(inFormation, "_enemyShots"), "_shotPhase") == 0 &&
+                (double)Read(Read(inFormation, "_enemyShots"), "_shotTickElapsed") == 0d,
                 "Pause preserves UFO occupancy, position and countdown while resetting the shared clock.");
             inDriver.EditorSetState(GameState.Playing);
             Require(inUfo.GetComponent<Rigidbody2D>().simulated && (int)Read(inUfo, "_direction") == 1 &&
@@ -479,16 +480,16 @@ namespace UnityInvader.Editor
             Require((bool)typeof(EnemyShot).GetMethod("TryLaunch", PrivateInstance).Invoke(squiggly, new object[] { Vector2.zero }),
                 "Launch Squiggly before pending UFO.");
             Set(inFormation, "_ufoPending", true);
-            Set(inFormation, "_shotPhase", 2);
-            Set(inFormation, "_shotTickElapsed", 0d);
-            Call(inFormation, "UpdateEnemyShots");
+            Set(Read(inFormation, "_enemyShots"), "_shotPhase", 2);
+            Set(Read(inFormation, "_enemyShots"), "_shotTickElapsed", 0d);
+            Call(inFormation, "UpdateAttacks");
             Require(inUfo.gameObject.activeSelf == false && (bool)Read(inFormation, "_ufoPending") &&
                 (int)Read(squiggly, "_stepCount") == 2, "Shared phase advances occupied Squiggly and leaves UFO pending.");
             Call(squiggly, "ResetFlight");
             VerifyPendingUfoLaunch(inFormation, inUfo, 3);
-            Set(inFormation, "_shotPhase", 2);
-            Set(inFormation, "_shotTickElapsed", 0d);
-            Call(inFormation, "UpdateEnemyShots");
+            Set(Read(inFormation, "_enemyShots"), "_shotPhase", 2);
+            Set(Read(inFormation, "_enemyShots"), "_shotTickElapsed", 0d);
+            Call(inFormation, "UpdateAttacks");
             Require(squiggly.gameObject.activeSelf == false, "UFO occupies the shared phase without launching Squiggly.");
 
             int lives = inDriver.Lives;
@@ -506,17 +507,81 @@ namespace UnityInvader.Editor
             Debug.Log("UFO_CONTROL_PASS: Player-bound live history 0..3, Formation launches, shared phase, pause/resume and death/respawn.");
         }
 
+        private static void VerifyAttackClock(InvaderFormation inFormation, Ufo inUfo)
+        {
+            var controller = Read(inFormation, "_enemyShots");
+            var processUfo = (Func<bool>)Read(controller, "_tryProcessUfoPhase");
+            var countdown  = (Action)Read(controller, "_tickUfoCountdown");
+            var order      = new System.Collections.Generic.List<string>();
+            Call(inFormation, "BeginWave");
+            inFormation.GetComponent<Rigidbody2D>().position -= Vector2.up;
+            Set(inFormation, "_ufoTicksRemaining", 0);
+            Set(controller, "_tryProcessUfoPhase", (Func<bool>)(() =>
+            {
+                order.Add("ufo");
+                return processUfo();
+            }));
+            Set(controller, "_tickUfoCountdown", (Action)(() =>
+            {
+                order.Add("tick" + Read(controller, "_shotPhase"));
+                countdown();
+            }));
+            try
+            {
+                for (int step = 0; step < 5; step++)
+                {
+                    Call(inFormation, "UpdateAttacks");
+                    if (step == 0)
+                    {
+                        Require(inUfo.gameObject.activeSelf == false && (bool)Read(inFormation, "_ufoPending"),
+                            "Countdown expiry follows phase 0; UFO waits for phase 2.");
+                    }
+                }
+                Require(string.Join(",", order) == "tick0,ufo,tick2,tick1,tick0,ufo,tick2,tick1" &&
+                    (int)Read(controller, "_shotPhase") == 0 &&
+                    Math.Abs((double)Read(controller, "_shotTickElapsed")) < 1e-7d &&
+                    (int)Read(inFormation, "_ufoTicksRemaining") == 0x0600 - 6 && inUfo.gameObject.activeSelf,
+                    "Five 0.02s updates execute six ordered 60Hz ticks, including two ticks in the last step.");
+            }
+            finally
+            {
+                Set(controller, "_tryProcessUfoPhase", processUfo);
+                Set(controller, "_tickUfoCountdown", countdown);
+            }
+            var squiggly = (EnemyShot)Read(controller, "_squigglyShot");
+            foreach (int alive in new[] { 7, 8 })
+            {
+                Call(inFormation, "BeginWave");
+                Set(inFormation, "_aliveCount", alive);
+                Set(inFormation, "_ufoPending", true);
+                Set(controller, "_shotPhase", 2);
+                Call(inFormation, "UpdateAttacks");
+                Require(inUfo.gameObject.activeSelf == (alive == 8) && squiggly.gameObject.activeSelf == (alive == 7),
+                    "Shared phase preserves the eight-Invader UFO threshold.");
+            }
+            Call(inFormation, "PreparePlayerRespawn");
+            Set(inFormation, "_ufoPending", true);
+            Call(inUfo, "SetPlaying", false);
+            Set(controller, "_shotPhase", 2);
+            Call(inFormation, "UpdateAttacks");
+            Require(inUfo.gameObject.activeSelf == false && squiggly.gameObject.activeSelf == false &&
+                (bool)Read(inFormation, "_ufoPending") && (int)Read(controller, "_shotPhase") == 1,
+                "Failed UFO launch consumes phase 2 without falling back to Squiggly.");
+            Call(inFormation, "BeginWave");
+            Debug.Log("ATTACK_CLOCK_PASS: 60Hz residue/multiple ticks, countdown order, UFO threshold and failed launch.");
+        }
+
         private static void VerifyPendingUfoLaunch(InvaderFormation inFormation, Ufo inUfo, long inCount)
         {
             Set(inFormation, "_ufoPending", true);
-            Set(inFormation, "_shotPhase", 0);
-            Set(inFormation, "_shotTickElapsed", 0d);
-            Call(inFormation, "UpdateEnemyShots");
+            Set(Read(inFormation, "_enemyShots"), "_shotPhase", 0);
+            Set(Read(inFormation, "_enemyShots"), "_shotTickElapsed", 0d);
+            Call(inFormation, "UpdateAttacks");
             Require(inUfo.gameObject.activeSelf == false, "Phase 0 cannot launch UFO.");
-            Call(inFormation, "UpdateEnemyShots");
+            Call(inFormation, "UpdateAttacks");
             int direction = (inCount & 1L) != 0 ? 1 : -1;
             Require(inUfo.gameObject.activeSelf && (int)Read(inUfo, "_direction") == direction &&
-                (bool)Read(inFormation, "_ufoPending") == false && (int)Read(inFormation, "_shotPhase") == 1,
+                (bool)Read(inFormation, "_ufoPending") == false && (int)Read(Read(inFormation, "_enemyShots"), "_shotPhase") == 1,
                 "Phase 2 launches UFO using the latest Player count and consumes pending once.");
         }
 

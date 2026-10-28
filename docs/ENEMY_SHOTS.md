@@ -32,7 +32,7 @@ ScoreはDriverが所有し、初期化時に渡す`Func<int>`（`() => Score`）
 
 ## Unityでの制御と近似
 
-Formation内だけに1/60秒の蓄積時計を持ち、種類別phaseでEnemyShotControllerのProcessRolling/ProcessPlunger/ProcessSquigglyへ発射試行または飛行中の1stepを依頼します。shotSyncの種類対応とタイマーの下降順を使い、phaseは**0→2→1→0**です。同じ種類の更新は3仮想tickごとになります。暫定2秒周期・1秒位相差のInspector設定は廃止しました。
+EnemyShotControllerが1/60秒の蓄積時計と種類別phaseを所有し、3種類の発射試行または飛行中の1stepを管理します。Formationは移動後に敵弾→UFOのPreparePhysicsStepを行い、Controller.Updateへ位置・生存数を渡します。phase 2はFormationのUFO処理コールバックが消費しなかった場合だけSquigglyを処理します。各tickの処理後・phase進行前にFormationのUFOカウンタ更新を呼びます（Issue #116）。shotSyncの種類対応とタイマーの下降順を使い、phaseは**0→2→1→0**です。同じ種類の更新は3仮想tickごとになります。暫定2秒周期・1秒位相差のInspector設定は廃止しました。
 
 EnemyShot自身の独立したFixedUpdate時計はなくし、選ばれたphaseから`AdvanceStep`を呼びます。位置の正は引き続きRigidbody2Dです。移動先と既存Shield画素判定・下端消滅・Player Trigger処理はEnemyShotが担当し、Formationへ衝突処理は移していません。通常4px/step、残り8体以下で5px/stepは3種類に適用します。
 
