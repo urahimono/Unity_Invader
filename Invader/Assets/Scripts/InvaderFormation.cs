@@ -102,10 +102,6 @@ namespace UnityInvader
                     invader.Defeated -= NotifyDefeated;
                 }
             }
-            if (_ufo != null)
-            {
-                _ufo.Defeated -= NotifyUfoDefeated;
-            }
         }
 
         internal void Initialize(GameplayDriver inDriver, IPositionProvider inPlayer, Func<long> inGetNormalShotEndCount)
@@ -127,7 +123,6 @@ namespace UnityInvader
             _getNormalShotEndCount = inGetNormalShotEndCount;
             _driver               = inDriver;
             _body                 = GetComponent<Rigidbody2D>();
-            _ufo.Defeated += NotifyUfoDefeated;
             CreateInvaders();
             BeginWave();
         }
@@ -179,8 +174,6 @@ namespace UnityInvader
             _rollingShot.SetFast(_aliveCount <= 8);
             _plungerShot.SetFast(_aliveCount <= 8);
             _squigglyShot.SetFast(_aliveCount <= 8);
-            // Temporary scoring path for B shots; normal shots score after Player updates history.
-            _driver.NotifyDebugShotHit(inSource, inInvader.TargetType);
         }
 
         internal void PreparePlayerRespawn()
@@ -188,12 +181,6 @@ namespace UnityInvader
             // Clear all slots without resetting the rack, column pointers or movement state.
             ResetEnemyShots();
             ResetUfo();
-        }
-
-        private void NotifyUfoDefeated(Component inSource)
-        {
-            // Temporary scoring path for B shots, whose lifecycle is outside Player.
-            _driver.NotifyDebugShotHit(inSource, HitTargetType.Ufo);
         }
 
         private void CreateInvaders()

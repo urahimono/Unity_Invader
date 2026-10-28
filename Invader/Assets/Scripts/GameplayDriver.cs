@@ -92,16 +92,6 @@ namespace UnityInvader
             }
         }
 
-        // Temporary compatibility for DebugCarpetBomb, which owns its shots outside Player.
-        internal void NotifyDebugShotHit(Component inSource, HitTargetType inTargetType)
-        {
-            if (_player.OwnsShot(inSource))
-            {
-                return;
-            }
-            NotifyShotResolved(inTargetType);
-        }
-
         internal void NotifyPlayerHit()
         {
             if (_initialized == false || isActiveAndEnabled == false || _currentState != GameState.Playing || _lives <= 0)
@@ -123,7 +113,7 @@ namespace UnityInvader
             ChangeState(GameState.GameOver);
         }
 
-        private void NotifyShotResolved(HitTargetType inTargetType)
+        internal void NotifyShotResolved(HitTargetType inTargetType)
         {
             if (_initialized == false || isActiveAndEnabled == false || _currentState != GameState.Playing)
             {

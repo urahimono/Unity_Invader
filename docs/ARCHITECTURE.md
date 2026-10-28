@@ -31,10 +31,11 @@ flowchart TD
     Shot -->|IHitReceiver.TryReceiveHit(this)| Ufo[Ufo: 移動・被弾・解除]
     Shot -.->|FlightEnded: 命中種別| Player
     Player -.->|ShotResolved: 履歴更新済みの命中結果| Driver
-    Bomb[DebugCarpetBomb] -->|TryLaunchのみ| Shot
-    Ufo -.->|Defeated(source)を購読| Formation
+    Bomb[DebugCarpetBomb] -->|TryLaunch / ResetFlight| Shot
+    Shot -.->|B弾のFlightEnded| Bomb
+    Bomb -->|共通NotifyShotResolved| Driver
     Invader -.->|Defeated個体・命中元を購読| Formation
-    Formation -->|B弾の暫定得点通知・侵攻通知 / IsCleared| Driver
+    Formation -->|侵攻通知 / IsCleared| Driver
     Formation -->|配置・アニメ・再開| Invader
     Formation -->|種類別phase / TryLaunch / AdvanceStep / SetPlaying| EnemyShot[3種類のEnemyShot: 下降・画面外消滅・再利用]
     Formation -->|Squiggly共有phase / TryLaunch / AdvanceStep / SetPlaying| Ufo
@@ -52,15 +53,15 @@ flowchart TD
 | --- | --- |
 | GameplayDriver | 入力Readerと全体進行・State・Score・Wave・Livesを所有。PlayerのHitAcceptedとShotResolvedを購読し、更新済みの終了履歴からUFO得点を導出。得点表を所有し、加点後とUpdateでFormation.IsClearedを確認。WaveClearの暫定1秒待機とPlayerDeadの暫定0.5秒待機を管理。PlayerShot参照・終了履歴は持たない |
 | Shield | 各基の画素占有を所有し、描画・穴通過・方向別局所破壊を担当。弾の移動区間とInvader Colliderのswept boundsを既存Triggerで検索し、残存画素を判定・消去。死亡・停止時は保持、次Waveで初期画像から復元 |
-| DebugCarpetBomb | Editor/Development Build限定のB長押し入力、専用PlayerShot 96発の遅延生成・再利用、23レーンの一巡シャッフル。DriverのState/Waveを読み、非Playing・Driver無効・Wave変更・自身の無効化で専用弾を回収。弾イベントは購読せず、通常終了履歴にも加算しない。命中・Score・全滅・Wave進行は既存Componentへ任せる。製品ビルドにも型とScene参照は残すが入力・生成処理は含めない |
+| DebugCarpetBomb | Editor/Development Build限定のB長押し入力、専用PlayerShot 96発の遅延生成・再利用、23レーンの一巡シャッフル。DriverのState/Waveを読み、非Playing・Driver無効・Wave変更・自身の無効化で専用弾を回収。生成時にFlightEndedを一度購読し、Driverの共通NotifyShotResolvedへ命中種別を渡す。破棄時に解除し、Playerの通常終了履歴には加算しない。Score・全滅・Wave進行はDriverへ任せる。製品ビルドにも型とScene参照は残すが入力・生成・結果通知処理は含めない |
 | DebugFormationSpeed | Formationと同じGameObjectでF長押しを読み、Editor/Development Build限定の内部操作で移動経過時間の倍率を10/1へ設定。FixedUpdate実行順-100でFormationより先に反映し、自身またはFormation無効時は1へ戻す。製品ビルドにも型は残すが入力・倍率処理は含めない |
 | DebugStatusOverlay | ArcadeのDriverと同じGameObjectで、State・Lives・Wave・Scoreの読み取り専用enum/intを描画時に取得。状態の複製や進行操作を行わず、非Playingでも表示。OnGUIによる開発用表示はEditor/Development Buildのみ有効で、Componentの型は製品ビルドにも残す |
-| Player | 入力値・移動・同時1発の射撃枠とrelease/再押下ゲート、通常弾の終了履歴を所有。FlightEndedで枠解放→履歴加算→ShotResolvedを通知。NormalShotEndCountは値のみ公開し、OwnsShotで所有関係を問い合わせ可能。次Waveで履歴リセット、死亡復帰では保持。HitAcceptedで被弾を通知。直接操作するゲーム内ComponentはPlayerShotだけ |
+| Player | 入力値・移動・同時1発の射撃枠とrelease/再押下ゲート、通常弾の終了履歴を所有。FlightEndedで枠解放→履歴加算→ShotResolvedを通知。NormalShotEndCountは値のみ公開。次Waveで履歴リセット、死亡復帰では保持。HitAcceptedで被弾を通知。直接操作するゲーム内ComponentはPlayerShotだけ |
 | PlayerShot | 構成済みRigidbody2D/RendererとTrigger。GameObject.activeSelfが飛行状態、MonoBehaviour.enabledが進行可否。IHitReceiver.TryReceiveHit(this)成立後にTargetTypeを取得して消費し、FlightEnded(HitTargetType)を一度通知。Shield吸収・上端はNone、ResetFlightは無通知。得点表・通常弾/B弾の識別・Driver参照は持たない |
 | Invader | GameObjectの有効状態による生死、種類別Sprite配列・現在フレームindex・アニメ進行、種類から命中種別への対応付け、被弾反応。Inactive化後にDefeated(個体, 命中元)を一度だけ通知し、Formation参照は持たない |
-| InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、行からの種類選択・配置、集団移動の方向/周期・アニメ進行の共通タイミング、生存数の集計。敵弾/UFOの60Hz時計・種類別phase、3種の発射元/Reload制御。UFOの下降条件・出現カウンタ・開始待ち・Squiggly共有枠・発進時の最新通常弾終了回数による方向判定。既存_aliveCountからIsClearedを公開。B弾の得点だけ暫定的にDriverへ通知 |
+| InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、行からの種類選択・配置、集団移動の方向/周期・アニメ進行の共通タイミング、生存数の集計。敵弾/UFOの60Hz時計・種類別phase、3種の発射元/Reload制御。UFOの下降条件・出現カウンタ・開始待ち・Squiggly共有枠・発進時の最新通常弾終了回数による方向判定。既存_aliveCountからIsClearedを公開。弾の得点通知は行わない |
 | EnemyShot | Kinematic Rigidbody2D、移動step countと速度区分。Formationのphaseから1stepを受け、既存Shield判定と移動を実行。TriggerでPlayerへ被弾受付を依頼し、成立時または画面下端で非アクティブ化して再利用 |
-| Ufo | Kinematic Rigidbody2D、飛行方向、Sprite/Collider。共有phaseから2px移動を受け、退出・被弾で解除。IHitReceiverで命中を受理し、Defeated(source)を所属Formationへ通知。飛行中はGameObject有効状態を正とし、独立時計やScoreを所有しない |
+| Ufo | Kinematic Rigidbody2D、飛行方向、Sprite/Collider。共有phaseから2px移動を受け、退出・被弾で解除。IHitReceiverで命中を受理し、自身を非アクティブ化。飛行中はGameObject有効状態を正とし、独立時計やScoreを所有しない |
 | ArcadeViewport | 224:256の表示領域と論理px→Unity単位の倍率 |
 
 `GameplaySimulation`、`PlayerUnit`、`PlayerBody`、`InvaderSlot`、`InvaderFormationSimulation`、旧表示Controller2種、表示/検証スナップショットは削除しました。互換モデルや旧AABB判定は残しません。管理Componentや配列を返すGetterもありません。
@@ -78,7 +79,7 @@ var shot = Instantiate(shotPrefab);
 shot.TryLaunch(position);
 ```
 
-この利用例に購読者・Driverや準備呼出順は不要です。通常ゲームのPlayerは進行に応じてSetPlayingで明示的に停止/再開します。B弾はTryLaunchで発射しResetFlightで回収するだけです。PlayerはAwakeでFlightEndedを一度購読しOnDestroyで解除します。入力時点の射撃枠を判断し、飛行中の押下は予約しません。RespawnのResetFlightは無通知なので射撃枠も明示的に解放します。B弾はTryLaunchの成否でプールを探し、発射成功でのみレーンを消費します。初回のプール生成時にレーンをシャッフルし、以後は一巡の最後の発射成功時に次巡を準備します。Playerは所有期間中FlightEnded購読を、DriverはPlayerのShotResolved購読を保持するため、一時停止やWaveClearへ遷移した命中処理の途中でも自然終了通知を取りこぼしません。通知の判断履歴は [ADR-0010](adr/0010-player-shot-lifecycle-and-events.md)、現在の状態表現は [ADR-0012](adr/0012-player-shot-unity-state.md) を参照してください。
+この利用例に購読者・Driverや準備呼出順は不要です。通常ゲームのPlayerは進行に応じてSetPlayingで明示的に停止/再開します。B弾の所有者DebugCarpetBombはTryLaunchで発射しResetFlightで回収し、生成時にFlightEndedを一度購読してOnDestroyで解除します。PlayerはAwakeでFlightEndedを一度購読しOnDestroyで解除します。入力時点の射撃枠を判断し、飛行中の押下は予約しません。RespawnのResetFlightは無通知なので射撃枠も明示的に解放します。B弾はTryLaunchの成否でプールを探し、発射成功でのみレーンを消費します。初回のプール生成時にレーンをシャッフルし、以後は一巡の最後の発射成功時に次巡を準備します。Playerは所有期間中FlightEnded購読を、DriverはPlayerのShotResolved購読を保持するため、一時停止やWaveClearへ遷移した命中処理の途中でも自然終了通知を取りこぼしません。通知の判断履歴は [ADR-0010](adr/0010-player-shot-lifecycle-and-events.md)、現在の状態表現は [ADR-0012](adr/0012-player-shot-unity-state.md) を参照してください。
 
 Issue #97では通常弾の結果をPlayerShot→Player→Driverへ変更しました。PlayerはAwakeでFlightEndedを一度購読しOnDestroyで解除、DriverはStartでPlayer.HitAcceptedとShotResolvedを購読しOnDestroyで解除します。Pause/Disableでは購読を保持します。PlayerInputReaderはDriverのOnEnableで生成、OnDisableでDisposeし、Updateで取得したPlayerInputStateだけをPlayer.SetInputへ渡します。PlayerはFixedUpdateまで短い発射入力を保持します。停止・無効化では未処理の入力値・発射予約だけを破棄し、射撃受付状態（_fireReady）は保持します。WaveClear・Pauseからの再開時に新たなreleaseを一律には要求しません。Respawn時は_fireReady=falseとし、Playing中のrelease→再押下を必要とします。過去の直接購読判断はADR-0011、現在の判断は [ADR-0014](adr/0014-player-shot-results-and-scoring.md) を参照してください。
 
@@ -88,7 +89,7 @@ Invaderは5×11個を一度生成し、次Waveでも同じ個体・Rendererを�
 
 Issue #101では画像参照・現在フレームindexをInvaderが所有します。BeginWaveで先頭へ戻し、Formationの既存MoveFormationから55体すべてへAdvanceAnimationを呼びます。個体ごとの時計は追加せず、死亡個体のフレーム進行も従来どおりです。停止/再開・死亡復帰でフレームをリセットしません。保存済み設定の限定更新はConfigure Invader Animationを使い、Arcadeの再生成は行いません。生成用Editorコードも既存Prefabの未設定配列を補完し、設定済みの任意長配列を維持します。既存の個体表示責務への適合であり、新規ADRは追加しません。
 
-Issue #99ではFormationがCreateInvadersで各個体のDefeatedを一度だけ購読し、OnDestroyで解除します。BeginWaveや一時停止では購読を変更しません。通知は同期的に既存NotifyDefeatedへ届き、生存数・8体以下の敵弾速度・命中元・通常弾/B弾の得点分岐・WaveClearの順序を維持します。既存のイベント通知原則の適用であり、新しいADRは追加しません。
+Issue #99ではFormationがCreateInvadersで各個体のDefeatedを一度だけ購読し、OnDestroyで解除するようにしました。BeginWaveや一時停止では購読を変更しません。現在のNotifyDefeatedは生存数と8体以下の敵弾速度だけを更新します。Issue #105で得点通知を弾の所有者へ移したため、Formationは命中元による得点分岐を行いません。
 
 Issue #89では衝突対象をレイヤーで制限します。Player=8、Invader/UFO=9、PlayerShot=10、EnemyShot=11をPrefabへ保存し、Arcadeは継承します。Physics2DではPlayerShot↔PlayerとEnemyShot↔Invader/UFOだけを除外し、他の組合せは維持します。新規生成も同じレイヤーを使い、既存設定更新はConfigure Gameplay Collisionsです。ShieldのDefaultレイヤー・移動区間の画素判定・上下別マスクには変更しません。レイヤー設定の判断は [ADR-0013](adr/0013-hit-receivers-and-ufo-scoring.md)、現在の結果通知・加点順は [ADR-0014](adr/0014-player-shot-results-and-scoring.md) を参照します。
 
@@ -113,11 +114,11 @@ Unityの既存Fixed Timestep（0.02秒）を使います。Issue #89のProjectSe
 - Formation左上初期位置：(32,208)、間隔16px、Colliderは16×8px。Spriteは既存480×241/PPU30の約16×8.03pxの比率を維持。
 - Score：Top=30、Middle=20、Bottom=10。55体の合計は990。Driverが通知の受理時に加算する。HUDは未実装。
 
-ShotはInvaderへ同期的に命中を依頼し、Invaderは自身をInactive化してFormationの_aliveCountを更新します。通常弾の通知は暫定得点経路では無視します。Shotは成立後にTargetTypeを取得してInactive化し、FlightEndedでPlayerが射撃枠解放→終了履歴加算→ShotResolvedを発行します。Driverは更新済み履歴で加点した後、TryEnterWaveClearでPlayingかつFormation.IsClearedなら一度だけWaveClearへ移行します。Updateでも同じ判定を補完的に呼び、予約フラグ・別の生存カウンタは持ちません。UFOも同じ通常弾の順序で加点し、終了予定分+1補正はありません。
+ShotはInvaderへ同期的に命中を依頼し、Invaderは自身をInactive化してFormationの_aliveCountを更新します。Shotは成立後にTargetTypeを取得してInactive化し、FlightEndedでPlayerが射撃枠解放→終了履歴加算→ShotResolvedを発行します。Driverは更新済み履歴で加点した後、TryEnterWaveClearでPlayingかつFormation.IsClearedなら一度だけWaveClearへ移行します。B弾はFlightEndedを所有者DebugCarpetBombが受け、同じNotifyShotResolvedへ結果を渡します。B弾はPlayerの履歴を進めません。Updateでも同じ全滅判定を補完的に呼び、予約フラグ・別の生存カウンタは持ちません。UFOも同じ終了結果から加点し、終了予定分+1補正はありません。
 
 隣接2体への同時接触は最大1体だけを撃破しますが、どちらが選ばれるかは保証しません。旧独自判定の下段→上段・左→右の優先順位は再現しません。Discrete Triggerと固定物理stepを使うため、高速化時のすり抜け・接触境界の差はローカルで確認が必要です。移動速度・初期位置・WaveClearの1秒等は既存の暫定値を継承しています。
 
-通常弾の最終撃破では、従来の受信側内でのWaveClearから、同じ同期呼び出し内の弾終了・履歴更新・加点後へ遷移位置が移ります。Physics2Dの次のTriggerコールバックまでには停止するため、先に処理されたPlayer被弾・侵攻を優先する既存のStateガードは維持します。B弾は従来どおり受信側の同期通知中に遷移します。Update補完は通知経路外で全滅した場合に限る補完で、同一物理更新でのコールバック順自体は保証しません。
+通常弾・B弾とも最終撃破は同じ同期呼び出し内の弾終了・所有者の結果通知・加点後にWaveClearへ遷移します。通常弾だけが所有者Playerの履歴を加算してから通知します。Physics2Dの次のTriggerコールバックまでには停止するため、先に処理されたPlayer被弾・侵攻を優先する既存のStateガードは維持します。Update補完は通知経路外で全滅した場合に限る補完で、同一物理更新でのコールバック順自体は保証しません。
 
 ## 検証の範囲
 
@@ -143,7 +144,7 @@ EnemyShotは3つの独立したインスタンスで、発射時count=1・移動
 
 ### UFO（Issue #79）
 
-Formationの既存phase 2・下降条件・8体以上の開始条件は維持します。Ufoは移動・被弾・解除、Playerは通常弾終了履歴、Driverは得点表と加点を所有します。Issue #103では発進方向の判定もFormationへ移しました。Driverは初期化時にPlayer.GetNormalShotEndCountをFunc<long>として渡し、Formationは発進時にその最新値の偶奇を評価します。回数を複製せず、IPositionProviderはPositionのみの契約を維持します。既存責務内の整理に留まるため、新規ADRは追加しません。Ufo.DefeatedはFormationが購読し、通常弾以外のB弾用の暫定通知としてDriverへ伝えます。DriverはPlayer.OwnsShot(source)で通常弾を除外し、B弾は現在のPlayer履歴で加点します。B弾のInvader撃破も同じ暫定経路で加点後に全滅判定し、通常弾履歴は進めません。FormationのDriver参照はB弾加点・侵攻通知・敵弾Reload用Score参照のため維持します。B弾の再設計・新規Managerは導入しません。詳細は [UFO](UFO.md) と [ADR-0014](adr/0014-player-shot-results-and-scoring.md) を参照してください。
+Formationの既存phase 2・下降条件・8体以上の開始条件は維持します。Ufoは移動・被弾・解除、Playerは通常弾終了履歴、Driverは得点表と加点を所有します。Issue #103では発進方向の判定もFormationへ移しました。Driverは初期化時にPlayer.GetNormalShotEndCountをFunc<long>として渡し、Formationは発進時にその最新値の偶奇を評価します。回数を複製せず、IPositionProviderはPositionのみの契約を維持します。Issue #105でUfo.Defeated・Formationの得点中継・DriverのB弾専用通知・Player.OwnsShotを撤去しました。B弾は所有者DebugCarpetBombが終了結果を共通得点処理へ渡し、Playerの現在履歴でUFO得点を算出します。FormationのDriver参照は侵攻通知・敵弾Reload用Score参照のため維持します。既存の弾所有者による結果通知原則の適用であり、新規ADRは追加しません。過去の通知判断は [ADR-0014](adr/0014-player-shot-results-and-scoring.md)、現行の詳細は [UFO](UFO.md) を参照してください。
 
 旧モデル・旧Push専用のEditor検証と旧設定ツールは削除しました。代わりに接続・物理設定・Missing Script・Play中の55体と生存集計を確認する `Verify Component Gameplay Setup`、Editor限定の一時停止/再開メニュー、READMEの最小限の操作確認を用意しています。接続チェックは衝突やWave進行の成功を意味しません。
 

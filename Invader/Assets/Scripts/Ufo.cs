@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 namespace UnityInvader
@@ -14,8 +13,6 @@ namespace UnityInvader
         private BoxCollider2D _hitCollider;
         private bool          _playing;
         private int           _direction;
-
-        public event Action<Component> Defeated;
 
         public HitTargetType TargetType => HitTargetType.Ufo;
 
@@ -59,9 +56,8 @@ namespace UnityInvader
             {
                 return false;
             }
-            // Consume before notifying; later Trigger callbacks cannot award this UFO again.
+            // Consume before returning; later Trigger callbacks cannot accept this UFO again.
             ResetFlight();
-            Defeated?.Invoke(inSource);
             return true;
         }
 
