@@ -74,10 +74,16 @@ namespace UnityInvader.Editor
             var invaders  = formation.GetComponentsInChildren<Invader>(true);
             var enemies   = new[] { "_rollingShot", "_plungerShot", "_squigglyShot" }
                 .Select(inName => (EnemyShot)Read(formation, inName)).ToArray();
-            var ufo         = (Ufo)Read(formation, "_ufo");
-            var ufoHandlers = Read(ufo, "Defeated");
+            var ufo = (Ufo)Read(formation, "_ufo");
             inDriver.EditorSetState(GameState.Playing);
             VerifyUfoControl(inDriver, formation, player, shot, ufo);
+            var bomb = inDriver.GetComponent<DebugCarpetBomb>();
+            Call(bomb, "UpdateBombardment");
+            Call(bomb, "CreatePool");
+            var debugShots = (PlayerShot[])Read(bomb, "_shots");
+            Require(debugShots.Length == 96, "Use DebugCarpetBomb's actual 96 owned shots.");
+            var debugShot = debugShots[0];
+            VerifyBombResults(inDriver, player, shot, bomb, debugShot, ufo);
             int score                        = inDriver.Score;
             int notifications                = 0;
             Component source                 = null;
@@ -95,8 +101,8 @@ namespace UnityInvader.Editor
                 "Source identity and duplicate guard.");
             Require(notifications == 1 && Alive(formation) == 54 && inDriver.Score == score + 30, "No duplicate effects.");
 
-            var debugShot = UnityEngine.Object.Instantiate(shot);
             Hit(debugShot, invaders[1]);
+            Call(debugShot, "ResolveHit", invaders[1].GetComponent<Collider2D>());
             Require(Alive(formation) == 53 && inDriver.Score == score + 60 && player.NormalShotEndCount == 1,
                 "B shot scores once without normal history.");
             for (int i = 2; i < invaders.Length; i++)
@@ -110,10 +116,14 @@ namespace UnityInvader.Editor
             Require(inDriver.Score == score + 990, "Full wave score including B shot.");
 
             // Exercise the existing next-wave transition without waiting for wall-clock time.
+            Require(debugShot.TryLaunch(Vector2.zero), "Leave a B shot active across the Wave transition.");
             typeof(GameplayDriver).GetField("_waveClearElapsed", PrivateInstance).SetValue(inDriver, 1f);
             Call(inDriver, "UpdateWaveClear");
             Require(inDriver.WaveNumber == 2 && Alive(formation) == 55 && player.NormalShotEndCount == 0,
                 "Next wave reset.");
+            Call(bomb, "LateUpdate");
+            Require(debugShot.gameObject.activeSelf == false, "Wave change clears B shots without scoring.");
+            Call(bomb, "UpdateBombardment");
             VerifyPendingUfoLaunch(formation, ufo, 0);
             Call(formation, "PreparePlayerRespawn");
             InvaderAnimationVerification.VerifyFirstFrames(invaders);
@@ -124,13 +134,24 @@ namespace UnityInvader.Editor
             Require(notifications == 2 && Alive(formation) == 54 && inDriver.Score == score + 1020,
                 "Reused normal kill not duplicated.");
             Hit(debugShot, invaders[1]);
+            Action<Invader, Component> verifyFinalOrder = (inInvader, inSource) =>
+            {
+                Require(Alive(formation) == 0 && inDriver.CurrentState == GameState.Playing &&
+                    inDriver.Score == score + 1970 && debugShot.gameObject.activeSelf,
+                    "Final B kill only updates Formation; scoring and WaveClear wait for flight end.");
+            };
+            invaders[invaders.Length - 1].Defeated += verifyFinalOrder;
             for (int i = 2; i < invaders.Length; i++)
             {
                 Hit(debugShot, invaders[i]);
             }
             Require(inDriver.CurrentState == GameState.WaveClear && inDriver.Score == score + 1980 &&
                 player.NormalShotEndCount == 1, "B final kill and no double scoring.");
-            Require(Equals(ufoHandlers, Read(ufo, "Defeated")), "UFO subscription unchanged during waves.");
+            invaders[invaders.Length - 1].Defeated -= verifyFinalOrder;
+            Require(debugShots.All(inShot => ((Delegate)Read(inShot, "FlightEnded")).GetInvocationList()
+                .Count(inHandler => ReferenceEquals(inHandler.Target, bomb)) == 1), "One owner subscription after two Waves and reuse.");
+            UnityEngine.Object.DestroyImmediate(bomb);
+            Require(debugShots.All(inShot => Read(inShot, "FlightEnded") == null), "All 96 subscriptions removed when owner is destroyed.");
             invaders[0].Defeated -= observe;
             inDriver.enabled = false;
             // Keep children alive to inspect actual OnDestroy unsubscription.
@@ -140,10 +161,72 @@ namespace UnityInvader.Editor
             }
             UnityEngine.Object.DestroyImmediate(formation.gameObject);
             Require(invaders.All(inInvader => Read(inInvader, "Defeated") == null), "All 55 handlers removed on destruction.");
-            Require(Read(ufo, "Defeated") == null, "Existing UFO unsubscribe maintained.");
             invaders[0].gameObject.SetActive(true);
             invaders[0].GetComponent<Collider2D>().enabled = true;
             Require(invaders[0].TryReceiveHit(debugShot), "Unsubscribed individual can accept a hit.");
+        }
+
+        private static void VerifyBombResults(GameplayDriver inDriver, Player inPlayer, PlayerShot inNormalShot,
+            DebugCarpetBomb inBomb, PlayerShot inDebugShot, Ufo inUfo)
+        {
+            int score = inDriver.Score;
+            Call(inBomb, "FireBurst");
+            var pool = (PlayerShot[])Read(inBomb, "_shots");
+            Require(pool.Count(inShot => inShot.gameObject.activeSelf) == 3 && (int)Read(inBomb, "_laneIndex") == 3,
+                "Existing three-shot burst and lanes.");
+            inBomb.enabled = false;
+            Require(pool.All(inShot => inShot.gameObject.activeSelf == false), "Disabling owner recalls its shots.");
+            inBomb.enabled = true;
+            Require(inDebugShot.TryLaunch(Vector2.up * (ArcadeViewport.ScreenHeight * 0.5f * ArcadeViewport.UnitsPerPixel)), "Launch above screen.");
+            Call(inDebugShot, "CheckScreenExit");
+            Require(inDebugShot.gameObject.activeSelf == false, "Screen exit ends B shot.");
+            var shield = UnityEngine.Object.FindAnyObjectByType<Shield>();
+            var solid  = (bool[])Read(shield, "_solid");
+            int pixel  = Array.FindIndex(solid, inValue => inValue);
+            var impact = (Vector2)shield.transform.position + new Vector2(pixel % Shield.Width + 0.5f,
+                pixel / Shield.Width + 0.5f - PlayerShot.Height * 0.5f) * ArcadeViewport.UnitsPerPixel;
+            Require(inDebugShot.TryLaunch(impact), "Launch B shot into a remaining shield pixel.");
+            Physics2D.SyncTransforms();
+            Require((bool)typeof(PlayerShot).GetMethod("TryHitShield", PrivateInstance).Invoke(inDebugShot, null) &&
+                inDebugShot.gameObject.activeSelf == false, "Shield absorption ends B shot as None.");
+            Require(inDebugShot.TryLaunch(Vector2.zero), "Launch for forced recall.");
+            Call(inBomb, "ClearShots");
+            Require(inDebugShot.TryLaunch(Vector2.zero), "Reuse recalled shot.");
+            inDriver.EditorSetState(GameState.Attract);
+            Call(inBomb, "LateUpdate");
+            Require(inDebugShot.gameObject.activeSelf == false && inDriver.Score == score && inPlayer.NormalShotEndCount == 0,
+                "None, ResetFlight and stopped recall never score or advance Player history.");
+            inDriver.EditorSetState(GameState.Playing);
+
+            HitUfo(inDebugShot, inUfo);
+            Require(inDriver.Score == score + 100 && inPlayer.NormalShotEndCount == 0, "B UFO at history 0 scores 100 once.");
+            HitUfo(inNormalShot, inUfo);
+            Require(inDriver.Score == score + 150 && inPlayer.NormalShotEndCount == 1, "Normal UFO increments history before 50 points.");
+            HitUfo(inDebugShot, inUfo);
+            Require(inDriver.Score == score + 200 && inPlayer.NormalShotEndCount == 1, "B UFO uses latest history without increment.");
+            for (int count = 1; count < 7; count++)
+            {
+                Require(inNormalShot.TryLaunch(Vector2.zero), "Launch normal None shot.");
+                Call(inNormalShot, "FinishFlight", HitTargetType.None);
+            }
+            HitUfo(inNormalShot, inUfo);
+            Require(inDriver.Score == score + 500 && inPlayer.NormalShotEndCount == 8, "Normal UFO at updated history 8 scores 300.");
+            HitUfo(inDebugShot, inUfo);
+            Require(inDriver.Score == score + 800 && inPlayer.NormalShotEndCount == 8, "B UFO at current history 8 scores 300.");
+            Set(inDriver, "_score", score);
+            Call(inPlayer, "ResetShotHistory");
+            Call(shield, "BeginWave");
+            Debug.Log("DEBUG_SHOT_RESULTS_PASS: actual pool, owner enable/disable, None/Shield/recall and normal/B UFO scores/history.");
+        }
+
+        private static void HitUfo(PlayerShot inShot, Ufo inUfo)
+        {
+            Require((bool)typeof(Ufo).GetMethod("TryLaunch", PrivateInstance).Invoke(inUfo, new object[] { true }), "Launch UFO.");
+            Require(inShot.TryLaunch(inUfo.transform.position), "Launch shot at UFO.");
+            Call(inShot, "ResolveHit", inUfo.GetComponent<Collider2D>());
+            Require(inShot.gameObject.activeSelf == false && inUfo.gameObject.activeSelf == false, "UFO and shot consumed.");
+            Call(inShot, "ResolveHit", inUfo.GetComponent<Collider2D>());
+            Require(inUfo.TryReceiveHit(inShot) == false, "Duplicate UFO hit rejected.");
         }
 
         private static void VerifyUfoControl(GameplayDriver inDriver, InvaderFormation inFormation, Player inPlayer,
@@ -231,9 +314,14 @@ namespace UnityInvader.Editor
 
         private static void Hit(PlayerShot inShot, Invader inInvader)
         {
+            var driver = UnityEngine.Object.FindAnyObjectByType<GameplayDriver>();
+            int score  = driver.Score;
+            int points = inInvader.TargetType == HitTargetType.InvaderTop ? 30 :
+                inInvader.TargetType == HitTargetType.InvaderMiddle ? 20 : 10;
             Require(inShot.TryLaunch(inInvader.transform.position), "Launch shot.");
             Call(inShot, "ResolveHit", inInvader.GetComponent<Collider2D>());
             Require(inShot.gameObject.activeSelf == false && inInvader.gameObject.activeSelf == false, "Shot and target consumed.");
+            Require(driver.Score == score + points, "Each Top/Middle/Bottom kill scores exactly once before WaveClear.");
         }
 
         private static int Alive(InvaderFormation inFormation)

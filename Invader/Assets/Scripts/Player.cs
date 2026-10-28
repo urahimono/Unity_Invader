@@ -87,11 +87,6 @@ namespace UnityInvader
             return NormalShotEndCount;
         }
 
-        internal bool OwnsShot(Component inSource)
-        {
-            return inSource == _shot;
-        }
-
         internal void ResetShotHistory()
         {
             _normalShotEndCount = 0;

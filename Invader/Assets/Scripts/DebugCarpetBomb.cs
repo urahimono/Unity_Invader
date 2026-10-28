@@ -60,6 +60,26 @@ namespace UnityInvader
             ClearShots();
         }
 
+        private void OnDestroy()
+        {
+            if (_shots == null)
+            {
+                return;
+            }
+            foreach (var shot in _shots)
+            {
+                if (shot != null)
+                {
+                    shot.FlightEnded -= ResolveShot;
+                }
+            }
+        }
+
+        private void ResolveShot(HitTargetType inTargetType)
+        {
+            _driver.NotifyShotResolved(inTargetType);
+        }
+
         private bool IsPlaying()
         {
             return _driver != null && _driver.isActiveAndEnabled && _driver.CurrentState == GameState.Playing;
@@ -109,6 +129,7 @@ namespace UnityInvader
             {
                 var shot      = Instantiate(_shotPrefab, transform);
                 shot.name     = $"Debug PlayerShot {index}";
+                shot.FlightEnded += ResolveShot;
                 _shots[index] = shot;
             }
             ShuffleLanes();

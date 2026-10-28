@@ -21,7 +21,7 @@ PlayerShotはIHitReceiver.TryReceiveHit(this)成立後にTargetTypeを取得し�
 
 `100, 50, 50, 100, 150, 100, 100, 50, 300, 100, 100, 100, 50, 150, 100`
 
-ROMではUFO命中を1579〜157Eでフラグ化し、弾終了処理で表を進めた後にUFO処理で得点を読みます。本実装は爆発待ちを省略し、**UFO命中成立→弾の自然終了→Playerの履歴更新→Driverの得点確定**の順です。終了予定分+1補正はありません。通常弾は履歴0→1で50点、7→8で300点です。B弾は既存Ufo.Defeated→Formation→Driverを暫定利用し、Player.OwnsShotで通常弾の二重加点を防ぎます。B弾では履歴を進めず、現在履歴0なら100点、8なら300点です。この暫定経路の再設計は別作業です。
+ROMではUFO命中を1579〜157Eでフラグ化し、弾終了処理で表を進めた後にUFO処理で得点を読みます。本実装は爆発待ちを省略し、**UFO命中成立→弾の自然終了→Playerの履歴更新→Driverの得点確定**の順です。終了予定分+1補正はありません。通常弾は履歴0→1で50点、7→8で300点です。Issue #105でB弾はFlightEnded→所有者DebugCarpetBomb→共通GameplayDriver.NotifyShotResolvedへ変更しました。B弾では履歴を進めず、現在履歴0なら100点、8なら300点です。Formationの得点中継・Ufo.Defeated・DriverのB弾専用通知・Player.OwnsShotは撤去しました。Ufoは命中を受理して自身を非アクティブ化し、弾が命中種別を読み取ります。
 
 Ufoは自身の有効状態・Colliderで一度だけ被弾を受理し、直ちに解除します。PlayerShotも自身を消費して後続Triggerを拒否します。加点はGameplayDriverだけが行い、UFOはInvader生存数・WaveClearに関与しません。加点後、次の敵弾試行から既存のScore依存Reloadへ反映されます。Editor/Development BuildのDebugStatusOverlayへScoreを1行追加しました。
 

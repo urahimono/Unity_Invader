@@ -26,7 +26,7 @@ Issue #57 / ADR-0008に基づき、PlayingはComponent・Physics2D中心に構�
 - Playerは入力・移動・単一Shotへの発射依頼を担当します。
 - PlayerShotは自身のOnTriggerEnter2Dで接触を検出し、IHitReceiverへ命中元Componentを渡し、受理されたら自身を消費します。受理後に対象種別を読み取りますが、得点は計算しません。
 - Invaderは自身の被弾・撃破・表示を担当し、Formationへ一度だけ通知します。
-- Formationは個体の配置・集団移動・生存数を管理し、Driverへ全滅状態の値を提供します。B弾の得点通知は暫定経路として残します。Driver/Formationへ独自AABB判定を持ち込みません。
+- Formationは個体の配置・集団移動・生存数を管理し、Driverへ全滅状態の値を提供します。弾の得点通知は所有者が担当し、Formationへデバッグ用の中継を持ち込みません。Driver/Formationへ独自AABB判定を持ち込みません。
 
 今後の依存関係は、[設計原則の「責務境界に沿った依存関係」](PROJECT_PRINCIPLES.md#責務境界に沿った依存関係)に基づいて判断します。C#での適用では次を守ります。
 
@@ -76,7 +76,7 @@ _shot.FlightEnded += ResolveShot;
 
 現在はPlayerが通常弾のFlightEndedを購読し、射撃枠解放と終了履歴更新後にShotResolvedを発行します。DriverはPlayerのHitAcceptedとShotResolvedを購読し、PlayerShotを直接参照しません。PlayerはPlayerInputStateの値を受け取り、直接操作するゲーム内ComponentはPlayerShotだけです。変更前の判断はADR-0011、現在の責務分担は [ADR-0014](adr/0014-player-shot-results-and-scoring.md) に記録します。
 
-IHitReceiver.TryReceiveHit(Component inSource)の命中受付と、TargetTypeの読み取りを分けます。PlayerShotは受理後に種別を取得し、自然終了時に通知します。通常弾のUFO得点はPlayerの更新済み履歴からDriverが計算し、+1補正は行いません。UFO/FormationからのDriver通知はB弾用の暫定経路として残し、Player.OwnsShotで通常弾を除外します。友軍接触の制限は既存Physics2Dレイヤー設定を維持します。
+IHitReceiver.TryReceiveHit(Component inSource)の命中受付と、TargetTypeの読み取りを分けます。PlayerShotは受理後に種別を取得し、自然終了時に通知します。通常弾のUFO得点はPlayerの更新済み履歴からDriverが計算し、+1補正は行いません。B弾は所有者DebugCarpetBombがFlightEndedを生成時に一度購読し、Driverの共通NotifyShotResolvedへ結果を渡します。破棄時に解除し、再利用・回収では購読を増やしません。Player履歴は進めず、Driverや弾にB弾専用API・識別を持ち込みません。友軍接触の制限は既存Physics2Dレイヤー設定を維持します。
 
 同時1発・入力の再押下条件はPlayer側へ置きます。弾は自身の飛行中の再発射を拒否しますが、複数インスタンスの利用は制限しません。Issue #83ではPlayerShot周辺に適用し、Issue #85ではPlayerの入力・被弾通知とEnemyShot/Formationからの最小Interface接続へ適用しました。Formationに残るDriver直接依存の全面解消は今回行いません。
 
