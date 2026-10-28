@@ -41,6 +41,8 @@ namespace UnityInvader
         private float _debugMovementMultiplier = 1f;
 #endif
 
+        public event Action Invaded;
+
         internal bool IsCleared => _aliveCount == 0;
 
         public  const    int           Rows       = 5;
@@ -275,7 +277,7 @@ namespace UnityInvader
                 // Ignore subpixel float residue from repeated 8px descents at exactly 40px.
                 if (invader.gameObject.activeSelf && y < InvasionY - 1e-6f)
                 {
-                    _driver.NotifyInvaded();
+                    Invaded?.Invoke();
                     return;
                 }
             }
