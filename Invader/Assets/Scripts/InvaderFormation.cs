@@ -97,6 +97,13 @@ namespace UnityInvader
 
         private void OnDestroy()
         {
+            foreach (var invader in _invaders)
+            {
+                if (invader != null)
+                {
+                    invader.Defeated -= NotifyDefeated;
+                }
+            }
             if (_ufo != null)
             {
                 _ufo.Defeated -= NotifyUfoDefeated;
@@ -199,7 +206,8 @@ namespace UnityInvader
                     var invader                     = Instantiate(_invaderPrefab, transform);
                     invader.name                    = $"Invader ({row},{column})";
                     invader.transform.localPosition = new Vector3(column * Spacing, -row * Spacing, 0f) * ArcadeViewport.UnitsPerPixel;
-                    invader.Initialize(this, _frames[type * 2], _frames[type * 2 + 1], targetType);
+                    invader.Initialize(_frames[type * 2], _frames[type * 2 + 1], targetType);
+                    invader.Defeated += NotifyDefeated;
                     _invaders.Add(invader);
                 }
             }

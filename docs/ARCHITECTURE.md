@@ -33,7 +33,7 @@ flowchart TD
     Player -.->|ShotResolved: 履歴更新済みの命中結果| Driver
     Bomb[DebugCarpetBomb] -->|TryLaunchのみ| Shot
     Ufo -.->|Defeated(source)を購読| Formation
-    Invader -->|NotifyDefeated| Formation
+    Invader -.->|Defeated個体・命中元を購読| Formation
     Formation -->|B弾の暫定得点通知・侵攻通知 / IsCleared| Driver
     Formation -->|配置・アニメ・再開| Invader
     Formation -->|種類別phase / TryLaunch / AdvanceStep / SetPlaying| EnemyShot[3種類のEnemyShot: 下降・画面外消滅・再利用]
@@ -57,7 +57,7 @@ flowchart TD
 | DebugStatusOverlay | ArcadeのDriverと同じGameObjectで、State・Lives・Wave・Scoreの読み取り専用enum/intを描画時に取得。状態の複製や進行操作を行わず、非Playingでも表示。OnGUIによる開発用表示はEditor/Development Buildのみ有効で、Componentの型は製品ビルドにも残す |
 | Player | 入力値・移動・同時1発の射撃枠とrelease/再押下ゲート、通常弾の終了履歴を所有。FlightEndedで枠解放→履歴加算→ShotResolvedを通知。NormalShotEndCountは値のみ公開し、OwnsShotで所有関係を問い合わせ可能。次Waveで履歴リセット、死亡復帰では保持。HitAcceptedで被弾を通知。直接操作するゲーム内ComponentはPlayerShotだけ |
 | PlayerShot | 構成済みRigidbody2D/RendererとTrigger。GameObject.activeSelfが飛行状態、MonoBehaviour.enabledが進行可否。IHitReceiver.TryReceiveHit(this)成立後にTargetTypeを取得して消費し、FlightEnded(HitTargetType)を一度通知。Shield吸収・上端はNone、ResetFlightは無通知。得点表・通常弾/B弾の識別・Driver参照は持たない |
-| Invader | GameObjectの有効状態による生死、Spriteの2コマ、被弾反応、所属Formationへの一度だけの通知 |
+| Invader | GameObjectの有効状態による生死、Spriteの2コマ、被弾反応。Inactive化後にDefeated(個体, 命中元)を一度だけ通知し、Formation参照は持たない |
 | InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、集団移動の方向/周期/アニメ位相、生存数の集計。敵弾/UFOの60Hz時計・種類別phase、3種の発射元/Reload制御。UFOの下降条件・出現カウンタ・開始待ち・Squiggly共有枠。既存_aliveCountからIsClearedを公開。B弾の得点だけ暫定的にDriverへ通知 |
 | EnemyShot | Kinematic Rigidbody2D、移動step countと速度区分。Formationのphaseから1stepを受け、既存Shield判定と移動を実行。TriggerでPlayerへ被弾受付を依頼し、成立時または画面下端で非アクティブ化して再利用 |
 | Ufo | Kinematic Rigidbody2D、飛行方向、Sprite/Collider。共有phaseから2px移動を受け、退出・被弾で解除。IHitReceiverで命中を受理し、Defeated(source)を所属Formationへ通知。飛行中はGameObject有効状態を正とし、独立時計やScoreを所有しない |
@@ -85,6 +85,8 @@ Issue #97では通常弾の結果をPlayerShot→Player→Driverへ変更しま�
 Player自身のRenderer/ColliderはPrefab保存時、ShotはArcadeのinstance overrideで設定し、Awakeは構成検証だけを行います。SetPlayingやOnEnableから参照を再取得せず、Awakeで進行状態を上書きしないため、DriverとのAwake順に依存しません。FormationにはDriverのStartからPlayerをIPositionProviderとして一度渡し、Rolling照準に現在位置の値だけを使います。EnemyShotは接触先のIHitReceiverに被弾受付を依頼します。FormationのDriver依存は今回維持します。判断は [ADR-0011](adr/0011-player-dependencies.md) を参照してください。
 
 Invaderは5×11個を一度生成し、次Waveでも同じ個体・Rendererを再利用します。行ごとのSpriteは既存のTop/Middle/Bottom A/Bを渡し、画像全体の比率を維持します。表示用の子Visualだけを縮小し、親Colliderの寸法を変えません。ShotもBorder不要のSimple表示です。
+
+Issue #99ではFormationがCreateInvadersで各個体のDefeatedを一度だけ購読し、OnDestroyで解除します。BeginWaveや一時停止では購読を変更しません。通知は同期的に既存NotifyDefeatedへ届き、生存数・8体以下の敵弾速度・命中元・通常弾/B弾の得点分岐・WaveClearの順序を維持します。既存のイベント通知原則の適用であり、新しいADRは追加しません。
 
 Issue #89では衝突対象をレイヤーで制限します。Player=8、Invader/UFO=9、PlayerShot=10、EnemyShot=11をPrefabへ保存し、Arcadeは継承します。Physics2DではPlayerShot↔PlayerとEnemyShot↔Invader/UFOだけを除外し、他の組合せは維持します。新規生成も同じレイヤーを使い、既存設定更新はConfigure Gameplay Collisionsです。ShieldのDefaultレイヤー・移動区間の画素判定・上下別マスクには変更しません。レイヤー設定の判断は [ADR-0013](adr/0013-hit-receivers-and-ufo-scoring.md)、現在の結果通知・加点順は [ADR-0014](adr/0014-player-shot-results-and-scoring.md) を参照します。
 

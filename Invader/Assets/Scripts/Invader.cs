@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace UnityInvader
@@ -9,10 +10,11 @@ namespace UnityInvader
         [SerializeField]
         private SpriteRenderer _renderer;
 
-        private InvaderFormation _formation;
-        private Collider2D       _collider;
-        private Sprite           _frameA;
-        private Sprite           _frameB;
+        private Collider2D _collider;
+        private Sprite     _frameA;
+        private Sprite     _frameB;
+
+        public event Action<Invader, Component> Defeated;
 
         public HitTargetType TargetType { get; private set; }
 
@@ -24,13 +26,12 @@ namespace UnityInvader
             }
             // Active state also rejects later queued contacts with this individual.
             gameObject.SetActive(false);
-            _formation.NotifyDefeated(this, inSource);
+            Defeated?.Invoke(this, inSource);
             return true;
         }
 
-        internal void Initialize(InvaderFormation inFormation, Sprite inFrameA, Sprite inFrameB, HitTargetType inTargetType)
+        internal void Initialize(Sprite inFrameA, Sprite inFrameB, HitTargetType inTargetType)
         {
-            _formation = inFormation;
             _collider  = GetComponent<Collider2D>();
             _frameA    = inFrameA;
             _frameB    = inFrameB;
