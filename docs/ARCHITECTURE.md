@@ -24,7 +24,7 @@ flowchart TD
     Reader --> Driver
     Driver -->|PlayerInputStateの値| Player[Player: 移動・射撃受付]
     Driver[GameplayDriver: State / Score / Wave / Lives] -->|SetPlaying / Respawn| Player
-    Driver -->|SetPlaying / BeginWave / PreparePlayerRespawn| Formation[InvaderFormation: 集団移動・集計]
+    Driver -->|SetPlaying / BeginWave / PreparePlayerRespawn / Score読取関数| Formation[InvaderFormation: 集団移動・集計]
     Player -->|TryLaunch / SetPlaying / ResetFlight| Shot[PlayerShot: Rigidbody2D / Trigger / 消費]
     Physics[Unity Physics2D] -->|OnTriggerEnter2D| Shot
     Shot -->|IHitReceiver.TryReceiveHit(this)| Invader[Invader: 個体の被弾・撃破・表示]
@@ -84,7 +84,7 @@ shot.TryLaunch(position);
 
 Issue #97では通常弾の結果をPlayerShot→Player→Driverへ変更しました。PlayerはAwakeでFlightEndedを一度購読しOnDestroyで解除、DriverはStartでPlayer.HitAcceptedとShotResolvedを購読しOnDestroyで解除します。Pause/Disableでは購読を保持します。PlayerInputReaderはDriverのOnEnableで生成、OnDisableでDisposeし、Updateで取得したPlayerInputStateだけをPlayer.SetInputへ渡します。PlayerはFixedUpdateまで短い発射入力を保持します。停止・無効化では未処理の入力値・発射予約だけを破棄し、射撃受付状態（_fireReady）は保持します。WaveClear・Pauseからの再開時に新たなreleaseを一律には要求しません。Respawn時は_fireReady=falseとし、Playing中のrelease→再押下を必要とします。過去の直接購読判断はADR-0011、現在の判断は [ADR-0014](adr/0014-player-shot-results-and-scoring.md) を参照してください。
 
-Player自身のRenderer/ColliderはPrefab保存時、ShotはArcadeのinstance overrideで設定し、Awakeは構成検証だけを行います。SetPlayingやOnEnableから参照を再取得せず、Awakeで進行状態を上書きしないため、DriverとのAwake順に依存しません。FormationにはDriverのStartからPlayerをIPositionProviderとして一度渡し、Rolling照準に現在位置の値だけを使います。EnemyShotは接触先のIHitReceiverに被弾受付を依頼します。FormationのDriver依存は今回維持します。判断は [ADR-0011](adr/0011-player-dependencies.md) を参照してください。
+Player自身のRenderer/ColliderはPrefab保存時、ShotはArcadeのinstance overrideで設定し、Awakeは構成検証だけを行います。SetPlayingやOnEnableから参照を再取得せず、Awakeで進行状態を上書きしないため、DriverとのAwake順に依存しません。FormationにはDriverのStartからPlayerをIPositionProviderとして一度渡し、Rolling照準に現在位置の値だけを使います。EnemyShotは接触先のIHitReceiverに被弾受付を依頼します。Issue #110でFormationのGameplayDriver型・インスタンスの直接保持は撤去しました。必要なScoreは初期化時にFunc<int>を受け取り、発射試行時に最新値を読みます。判断は [ADR-0011](adr/0011-player-dependencies.md) を参照してください。
 
 Invaderは5×11個を一度生成し、次Waveでも同じ個体・Rendererを再利用します。Formationは行からInvaderType（Top/Middle/Bottom）を選んでInitializeへ渡します。Invaderは種類をHitTargetTypeへ対応付け、単一Prefabに保存した種類別の任意長Sprite配列から画像を選択します。現行は各2枚のA/Bで、画像全体の比率を維持します。表示用の子Visualだけを縮小し、親Colliderの寸法を変えません。ShotもBorder不要のSimple表示です。
 
@@ -131,13 +131,13 @@ PlayerDeadでは既存SetPlaying(false)で入力・射撃・編隊・弾・UFO�
 
 ### Invader侵攻（Issue #81）
 
-Formationは通常の移動ステップ後、移動先Rigidbody2D座標と各生存Invaderのローカル位置から最下位置を判定します。論理y=40未満でInvadedイベントを同期通知し、Driverは初期化済み・有効・Playing中だけLivesを0にして直ちにGameOverへ遷移します。DriverがInitializeGameplayで一度購読しOnDestroyで解除、停止・Wave変更では購読を維持します（Issue #107）。PlayerDead・復帰経路は使いません。既存ApplyPlayingStateでPlayer・自機弾・編隊・敵弾3種類・UFO・Shieldを停止し、同じFixedUpdateの残りの編隊移動も中断します。Score/Wave・Shield画素・個体の生死は保持します。FormationのDriver参照・初期化引数は敵弾Reload用Score参照のため残しています。
+Formationは通常の移動ステップ後、移動先Rigidbody2D座標と各生存Invaderのローカル位置から最下位置を判定します。論理y=40未満でInvadedイベントを同期通知し、Driverは初期化済み・有効・Playing中だけLivesを0にして直ちにGameOverへ遷移します。DriverがInitializeGameplayで一度購読しOnDestroyで解除、停止・Wave変更では購読を維持します（Issue #107）。PlayerDead・復帰経路は使いません。既存ApplyPlayingStateでPlayer・自機弾・編隊・敵弾3種類・UFO・Shieldを停止し、同じFixedUpdateの残りの編隊移動も中断します。Score/Wave・Shield画素・個体の生死は保持します。敵弾Reload用Score参照はIssue #110でFunc<int>へ移し、FormationのDriver型付きフィールド・初期化引数は撤去しました。
 
 接触判定ではなく生存個体アンカーの座標判定です。原作ROMの描画座標とUnityのSprite中心は異なり、40pxは暫定対応です。演出・原作動画との見た目の一致は未確認です。根拠・差分は [侵攻GameOver](GAME_OVER.md) を参照してください。既存の責務と通知方式の拡張に留まり、新規ADRは追加しません。
 
 ### 3種類のEnemyShot（Issue #77）
 
-FormationがRollingのPlayer対応列、Plunger16列、Squiggly15列を選びます。単一の敵弾専用60Hz蓄積時計でRolling=0 / Plunger=1 / Squiggly=2のphaseを0→2→1の順に処理し、各種は3tickに1回だけ発射試行または移動します。旧2秒タイマーは廃止しました。他2種のstep countが0またはScore依存Reload値を厳密に超えている場合だけ新規発射できます。ScoreはDriverの読み取り専用値から取得します。
+FormationがRollingのPlayer対応列、Plunger16列、Squiggly15列を選びます。単一の敵弾専用60Hz蓄積時計でRolling=0 / Plunger=1 / Squiggly=2のphaseを0→2→1の順に処理し、各種は3tickに1回だけ発射試行または移動します。旧2秒タイマーは廃止しました。他2種のstep countが0またはScore依存Reload値を厳密に超えている場合だけ新規発射できます。ScoreはDriverが所有し、初期化時に渡したFunc<int>を発射試行時に呼んで最新値を取得します。FormationにScoreのコピーや同期状態は持ちません。
 
 EnemyShotは3つの独立したインスタンスで、発射時count=1・移動ごとに加算し、既存のShield画素判定・Player Trigger・下端消滅を共用します。独立FixedUpdate時計はなく、Formationのphaseから移動を依頼します。各物理stepの先頭で前stepのMovePosition速度を保持位置へ戻してから、選択された種類の移動先を設定します。Rigidbody2D/GameObject有効状態を正とする点は維持しています。
 
@@ -145,7 +145,7 @@ EnemyShotは3つの独立したインスタンスで、発射時count=1・移動
 
 ### UFO（Issue #79）
 
-Formationの既存phase 2・下降条件・8体以上の開始条件は維持します。Ufoは移動・被弾・解除、Playerは通常弾終了履歴、Driverは得点表と加点を所有します。Issue #103では発進方向の判定もFormationへ移しました。Driverは初期化時にPlayer.GetNormalShotEndCountをFunc<long>として渡し、Formationは発進時にその最新値の偶奇を評価します。回数を複製せず、IPositionProviderはPositionのみの契約を維持します。Issue #105でUfo.Defeated・Formationの得点中継・DriverのB弾専用通知・Player.OwnsShotを撤去しました。B弾は所有者DebugCarpetBombが終了結果を共通得点処理へ渡し、Playerの現在履歴でUFO得点を算出します。FormationのDriver参照は敵弾Reload用Score参照のため維持します。既存の弾所有者による結果通知原則の適用であり、新規ADRは追加しません。過去の通知判断は [ADR-0014](adr/0014-player-shot-results-and-scoring.md)、現行の詳細は [UFO](UFO.md) を参照してください。
+Formationの既存phase 2・下降条件・8体以上の開始条件は維持します。Ufoは移動・被弾・解除、Playerは通常弾終了履歴、Driverは得点表と加点を所有します。Issue #103では発進方向の判定もFormationへ移しました。Driverは初期化時にPlayer.GetNormalShotEndCountをFunc<long>として渡し、Formationは発進時にその最新値の偶奇を評価します。回数を複製せず、IPositionProviderはPositionのみの契約を維持します。Issue #105でUfo.Defeated・Formationの得点中継・DriverのB弾専用通知・Player.OwnsShotを撤去しました。B弾は所有者DebugCarpetBombが終了結果を共通得点処理へ渡し、Playerの現在履歴でUFO得点を算出します。Issue #110でScore取得もFunc<int>へ変更し、FormationはGameplayDriver型を参照しません。Driverが既存Score propertyを読む関数を渡し、Formationは初期化時にnull検証します。既存の弾所有者による結果通知原則の適用であり、新規ADRは追加しません。過去の通知判断は [ADR-0014](adr/0014-player-shot-results-and-scoring.md)、現行の詳細は [UFO](UFO.md) を参照してください。
 
 旧モデル・旧Push専用のEditor検証と旧設定ツールは削除しました。代わりに接続・物理設定・Missing Script・Play中の55体と生存集計を確認する `Verify Component Gameplay Setup`、Editor限定の一時停止/再開メニュー、READMEの最小限の操作確認を用意しています。接続チェックは衝突やWave進行の成功を意味しません。
 

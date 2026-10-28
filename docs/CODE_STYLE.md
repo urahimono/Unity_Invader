@@ -78,7 +78,7 @@ _shot.FlightEnded += ResolveShot;
 
 IHitReceiver.TryReceiveHit(Component inSource)の命中受付と、TargetTypeの読み取りを分けます。PlayerShotは受理後に種別を取得し、自然終了時に通知します。通常弾のUFO得点はPlayerの更新済み履歴からDriverが計算し、+1補正は行いません。B弾は所有者DebugCarpetBombがFlightEndedを生成時に一度購読し、Driverの共通NotifyShotResolvedへ結果を渡します。破棄時に解除し、再利用・回収では購読を増やしません。Player履歴は進めず、Driverや弾にB弾専用API・識別を持ち込みません。友軍接触の制限は既存Physics2Dレイヤー設定を維持します。
 
-同時1発・入力の再押下条件はPlayer側へ置きます。弾は自身の飛行中の再発射を拒否しますが、複数インスタンスの利用は制限しません。Issue #83ではPlayerShot周辺に適用し、Issue #85ではPlayerの入力・被弾通知とEnemyShot/Formationからの最小Interface接続へ適用しました。Formationに残るDriver直接依存の全面解消は今回行いません。
+同時1発・入力の再押下条件はPlayer側へ置きます。弾は自身の飛行中の再発射を拒否しますが、複数インスタンスの利用は制限しません。Issue #83ではPlayerShot周辺に適用し、Issue #85ではPlayerの入力・被弾通知とEnemyShot/Formationからの最小Interface接続へ適用しました。現在はIssue #110でFormationのDriver直接依存を撤去し、ScoreはDriverが所有する既存propertyを読むFunc<int>で発射試行時に取得します。値の同期用コピーや専用Interfaceは追加しません。
 
 ### Editor検証用API
 
