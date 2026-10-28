@@ -280,7 +280,9 @@ namespace UnityInvader
                 if (invader.gameObject.activeSelf)
                 {
                     // Start below the existing 8px Invader hitbox; the shot position is its center.
-                    return (Vector2)invader.transform.position - Vector2.up * ((4f + EnemyShot.Height / 2f) * ArcadeViewport.UnitsPerPixel);
+                    // Match the current body pose even before child world Transforms synchronize.
+                    Vector2 invaderPosition = _body.position + (Vector2)invader.transform.localPosition;
+                    return invaderPosition - Vector2.up * ((4f + EnemyShot.Height / 2f) * ArcadeViewport.UnitsPerPixel);
                 }
             }
             return null; // An empty target column does not fall back to an adjacent column.
