@@ -35,7 +35,8 @@ flowchart TD
     Shot -.->|B弾のFlightEnded| Bomb
     Bomb -->|共通NotifyShotResolved| Driver
     Invader -.->|Defeated個体・命中元を購読| Formation
-    Formation -->|侵攻通知 / IsCleared| Driver
+    Formation -.->|Invadedを購読| Driver
+    Driver -->|IsClearedを確認| Formation
     Formation -->|配置・アニメ・再開| Invader
     Formation -->|種類別phase / TryLaunch / AdvanceStep / SetPlaying| EnemyShot[3種類のEnemyShot: 下降・画面外消滅・再利用]
     Formation -->|Squiggly共有phase / TryLaunch / AdvanceStep / SetPlaying| Ufo
@@ -130,7 +131,7 @@ PlayerDeadでは既存SetPlaying(false)で入力・射撃・編隊・弾・UFO�
 
 ### Invader侵攻（Issue #81）
 
-Formationは通常の移動ステップ後、移動先Rigidbody2D座標と各生存Invaderのローカル位置から最下位置を判定します。論理y=40未満でDriverへ侵攻通知し、Driverは有効・Playing中だけLivesを0にして直ちにGameOverへ遷移します。PlayerDead・復帰経路は使いません。既存ApplyPlayingStateでPlayer・自機弾・編隊・敵弾3種類・UFO・Shieldを停止し、同じFixedUpdateの残りの編隊移動も中断します。Score/Wave・Shield画素・個体の生死は保持します。
+Formationは通常の移動ステップ後、移動先Rigidbody2D座標と各生存Invaderのローカル位置から最下位置を判定します。論理y=40未満でInvadedイベントを同期通知し、Driverは初期化済み・有効・Playing中だけLivesを0にして直ちにGameOverへ遷移します。DriverがInitializeGameplayで一度購読しOnDestroyで解除、停止・Wave変更では購読を維持します（Issue #107）。PlayerDead・復帰経路は使いません。既存ApplyPlayingStateでPlayer・自機弾・編隊・敵弾3種類・UFO・Shieldを停止し、同じFixedUpdateの残りの編隊移動も中断します。Score/Wave・Shield画素・個体の生死は保持します。FormationのDriver参照・初期化引数は敵弾Reload用Score参照のため残しています。
 
 接触判定ではなく生存個体アンカーの座標判定です。原作ROMの描画座標とUnityのSprite中心は異なり、40pxは暫定対応です。演出・原作動画との見た目の一致は未確認です。根拠・差分は [侵攻GameOver](GAME_OVER.md) を参照してください。既存の責務と通知方式の拡張に留まり、新規ADRは追加しません。
 
@@ -144,7 +145,7 @@ EnemyShotは3つの独立したインスタンスで、発射時count=1・移動
 
 ### UFO（Issue #79）
 
-Formationの既存phase 2・下降条件・8体以上の開始条件は維持します。Ufoは移動・被弾・解除、Playerは通常弾終了履歴、Driverは得点表と加点を所有します。Issue #103では発進方向の判定もFormationへ移しました。Driverは初期化時にPlayer.GetNormalShotEndCountをFunc<long>として渡し、Formationは発進時にその最新値の偶奇を評価します。回数を複製せず、IPositionProviderはPositionのみの契約を維持します。Issue #105でUfo.Defeated・Formationの得点中継・DriverのB弾専用通知・Player.OwnsShotを撤去しました。B弾は所有者DebugCarpetBombが終了結果を共通得点処理へ渡し、Playerの現在履歴でUFO得点を算出します。FormationのDriver参照は侵攻通知・敵弾Reload用Score参照のため維持します。既存の弾所有者による結果通知原則の適用であり、新規ADRは追加しません。過去の通知判断は [ADR-0014](adr/0014-player-shot-results-and-scoring.md)、現行の詳細は [UFO](UFO.md) を参照してください。
+Formationの既存phase 2・下降条件・8体以上の開始条件は維持します。Ufoは移動・被弾・解除、Playerは通常弾終了履歴、Driverは得点表と加点を所有します。Issue #103では発進方向の判定もFormationへ移しました。Driverは初期化時にPlayer.GetNormalShotEndCountをFunc<long>として渡し、Formationは発進時にその最新値の偶奇を評価します。回数を複製せず、IPositionProviderはPositionのみの契約を維持します。Issue #105でUfo.Defeated・Formationの得点中継・DriverのB弾専用通知・Player.OwnsShotを撤去しました。B弾は所有者DebugCarpetBombが終了結果を共通得点処理へ渡し、Playerの現在履歴でUFO得点を算出します。FormationのDriver参照は敵弾Reload用Score参照のため維持します。既存の弾所有者による結果通知原則の適用であり、新規ADRは追加しません。過去の通知判断は [ADR-0014](adr/0014-player-shot-results-and-scoring.md)、現行の詳細は [UFO](UFO.md) を参照してください。
 
 旧モデル・旧Push専用のEditor検証と旧設定ツールは削除しました。代わりに接続・物理設定・Missing Script・Play中の55体と生存集計を確認する `Verify Component Gameplay Setup`、Editor限定の一時停止/再開メニュー、READMEの最小限の操作確認を用意しています。接続チェックは衝突やWave進行の成功を意味しません。
 

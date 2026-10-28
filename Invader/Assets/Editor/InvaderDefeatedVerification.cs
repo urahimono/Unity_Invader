@@ -153,7 +153,11 @@ namespace UnityInvader.Editor
             UnityEngine.Object.DestroyImmediate(bomb);
             Require(debugShots.All(inShot => Read(inShot, "FlightEnded") == null), "All 96 subscriptions removed when owner is destroyed.");
             invaders[0].Defeated -= observe;
-            inDriver.enabled = false;
+            VerifyInvasion(inDriver, formation, invaders, enemies, ufo);
+            UnityEngine.Object.DestroyImmediate(inDriver.GetComponent<DebugStatusOverlay>());
+            UnityEngine.Object.DestroyImmediate(inDriver);
+            Require(Read(formation, "Invaded") == null, "Driver destruction removes its invasion subscription.");
+            Call(formation, "CheckInvasion", Vector2.down * 2f);
             // Keep children alive to inspect actual OnDestroy unsubscription.
             foreach (var invader in invaders)
             {
@@ -164,6 +168,72 @@ namespace UnityInvader.Editor
             invaders[0].gameObject.SetActive(true);
             invaders[0].GetComponent<Collider2D>().enabled = true;
             Require(invaders[0].TryReceiveHit(debugShot), "Unsubscribed individual can accept a hit.");
+        }
+
+        private static void VerifyInvasion(GameplayDriver inDriver, InvaderFormation inFormation, Invader[] inInvaders,
+            EnemyShot[] inEnemies, Ufo inUfo)
+        {
+            Require(((Delegate)Read(inFormation, "Invaded")).GetInvocationList().Length == 1,
+                "One Driver subscription after two Waves, pause and respawn.");
+            Call(inFormation, "BeginWave");
+            inDriver.EditorSetState(GameState.Playing);
+            int notifications = 0;
+            Action observe    = () => notifications++;
+            inFormation.Invaded += observe;
+            float invasionY = (40f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
+            var boundary    = new Vector2(0f, invasionY - inInvaders.Min(inInvader => inInvader.transform.localPosition.y));
+            Call(inFormation, "CheckInvasion", boundary);
+            Require(notifications == 0 && inDriver.CurrentState == GameState.Playing, "Exactly y=40 does not invade.");
+            foreach (var invader in inInvaders.Skip(44))
+            {
+                invader.gameObject.SetActive(false);
+            }
+            Call(inFormation, "CheckInvasion", boundary - Vector2.up * ArcadeViewport.UnitsPerPixel);
+            Require(notifications == 0, "Defeated lowest row below the threshold is ignored.");
+            Call(inFormation, "BeginWave");
+            int lives = inDriver.Lives;
+            foreach (var state in new[] { GameState.Attract, GameState.PlayerDead, GameState.WaveClear, GameState.GameOver })
+            {
+                inDriver.EditorSetState(state);
+                Call(inFormation, "CheckInvasion", boundary - Vector2.up * ArcadeViewport.UnitsPerPixel);
+                Require(inDriver.CurrentState == state && inDriver.Lives == lives, "Non-Playing Driver ignores invasion.");
+            }
+            inDriver.EditorSetState(GameState.Playing);
+            inDriver.enabled = false;
+            Call(inFormation, "CheckInvasion", boundary - Vector2.up * ArcadeViewport.UnitsPerPixel);
+            Require(inDriver.Lives == lives && inDriver.CurrentState == GameState.Playing, "Disabled Driver ignores invasion.");
+            inDriver.enabled = true;
+            notifications = 0;
+            // Approach an edge from four pixels above the line; the existing eight-pixel descent crosses it.
+            float maximumX = (ArcadeViewport.ScreenWidth / 2f - 8f - 10 * InvaderFormation.Spacing) * ArcadeViewport.UnitsPerPixel;
+            var body       = inFormation.GetComponent<Rigidbody2D>();
+            body.position = new Vector2(maximumX - ArcadeViewport.UnitsPerPixel, boundary.y + 4f * ArcadeViewport.UnitsPerPixel);
+            Require((bool)typeof(Ufo).GetMethod("TryLaunch", PrivateInstance).Invoke(inUfo, new object[] { true }), "Launch UFO before invasion.");
+            foreach (var enemy in inEnemies.Take(2))
+            {
+                Require((bool)typeof(EnemyShot).GetMethod("TryLaunch", PrivateInstance).Invoke(enemy, new object[] { Vector2.zero }), "Launch enemy shot before invasion.");
+            }
+            var steps       = inEnemies.Select(inEnemy => (int)Read(inEnemy, "_stepCount")).ToArray();
+            var ufoPosition = inUfo.GetComponent<Rigidbody2D>().position;
+            int ticks       = (int)Read(inFormation, "_ufoTicksRemaining");
+            int score       = inDriver.Score;
+            int wave        = inDriver.WaveNumber;
+            Call(inFormation, "SetDebugFastMovement", true);
+            Set(inFormation, "_elapsed", 2f * 20f / 60f);
+            Call(inFormation, "FixedUpdate");
+            var stoppedPosition = body.position;
+            Require(notifications == 1 && inDriver.Lives == 0 && inDriver.CurrentState == GameState.GameOver &&
+                (bool)Read(inFormation, "_playing") == false && body.simulated == false &&
+                Mathf.Abs(stoppedPosition.y - (boundary.y - 4f * ArcadeViewport.UnitsPerPixel)) < 1e-6f,
+                "First fast movement step synchronously invades and stops remaining steps.");
+            Call(inFormation, "FixedUpdate");
+            Require(notifications == 1 && body.position == stoppedPosition && inDriver.Score == score && inDriver.WaveNumber == wave &&
+                inEnemies.Select(inEnemy => (int)Read(inEnemy, "_stepCount")).SequenceEqual(steps) &&
+                inEnemies.All(inEnemy => inEnemy.GetComponent<Rigidbody2D>().simulated == false) &&
+                inUfo.GetComponent<Rigidbody2D>().position == ufoPosition && inUfo.GetComponent<Rigidbody2D>().simulated == false &&
+                (int)Read(inFormation, "_ufoTicksRemaining") == ticks, "Stopped formation cannot notify again or progress enemies/UFO.");
+            inFormation.Invaded -= observe;
+            Debug.Log("INVASION_EVENT_PASS: threshold/dead guard, Driver state guards, synchronous fast-step GameOver and single subscription.");
         }
 
         private static void VerifyBombResults(GameplayDriver inDriver, Player inPlayer, PlayerShot inNormalShot,

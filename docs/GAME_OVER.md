@@ -12,8 +12,11 @@
 
 - InvaderFormationの既存2px横移動・端での8px下降・Shield侵食・アニメを実行後、移動先のRigidbody2D位置と子Invaderのローカル位置を使います。子のworld Transform同期の遅延に依存しません。
 - activeSelfの生存個体のみが対象です。撃破済みの最下行は判定せず、生存0なら侵攻通知せず既存のWaveClearへ進みます。毎フレームのScene検索、新しいTrigger、位置補正は追加しません。
+- Issue #107でFormationからDriverへの直接呼び出しをInvadedイベントへ変更しました。DriverがInitializeGameplayで一度だけNotifyInvadedを購読し、OnDestroyで解除します。停止・再開・死亡復帰・Wave変更では購読を増やしません。通知は同期的で、判定条件と処理順は維持します。
 - Driver.NotifyInvadedは初期化済み・有効・Playing中だけ受理し、Lives=0、GameOverへ直接遷移します。通常NotifyPlayerHitと0.5秒の復帰待機は使いません。停止でFormationのPlayingがfalseになるため通知後の繰り返し移動・敵弾/UFO更新も止まります。Fの10倍速でも各ステップで判定します。
 - 既存ApplyPlayingStateで全体を停止し、Score/Wave・破壊済Shield・撃破済Invader・通常弾履歴を保持します。非Playingでの追加被弾・撃破・侵攻通知は受け付けません。高度なイベント優先順位は追加せず、先に受理された既存State遷移に従います。
+
+FormationのGameplayDriver参照と初期化引数は敵弾Reload用のScore取得に残っています。今回撤去したのは侵攻時の直接呼び出しであり、Driver依存の全面解消ではありません。
 
 ## 対象外・未確認
 
