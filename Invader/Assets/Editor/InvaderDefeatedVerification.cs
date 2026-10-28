@@ -80,6 +80,7 @@ namespace UnityInvader.Editor
             VerifyAttackClock(formation, ufo);
             VerifyScoreReload(inDriver, formation, enemies);
             VerifyEnemyShotController(inDriver, formation, invaders, enemies);
+            VerifyMovedMuzzles(formation, invaders, enemies);
             var bomb = inDriver.GetComponent<DebugCarpetBomb>();
             Call(bomb, "UpdateBombardment");
             Call(bomb, "CreatePool");
@@ -268,6 +269,70 @@ namespace UnityInvader.Editor
             Require(inEnemies[0].gameObject.activeSelf == false, "Rolling does not substitute for an empty column.");
             Call(inFormation, "BeginWave");
             Debug.Log("ENEMY_SHOT_CONTROLLER_PASS: phase order, bulk operations/physics preparation, tables/empty columns, Rolling limits and reset contracts.");
+        }
+
+        private static void VerifyMovedMuzzles(InvaderFormation inFormation, Invader[] inInvaders, EnemyShot[] inEnemies)
+        {
+            var body       = inFormation.GetComponent<Rigidbody2D>();
+            var controller = Read(inFormation, "_enemyShots");
+            var getMuzzle  = (Func<int, Vector2?>)Read(controller, "_getColumnMuzzle");
+            var player     = UnityEngine.Object.FindAnyObjectByType<Player>().transform;
+            var playerPose = player.position;
+            try
+            {
+                for (int movement = 0; movement < 3; movement++)
+                {
+                    for (int type = 0; type < 3; type++)
+                    {
+                        Call(inFormation, "BeginWave");
+                        if (movement == 1)
+                        {
+                            // One 2px step before the right edge, where the next step descends 8px.
+                            inFormation.transform.position = new Vector3(-0.58f, 0.8f, 0f);
+                            body.position                  = new Vector2(-0.58f, 0.8f);
+                        }
+                        var origin      = body.position;
+                        var destination = origin + (movement == 1 ? new Vector2(0.02f, -0.08f) :
+                            Vector2.right * (movement == 2 ? 0.04f : 0.02f));
+                        player.position = new Vector3(destination.x + 0.32f, playerPose.y, playerPose.z);
+                        Call(inFormation, "SetDebugFastMovement", movement == 2);
+                        Set(inFormation, "_elapsed", (movement == 2 ? 2f : 1f) * 20f / 60f - Time.fixedDeltaTime);
+                        Set(controller, "_shotPhase", type);
+                        Set(controller, "_rollingAttemptReady", true);
+                        int calls         = 0;
+                        Vector2 expected  = default;
+                        Set(controller, "_getColumnMuzzle", (Func<int, Vector2?>)(inColumn =>
+                        {
+                            calls++;
+                            Require(Vector2.Distance(body.position, destination) < 1e-6f,
+                                "Muzzle lookup runs after all movement in the same FixedUpdate.");
+                            var invader = inInvaders[4 * InvaderFormation.Columns + inColumn];
+                            expected    = destination + (Vector2)invader.transform.localPosition - Vector2.up * 0.08f;
+                            var old     = (Vector2)invader.transform.position - Vector2.up * 0.08f;
+                            var actual  = getMuzzle(inColumn);
+                            Require(actual.HasValue && Vector2.Distance(actual.Value, expected) < 1e-6f,
+                                "Moved lowest living muzzle uses body position and unchanged 8px offset.");
+                            Debug.Log($"MOVED_MUZZLE_OBSERVATION: movement={movement}, type={type}, column={inColumn}, oldMinusNewPx={(old - actual.Value) / ArcadeViewport.UnitsPerPixel:F6}");
+                            return actual;
+                        }));
+                        // Invoke the production callback synchronously, as in the existing invasion fixture.
+                        // No physics simulation or Transform synchronization occurs between move and fire.
+                        Call(inFormation, "FixedUpdate");
+                        Require(calls == 1 && inEnemies[type].gameObject.activeSelf &&
+                            Vector2.Distance(inEnemies[type].GetComponent<Rigidbody2D>().position, expected) < 1e-6f,
+                            "Each shot type launches from the observed muzzle in the same FixedUpdate.");
+                        Require((int)Read(inFormation, "_direction") == (movement == 1 ? -1 : 1), "Descent reverses direction.");
+                    }
+                }
+            }
+            finally
+            {
+                Set(controller, "_getColumnMuzzle", getMuzzle);
+                player.position = playerPose;
+                Call(inFormation, "SetDebugFastMovement", false);
+                Call(inFormation, "BeginWave");
+            }
+            Debug.Log("MOVED_MUZZLE_PASS: all three shot paths after horizontal/descent/fast multiple steps in FixedUpdate.");
         }
 
         private static void VerifyScoreReload(GameplayDriver inDriver, InvaderFormation inFormation, EnemyShot[] inEnemies)
