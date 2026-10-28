@@ -584,6 +584,87 @@ private void LateUpdate()
 
 今回追加した宣言順序とイベント簡潔化の規約は、既存C#コードにも適用します。標準の EditorConfig で正確に表現できないため、本書を正本とし、`.editorconfig` は変更しません。
 
+## ログ・Assert・例外と異常時の継続可否
+
+ゲーム本体では、異常の検出・診断と、初期化の中断・ゲーム進行の停止を分けて設計します。ログを出しただけで修復・停止したと見なさず、異常の重大さと安全に続行できる範囲を明確にします。
+
+### Assert・ログの使い分け
+
+ゲーム本体のアサートは `UnityEngine.Debug.Assert(condition, message, context)` を標準とします。以下の `Debug` は `UnityEngine.Debug` を指します。例外を投げる挙動がある `UnityEngine.Assertions.Assert.IsTrue` / `IsNotNull` 等は、ランタイムの標準方式にしません。
+
+| 状況 | 標準 | 失敗後の動作 |
+| --- | --- | --- |
+| プログラマーの想定では必ず成立する不変条件・内部矛盾を開発時に検出したい | `Debug.Assert(condition, message, context)` | 条件違反をUnity Consoleに示す。これだけで処理を止めたつもりにならない |
+| 必須参照・設定不足など、ゲーム進行が成立しない不備 | 開発時の前提違反を `Debug.Assert` で検出してよい。製品ビルドでも記録が必要なら `Debug.LogError(message, context)` | 安全な初期化失敗・進行停止を必ず明示し、不完全な状態で続行しない |
+| 機能欠落・不正値など、続行はできるが本来の挙動から外れる問題 | `Debug.LogError(message, context)` | 影響する処理をスキップするか安全な代替へ切り替え、ゲーム全体は必要に応じて継続する |
+| 想定済み・許容できる不備や、安全なフォールバックの通知 | `Debug.LogWarning(message, context)` | 安全に続行する |
+| 通常情報・一時的な調査 | `Debug.Log(message, context)` | 過剰な毎フレームログを避ける |
+
+`Debug.Assert` は `UNITY_ASSERTIONS` に依存し、通常の製品ビルドでは呼び出しが省略され得ます。条件式や引数に、状態更新・初期化など実行が必要な副作用を含めません。`Debug.Assert(condition);` の後でそのままnull参照を使用するなど、アサートを例外や実行時ガードの代替にしてはいけません。
+
+安全に続行できない失敗では、アサートの有無にかかわらず、`return`、`enabled = false`、安全なState遷移、呼び出し元への失敗返却等で実際に中断・停止します。停止方法は担当クラスの責務とUnityライフサイクルに合わせます。`enabled = false` だけで他オブジェクトからの通常メソッド呼び出しまで止まると考えず、初期化APIの成否・失敗後の状態・呼び出し元が続行しないことも確認します。
+
+製品ビルドで原因を追う必要のあるエラーは `Debug.LogError` 等の実行時ログを残します。同じ失敗で `Debug.Assert` と `Debug.LogError` を機械的に二重出力せず、出力条件・担当・目的を明確にします。
+
+ログには原因・対象・必要な前提が分かるメッセージを付け、可能なら `UnityEngine.Object` の `context` を添付します。状態に依存する同じ異常を毎フレーム繰り返し出力しません。
+
+### throw の扱い
+
+- `Assets/Scripts/` 等のゲーム本体の通常実行経路では、設定不備・引数不正・ゲーム状態異常を通知するための明示的な `throw new ...` を原則禁止します。想定外状態の検出には上記のAssert・ログと明示的な失敗処理を使います。
+- 外部ライブラリやUnity内部から伝播する例外を隠蔽する規約ではありません。例外をすべて握りつぶす空の `catch` は設けません。
+- Editor拡張、データ変換ツール、開発用CLI、自動検証・テスト等のゲームプレイ外の処理では、明確な失敗通知のための例外を許容します。Editor検証・テストの失敗を `Debug.Assert` のログだけへ置き換えず、バッチ検証で失敗を確実に検出できる方式を維持します。
+- 既存の `throw` を機械的にAssert・ログへ置き換えません。適用時は初期化APIの成否と失敗後の状態、呼び出し元が続行しないことを個別にレビューします。
+
+### コード例
+
+以下は使い分けを示す小さな例です。実際の停止範囲は、そのクラスの責務に合わせて決めます。
+
+不変条件の検証では `Debug.Assert` を使います。この例では、アサートが省略されても範囲外アクセスを行わないよう、処理の中断を別途記述しています。
+
+```csharp
+private void AdvanceInvader(int inIndex)
+{
+    bool validIndex = inIndex >= 0 && inIndex < _invaders.Count;
+    Debug.Assert(validIndex, "Invader index must be within the formation.", this);
+    if (validIndex == false)
+    {
+        return;
+    }
+    _invaders[inIndex].AdvanceAnimation();
+}
+```
+
+必須のScene/Prefab参照がない場合は、製品ビルドでも原因を記録し、初期化を中断します。この例の `false` を受け取る呼び出し元も初期化失敗として扱い、ゲーム進行を開始しません。
+
+```csharp
+private bool TryInitializeGameplay()
+{
+    if (_formation == null)
+    {
+        Debug.LogError("Gameplay requires a Formation reference in the Scene/Prefab.", this);
+        enabled = false;
+        return false;
+    }
+    return true;
+}
+```
+
+本来あるべき演出機能が欠落していてもゲーム進行を継続できる場合は、`Debug.LogError` を出し、当該処理だけを中断します。この例は演出要求時に呼ぶもので、毎フレーム呼び出して同じエラーを連射しません。欠落が仕様上想定済み・許容済みなら、通知の必要性を判断したうえで `Debug.LogWarning` を使います。
+
+```csharp
+private void PlayDefeatEffect()
+{
+    if (_defeatEffect == null)
+    {
+        Debug.LogError("Defeat effect is missing; skip the effect and continue gameplay.", this);
+        return;
+    }
+    _defeatEffect.Play();
+}
+```
+
+本節は今後の実装・レビューの基準です。今回の規約追加では既存ランタイム実装・Editor検証・テストを変更しません。既存の `throw` の整理は、呼び出し元や状態遷移も含めて後続Issue・別PRで行います。標準のEditorConfigで正確に表現できないため、本書を正本とし、`.editorconfig` は変更しません。
+
 ## EditorConfig と既存コードへの適用
 
 ルートの [.editorconfig](../.editorconfig) に、Roslyn の命名規則で表現できる範囲を設定します。`const` は field の規則に含まれないよう、専用の除外ルールで診断を無効にしています。利用するエディターの Roslyn 対応により診断の表示は異なります。
