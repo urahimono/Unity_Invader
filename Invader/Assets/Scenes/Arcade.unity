@@ -185,7 +185,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b5b30e87a5da91c448962d6fb8cfa00f, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.Shield
 --- !u!1001 &171432328
 PrefabInstance:
@@ -253,7 +253,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b5b30e87a5da91c448962d6fb8cfa00f, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.Shield
 --- !u!1001 &395602390
 PrefabInstance:
@@ -321,7 +321,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a196e35fdde0a7141b606305e6537d29, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.Ufo
 --- !u!1 &600648462
 GameObject:
@@ -541,7 +541,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 403b52c322b700e44bb0f9aba2fd8955, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.DebugStatusOverlay
 --- !u!114 &788391823
 MonoBehaviour:
@@ -553,7 +553,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: eece3b38a1124e84db3b076879b881f8, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.DebugCarpetBomb
   _shotPrefab: {fileID: 7546425321980242310, guid: 72ca363032cdb7e499e595d43a891dd1, type: 3}
 --- !u!1 &805784277
@@ -589,10 +589,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.InvaderFormation
   _invaderPrefab: {fileID: 1458270863617279217, guid: 6a72d22b7079b5b46a7f03e5386f157f, type: 3}
   _aliveCount: 0
-  _rollingShot: {fileID: 1150688045}
-  _plungerShot: {fileID: 1114205932}
-  _squigglyShot: {fileID: 1644986078}
   _ufo: {fileID: 395602391}
+  _enemyShots:
+    _rollingShot: {fileID: 1150688045}
+    _plungerShot: {fileID: 1114205932}
+    _squigglyShot: {fileID: 1644986078}
 --- !u!50 &805784279
 Rigidbody2D:
   serializedVersion: 5
@@ -645,7 +646,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9e4bd667978f0b341afc0ae586cb1f0f, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.DebugFormationSpeed
 --- !u!1001 &868436401
 PrefabInstance:
@@ -713,7 +714,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b5b30e87a5da91c448962d6fb8cfa00f, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.Shield
 --- !u!1001 &984733094
 PrefabInstance:
@@ -849,7 +850,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fc079101324847eb82b14e68964f1ec6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.EnemyShot
 --- !u!1001 &1150688044
 PrefabInstance:
@@ -917,7 +918,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fc079101324847eb82b14e68964f1ec6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.EnemyShot
 --- !u!1001 &1644986077
 PrefabInstance:
@@ -985,7 +986,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fc079101324847eb82b14e68964f1ec6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.EnemyShot
 --- !u!1001 &1668351245
 PrefabInstance:
@@ -1125,7 +1126,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b5b30e87a5da91c448962d6fb8cfa00f, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityInvader.Shield
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

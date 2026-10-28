@@ -118,7 +118,7 @@ namespace UnityInvader.Editor
                     _formation  = UnityEngine.Object.FindAnyObjectByType<InvaderFormation>();
                     _player     = UnityEngine.Object.FindAnyObjectByType<Player>();
                     _playerShot = UnityEngine.Object.FindObjectsByType<PlayerShot>(FindObjectsInactive.Include).Single();
-                    _enemyShot  = (EnemyShot)new SerializedObject(_formation).FindProperty("_rollingShot").objectReferenceValue;
+                    _enemyShot  = (EnemyShot)new SerializedObject(_formation).FindProperty("_enemyShots").FindPropertyRelative("_rollingShot").objectReferenceValue;
                     _invaders   = _formation.GetComponentsInChildren<Invader>(true)
                         .OrderByDescending(inInvader => inInvader.transform.localPosition.y)
                         .ThenBy(inInvader => inInvader.transform.localPosition.x).ToArray();

@@ -44,7 +44,7 @@ namespace UnityInvader.Editor
                 throw new InvalidOperationException("Plunger setup is an edit-time operation.");
             }
             var data    = new SerializedObject(inFormation);
-            var rolling = data.FindProperty("_rollingShot").objectReferenceValue as EnemyShot;
+            var rolling = data.FindProperty("_enemyShots").FindPropertyRelative("_rollingShot").objectReferenceValue as EnemyShot;
             if (rolling == null)
             {
                 throw new InvalidOperationException("Configure Rolling EnemyShot first.");
@@ -65,7 +65,7 @@ namespace UnityInvader.Editor
                     PrefabUtility.UnloadPrefabContents(root);
                 }
             }
-            var shot = data.FindProperty("_plungerShot").objectReferenceValue as EnemyShot;
+            var shot = data.FindProperty("_enemyShots").FindPropertyRelative("_plungerShot").objectReferenceValue as EnemyShot;
             if (shot == null)
             {
                 // The migration menu replaces Formation but keeps existing enemy shot roots.
@@ -86,7 +86,7 @@ namespace UnityInvader.Editor
                 shot = ((GameObject)PrefabUtility.InstantiatePrefab(prefab, inScene)).GetComponent<EnemyShot>();
             }
             shot.gameObject.SetActive(false);
-            data.FindProperty("_plungerShot").objectReferenceValue = shot;
+            data.FindProperty("_enemyShots").FindPropertyRelative("_plungerShot").objectReferenceValue = shot;
             data.ApplyModifiedPropertiesWithoutUndo();
         }
     }

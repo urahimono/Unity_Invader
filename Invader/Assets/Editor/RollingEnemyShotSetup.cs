@@ -66,7 +66,7 @@ namespace UnityInvader.Editor
             shot.gameObject.name = "EnemyShot";
             shot.gameObject.SetActive(false);
             var data                                               = new SerializedObject(inFormation);
-            data.FindProperty("_rollingShot").objectReferenceValue = shot;
+            data.FindProperty("_enemyShots").FindPropertyRelative("_rollingShot").objectReferenceValue = shot;
             data.ApplyModifiedPropertiesWithoutUndo();
         }
 

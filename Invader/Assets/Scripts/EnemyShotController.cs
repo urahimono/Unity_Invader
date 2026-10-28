@@ -3,19 +3,35 @@ using UnityEngine;
 
 namespace UnityInvader
 {
+    [Serializable]
     internal sealed class EnemyShotController
     {
+        [SerializeField]
+        private EnemyShot _rollingShot;
+        [SerializeField]
+        private EnemyShot _plungerShot;
+        [SerializeField]
+        private EnemyShot _squigglyShot;
+
+        [NonSerialized]
         private bool _rollingAttemptReady;
+        [NonSerialized]
         private int  _plungerColumnIndex;
+        [NonSerialized]
         private int  _squigglyColumnIndex;
 
-        internal bool IsSquigglyInFlight => _shots[Squiggly].InFlight;
+        [NonSerialized]
+        private EnemyShot[]         _shots;
+        [NonSerialized]
+        private Func<int, Vector2?> _getColumnMuzzle;
+        [NonSerialized]
+        private Func<int>           _getScore;
+        [NonSerialized]
+        private int                 _columns;
+        [NonSerialized]
+        private float               _spacing;
 
-        private readonly EnemyShot[]         _shots;
-        private readonly Func<int, Vector2?> _getColumnMuzzle;
-        private readonly Func<int>           _getScore;
-        private readonly int                 _columns;
-        private readonly float               _spacing;
+        internal bool IsSquigglyInFlight => _shots[Squiggly].InFlight;
 
         private const int Rolling  = 0;
         private const int Plunger  = 1;
@@ -28,15 +44,14 @@ namespace UnityInvader
         private static readonly int[] _reloadScoreMsb  = { 0x02, 0x10, 0x20, 0x30 };
         private static readonly int[] _reloadRates     = { 0x30, 0x10, 0x0B, 0x08, 0x07 };
 
-        internal EnemyShotController(EnemyShot inRolling, EnemyShot inPlunger, EnemyShot inSquiggly,
-            Func<int, Vector2?> inGetColumnMuzzle, Func<int> inGetScore, int inColumns, float inSpacing)
+        internal void Initialize(Func<int, Vector2?> inGetColumnMuzzle, Func<int> inGetScore, int inColumns, float inSpacing)
         {
-            if (inRolling == null || inPlunger == null || inSquiggly == null ||
-                inRolling == inPlunger || inRolling == inSquiggly || inPlunger == inSquiggly)
+            if (_rollingShot == null || _plungerShot == null || _squigglyShot == null ||
+                _rollingShot == _plungerShot || _rollingShot == _squigglyShot || _plungerShot == _squigglyShot)
             {
                 throw new ArgumentException("Three independent enemy shots are required.");
             }
-            _shots           = new[] { inRolling, inPlunger, inSquiggly };
+            _shots           = new[] { _rollingShot, _plungerShot, _squigglyShot };
             _getColumnMuzzle = inGetColumnMuzzle ?? throw new ArgumentNullException(nameof(inGetColumnMuzzle));
             _getScore        = inGetScore ?? throw new ArgumentNullException(nameof(inGetScore));
             _columns         = inColumns;

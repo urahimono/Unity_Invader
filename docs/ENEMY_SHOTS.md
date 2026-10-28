@@ -51,11 +51,11 @@ Fデバッグ倍率は従来どおりFormationの移動時計だけへ適用し�
 - Issue #79でUFOとのSquiggly処理枠共有を追加しました。phase 2でSquiggly終了を待ち、UFO飛行中はSquigglyの新規発射を止めます。出現条件・加点と近似は [UFO](UFO.md) を参照してください。原作4コマ画像・爆発・SE、弾同士の相殺は未実装です。
 - 参考動画との視覚・時間照合、描画FPS別測定、実画面/実キー、Development Build/製品ビルド実行は未確認です。
 
-## Controllerと保存互換性（Issue #112）
+## Controllerと保存互換性（Issue #112/#114）
 
-EnemyShotControllerはFormationが初期化時に生成する通常のC#クラスです。3弾を配列で保持し、PreparePhysicsStep/SetPlaying/ResetFlights/SetFastを各一箇所の反復で実行します。発射条件・Reload・列選択・表ポインターを所有し、Formationの実体や55体のリストは受け取りません。Rollingの照準にはPlayer/Formation位置の値、列の発射位置にはFunc<int, Vector2?>、ScoreにはFunc<int>を使います。UFO/共有時計は所有せず、FormationにはIsSquigglyInFlightのboolだけを提供します。
+EnemyShotControllerはSerializableな通常のC#クラスで、FormationのSerializeField _enemyShotsへインライン保存します。ControllerのSerializeField _rollingShot/_plungerShot/_squigglyShotが3参照の所有者です。Formationは実行時の値取得関数と列数/間隔だけをInitializeで渡し、Controllerは3参照のnull/重複を検証して実行用配列を作ります。配列・delegate・表ポインター/フラグ・列数/間隔にはNonSerializedを付け、Inspector保存状態へ混入させません。3弾を配列で保持し、PreparePhysicsStep/SetPlaying/ResetFlights/SetFastを各一箇所の反復で実行します。発射条件・Reload・列選択・表ポインターを所有し、Formationの実体や55体のリストは受け取りません。Rollingの照準にはPlayer/Formation位置の値、列の発射位置にはFunc<int, Vector2?>、ScoreにはFunc<int>を使います。UFO/共有時計は所有せず、FormationにはIsSquigglyInFlightのboolだけを提供します。
 
-Formationの既存_rollingShot/_plungerShot/_squigglyShotというSerializeField名と参照は維持し、Controllerへ初期化時に渡します。Scene/Prefabの再生成・YAML編集・新規GameObjectはありません。Waveでは表を先頭へ戻して弾を回収、従来の時点で速度を戻します。死亡復帰の回収は表を保持し、Pauseは飛行・位置・StepCountを保持します。共有時計のリセットはFormationが行います。
+Issue #114では、旧3フィールドを一時保持したままEditor APIでController配下へ参照をコピーし、Scene保存・再ロード後の新旧GlobalObjectId一致を確認してから旧フィールドを削除しました。最終コードでも保存・再ロードと3設定メニュー各2回の再実行で元の参照と全GameObjectのID/個数が維持されることを確認しています。移行用の一時Editor処理は除去しました。設定ツール・接続検証は_enemyShots配下の相対プロパティを使用します。Scene/Prefabの再生成・YAML手編集・新規GameObjectはありません。Waveでは表を先頭へ戻して弾を回収、従来の時点で速度を戻します。死亡復帰の回収は表を保持し、Pauseは飛行・位置・StepCountを保持します。共有時計のリセットはFormationが行います。
 
 ## 保存と確認
 

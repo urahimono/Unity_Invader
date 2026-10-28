@@ -73,7 +73,7 @@ namespace UnityInvader.Editor
             var shot      = (PlayerShot)Read(player, "_shot");
             var invaders  = formation.GetComponentsInChildren<Invader>(true);
             var enemies   = new[] { "_rollingShot", "_plungerShot", "_squigglyShot" }
-                .Select(inName => (EnemyShot)Read(formation, inName)).ToArray();
+                .Select(inName => (EnemyShot)Read(Read(formation, "_enemyShots"), inName)).ToArray();
             var ufo = (Ufo)Read(formation, "_ufo");
             inDriver.EditorSetState(GameState.Playing);
             VerifyUfoControl(inDriver, formation, player, shot, ufo);
@@ -475,7 +475,7 @@ namespace UnityInvader.Editor
                 inPlayer.NormalShotEndCount == 3, "Resume preserves flight direction and history.");
 
             Call(inFormation, "PreparePlayerRespawn");
-            var squiggly = (EnemyShot)Read(inFormation, "_squigglyShot");
+            var squiggly = (EnemyShot)Read(Read(inFormation, "_enemyShots"), "_squigglyShot");
             Require((bool)typeof(EnemyShot).GetMethod("TryLaunch", PrivateInstance).Invoke(squiggly, new object[] { Vector2.zero }),
                 "Launch Squiggly before pending UFO.");
             Set(inFormation, "_ufoPending", true);

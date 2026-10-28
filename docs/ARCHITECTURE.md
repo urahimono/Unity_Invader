@@ -63,7 +63,7 @@ flowchart TD
 | PlayerShot | 構成済みRigidbody2D/RendererとTrigger。GameObject.activeSelfが飛行状態、MonoBehaviour.enabledが進行可否。IHitReceiver.TryReceiveHit(this)成立後にTargetTypeを取得して消費し、FlightEnded(HitTargetType)を一度通知。Shield吸収・上端はNone、ResetFlightは無通知。得点表・通常弾/B弾の識別・Driver参照は持たない |
 | Invader | GameObjectの有効状態による生死、種類別Sprite配列・現在フレームindex・アニメ進行、種類から命中種別への対応付け、被弾反応。Inactive化後にDefeated(個体, 命中元)を一度だけ通知し、Formation参照は持たない |
 | InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、行からの種類選択・配置、集団移動の方向/周期・アニメ進行の共通タイミング、生存数の集計。敵弾/UFOの60Hz時計・種類別phase、指定列の最下段生存個体の発射位置取得。UFOの下降条件・出現カウンタ・開始待ち・Squiggly共有枠・発進時の最新通常弾終了回数による方向判定。既存_aliveCountからIsClearedを公開。弾の得点通知は行わない |
-| EnemyShotController | 通常のC#クラス。3弾配列の一括準備・停止/再開・回収・速度変更、種類別発射条件、Reload計算、Rolling列選択、Plunger/Squiggly列テーブルとポインターを所有。列番号から発射位置を得るFunc<int, Vector2?>と最新ScoreのFunc<int>を受け、FormationやInvaderリスト、UFOは保持しない |
+| EnemyShotController | Serializableな通常のC#クラス。3つのEnemyShot参照を自身のSerializeFieldとして保存。3弾配列の一括準備・停止/再開・回収・速度変更、種類別発射条件、Reload計算、Rolling列選択、Plunger/Squiggly列テーブルとポインターを所有。列番号から発射位置を得るFunc<int, Vector2?>と最新ScoreのFunc<int>を受け、FormationやInvaderリスト、UFOは保持しない |
 | EnemyShot | Kinematic Rigidbody2D、移動step countと速度区分。Formationのphaseから1stepを受け、既存Shield判定と移動を実行。TriggerでPlayerへ被弾受付を依頼し、成立時または画面下端で非アクティブ化して再利用 |
 | Ufo | Kinematic Rigidbody2D、飛行方向、Sprite/Collider。共有phaseから2px移動を受け、退出・被弾で解除。IHitReceiverで命中を受理し、自身を非アクティブ化。飛行中はGameObject有効状態を正とし、独立時計やScoreを所有しない |
 | ArcadeViewport | 224:256の表示領域と論理px→Unity単位の倍率 |
@@ -142,7 +142,7 @@ Formationは通常の移動ステップ後、移動先Rigidbody2D座標と各生
 
 EnemyShotControllerがRollingのPlayer対応列、Plunger16列、Squiggly15列を選びます。Formationは列番号から生存個体の発射位置だけを返します。単一の敵弾専用60Hz蓄積時計でRolling=0 / Plunger=1 / Squiggly=2のphaseを0→2→1の順に処理し、各種は3tickに1回だけ発射試行または移動します。旧2秒タイマーは廃止しました。他2種のstep countが0またはScore依存Reload値を厳密に超えている場合だけ新規発射できます。ScoreはDriverが所有し、EnemyShotControllerが初期化時に受け取ったFunc<int>を発射試行時に呼んで最新値を取得します。Formation/ControllerにScoreのコピーや同期状態は持ちません。
 
-Issue #112でFormationは保存互換用の3つのSerializeFieldを維持し、初期化時にだけEnemyShotControllerへ渡します。以後はControllerの配列を使った一括APIとProcessRolling/ProcessPlunger/ProcessSquigglyを呼びます。UFO分岐・共有時計・phase順・countdown更新順はFormationに残し、Squigglyの飛行状態はbool値だけを問い合わせます。既存の時計設計を保った責務の分割として現文書に記録し、過去ADRは変更しません。
+Issue #112で3弾の操作を集約し、Issue #114で保存参照もControllerへ移しました。FormationはSerializeFieldの_enemyShotsを1つ所有し、Controllerへ実行時の発射位置/Score関数・列数/間隔だけをInitializeで渡します。Controllerを作り直さず、自身の3つの保存参照から実行用配列を作ります。配列・delegate・フラグ・表ポインター・列数/間隔はNonSerializedです。Controllerの配列を使った一括APIとProcessRolling/ProcessPlunger/ProcessSquigglyを呼びます。UFO分岐・共有時計・phase順・countdown更新順はFormationに残し、Squigglyの飛行状態はbool値だけを問い合わせます。Arcadeの旧3参照は旧フィールドを残した状態でEditor APIによりコピー・保存・再ロードし、GlobalObjectId一致を確認した後に旧フィールドを削除しました。Editor設定ツールは_enemyShots配下の相対プロパティを扱います。新規GameObject/Componentはなく、既存の時計設計を保った責務・設定所有の整理として現文書に記録し、過去ADRは変更しません。
 
 EnemyShotは3つの独立したインスタンスで、発射時count=1・移動ごとに加算し、既存のShield画素判定・Player Trigger・下端消滅を共用します。独立FixedUpdate時計はなく、Formationのphaseから移動を依頼します。各物理stepの先頭で前stepのMovePosition速度を保持位置へ戻してから、選択された種類の移動先を設定します。Rigidbody2D/GameObject有効状態を正とする点は維持しています。
 
