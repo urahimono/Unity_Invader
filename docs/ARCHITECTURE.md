@@ -8,6 +8,8 @@ Issue #57でPlayingのコードをComponent/Physics2Dへ移行し、現在はArc
 
 通常は保存済みBootstrapから起動します。Scene再生成が必要な場合の移行メニューは [README](../README.md) を参照してください。
 
+Issue #124では初期化失敗を例外ではなく成功・失敗の値で扱います。PlayerはAwakeで必須参照を検証し、成功時だけ弾終了を購読して`IsInitialized`を確定します。DriverはStartでPlayerの成功を確認し、Formation→EnemyShotController・各Invaderの`Initialize`がすべて成功した場合だけ進行用イベントを購読し、初期化済みとしてStateを適用します。原因を検出した担当が一度LogErrorを出し、上位は重複ログを出さず停止します。Formationの途中生成失敗では個体を停止・購読解除・破棄し、DriverはPlayer・Formation・敵弾・UFO・Shieldの進行を止めて無効になります。初期化はインスタンスごとに一度だけ試行し、失敗後は参照の修正や再有効化で通常進行へ復帰せず、構成を直したうえでSceneを再ロードします。正常時のWave・Pause・死亡復帰の契約は維持します。
+
 | Scene | 役割 |
 | --- | --- |
 | Bootstrap | StartでArcadeをSingleロード。今回変更なし |

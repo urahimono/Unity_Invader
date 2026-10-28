@@ -13,6 +13,7 @@ namespace UnityInvader.Editor
         private static double _startAfter;
 
         private const string       PendingKey      = "UnityInvader.InvaderDefeatedVerification";
+        private const string       FailureKey      = "UnityInvader.InitializationFailureVerification";
         private const BindingFlags PrivateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
 
         static InvaderDefeatedVerification()
@@ -27,6 +28,12 @@ namespace UnityInvader.Editor
             EditorSceneManager.OpenScene("Assets/Scenes/Bootstrap.unity");
             SessionState.SetBool(PendingKey, true);
             _startAfter = EditorApplication.timeSinceStartup + 2d;
+        }
+
+        public static void RunInitializationFailures()
+        {
+            SessionState.SetBool(FailureKey, true);
+            Run();
         }
 
         private static void VerifyWhenPlaying()
@@ -53,8 +60,16 @@ namespace UnityInvader.Editor
             SessionState.SetBool(PendingKey, false);
             try
             {
-                Verify(driver);
-                Debug.Log("INVADER_DEFEATED_PASS: normal/B scoring, duplicate guard, final kill, reuse, speed threshold, source and unsubscribe.");
+                if (SessionState.GetBool(FailureKey, false))
+                {
+                    SessionState.EraseBool(FailureKey);
+                    VerifyInitializationFailures();
+                }
+                else
+                {
+                    Verify(driver);
+                    Debug.Log("INVADER_DEFEATED_PASS: normal/B scoring, duplicate guard, final kill, reuse, speed threshold, source and unsubscribe.");
+                }
                 EditorApplication.Exit(0);
             }
             catch (Exception exception)
@@ -341,16 +356,7 @@ namespace UnityInvader.Editor
             Require(Read(controller, "_getScore") is Func<int> &&
                 typeof(InvaderFormation).GetFields(PrivateInstance).All(inField => inField.FieldType != typeof(GameplayDriver)),
                 "Formation has a score reader and no Driver field.");
-            try
-            {
-                typeof(InvaderFormation).GetMethod("Initialize", PrivateInstance).Invoke(inFormation, new object[] { null, null, null });
-                throw new InvalidOperationException("Null score reader must be rejected at initialization.");
-            }
-            catch (TargetInvocationException exception)
-            {
-                Require(exception.InnerException is ArgumentNullException argument && argument.ParamName == "inGetScore",
-                    "Null score reader validation precedes initialization.");
-            }
+            // Invalid initialization uses fresh objects in RunInitializationFailures, never this live rack.
             int initialScore = inDriver.Score;
             int[] scores     = { 0, 299, 300, 1099, 1100, 2099, 2100, 3099, 3100, 9999, 10000 };
             int[] rates      = { 48, 48, 16, 16, 11, 11, 8, 8, 7, 7, 7 };
@@ -376,7 +382,7 @@ namespace UnityInvader.Editor
                 "Common scoring immediately changes the next firing decision through the original callback.");
             Set(inDriver, "_score", initialScore);
             Call(inFormation, "PreparePlayerRespawn");
-            Debug.Log("SCORE_READER_PASS: null validation, live callback, Reload boundaries, strict StepCount and score-change firing.");
+            Debug.Log("SCORE_READER_PASS: live callback, Reload boundaries, strict StepCount and score-change firing.");
         }
 
         private static void VerifyInvasion(GameplayDriver inDriver, InvaderFormation inFormation, Invader[] inInvaders,
@@ -671,6 +677,223 @@ namespace UnityInvader.Editor
             Require(inUfo.gameObject.activeSelf && (int)Read(inUfo, "_direction") == direction &&
                 (bool)Read(Read(inFormation, "_ufo"), "_pending") == false && (int)Read(Read(inFormation, "_enemyShots"), "_shotPhase") == 1,
                 "Phase 2 launches UFO using the latest Player count and consumes pending once.");
+        }
+
+        private static void VerifyInitializationFailures()
+        {
+            // Separate explicit batch: expected Error logs are checked here, outside normal regression logs.
+            for (int failure = 0; failure < 11; failure++)
+            {
+                var root = new GameObject("Initialization failure fixture");
+                root.SetActive(false);
+                try
+                {
+                    var player = CloneFixture<Player>("Player", root);
+                    var shot   = CloneFixture<PlayerShot>("PlayerShot", root);
+                    Set(player, "_shot", failure == 0 ? null : shot);
+                    if (failure == 9)
+                    {
+                        Set(player, "_renderer", null);
+                    }
+                    if (failure == 10)
+                    {
+                        Set(player, "_hitCollider", null);
+                    }
+                    var enemies = new[] { "EnemyShot", "PlungerEnemyShot", "SquigglyEnemyShot" }
+                        .Select(inName => CloneFixture<EnemyShot>(inName, root)).ToArray();
+                    foreach (var enemy in enemies)
+                    {
+                        Call(enemy, "SetPlaying", false);
+                    }
+                    var ufo      = CloneFixture<Ufo>("Ufo", root);
+                    var template = CloneFixture<Invader>("Invader", root);
+                    template.gameObject.SetActive(false);
+                    var formationObject = new GameObject("Formation fixture");
+                    formationObject.transform.SetParent(root.transform);
+                    var formation  = formationObject.AddComponent<InvaderFormation>();
+                    var controller = Read(formation, "_enemyShots");
+                    Set(controller, "_rollingShot", enemies[0]);
+                    Set(controller, "_plungerShot", failure == 1 ? enemies[0] : enemies[1]);
+                    Set(controller, "_squigglyShot", failure == 2 ? null : enemies[2]);
+                    Set(formation, "_invaderPrefab", template);
+                    Set(formation, "_ufo", ufo);
+                    if (failure == 3)
+                    {
+                        // Eleven Top individuals succeed before the first Middle individual fails.
+                        Set(template, "_middleFrames", Array.Empty<Sprite>());
+                    }
+                    var driverObject = new GameObject("Driver fixture");
+                    driverObject.transform.SetParent(root.transform);
+                    var driver  = driverObject.AddComponent<GameplayDriver>();
+                    var shields = Enumerable.Range(0, 4).Select(inIndex => CloneFixture<Shield>("Shield", root)).ToArray();
+                    Set(driver, "_player", player);
+                    Set(driver, "_formation", formation);
+                    Set(driver, "_shields", shields);
+                    Set(driver, "_developmentStartPlaying", true);
+                    if (failure == 0 || failure >= 9)
+                    {
+                        ExpectInitializationError("Player requires saved PlayerShot, renderer and hit collider references. Configure Player Hit first.",
+                            () => root.SetActive(true));
+                    }
+                    else
+                    {
+                        root.SetActive(true);
+                    }
+                    if (failure < 4 || failure >= 9)
+                    {
+                        string message = failure == 1 || failure == 2 ?
+                            "EnemyShotController requires three distinct, non-null enemy shot references." :
+                            "Invader requires non-empty Sprite frames without null entries for Middle. Configure Invader Animation first.";
+                        if (failure == 0 || failure >= 9)
+                        {
+                            Call(driver, "InitializeGameplay");
+                        }
+                        else
+                        {
+                            ExpectInitializationError(message, () => Call(driver, "InitializeGameplay"));
+                        }
+                        Require(driver.enabled == false && (bool)Read(driver, "_initialized") == false &&
+                            driver.CurrentState == GameState.Attract, "Failure reaches Driver before subscriptions and Playing.");
+                        Require(Read(player, "HitAccepted") == null && Read(player, "ShotResolved") == null &&
+                            Read(formation, "Invaded") == null, "Driver never subscribes on initialization failure.");
+                        if (failure == 0 || failure >= 9)
+                        {
+                            Require(player.IsInitialized == false && player.enabled == false && Read(shot, "FlightEnded") == null,
+                                "Failed Awake has no shot subscription.");
+                            Set(player, "_shot", shot); // Repairing Inspector data and enabling must not retry Awake.
+                            Set(player, "_renderer", player.GetComponent<SpriteRenderer>());
+                            Set(player, "_hitCollider", player.GetComponent<BoxCollider2D>());
+                            player.enabled = true;
+                            Call(player, "SetPlaying", true);
+                            Call(player, "Respawn");
+                            Require(player.IsInitialized == false && player.TryReceiveHit(null) == false,
+                                "Failed Player cannot respawn or accept hits after re-enable.");
+                        }
+                        driver.enabled = true;
+                        Call(driver, "InitializeGameplay");
+                        driver.EditorSetState(GameState.Playing);
+                        Call(driver, "Update");
+                        Require((bool)Read(driver, "_initialized") == false && driver.CurrentState == GameState.Attract,
+                            "Re-enable and Editor state changes cannot start a failed Driver.");
+                        Require(player.GetComponent<BoxCollider2D>().enabled == false && shot.enabled == false &&
+                            shields.All(inShield => inShield.GetComponent<Collider2D>().enabled == false),
+                            "Player, shot and Shields stay stopped.");
+                    }
+                    else
+                    {
+                        // Delegate failures are tested without mutating an initialized Controller.
+                        object[] arguments = { (Func<int, Vector2?>)(inColumn => Vector2.zero), (Func<int>)(() => 0),
+                            11, 0.16f, (Func<bool, bool>)(inIdle => false), (Action)(() => { }) };
+                        if (failure == 4)
+                        {
+                            ExpectInitializationError("Formation requires a score reader.", () =>
+                                Require((bool)Call(formation, "Initialize", null, null, null) == false, "Invalid Formation returns false."));
+                        }
+                        else
+                        {
+                            arguments[new[] { 0, 1, 4, 5 }[failure - 5]] = null;
+                            ExpectInitializationError("EnemyShotController requires muzzle, score, UFO phase and countdown delegates.", () =>
+                                Require((bool)Call(controller, "Initialize", arguments) == false, "Null delegate returns false."));
+                            Require(Read(controller, "_shots") == null && Read(controller, "_getColumnMuzzle") == null &&
+                                Read(controller, "_getScore") == null, "Failed Controller commits no runtime references.");
+                            Call(controller, "SetPlaying", true);
+                            Call(controller, "Update", Vector2.zero, Vector2.zero, 55);
+                        }
+                    }
+                    formation.enabled = true;
+                    Call(formation, "SetPlaying", true);
+                    Call(formation, "BeginWave");
+                    Call(formation, "PreparePlayerRespawn");
+                    Call(formation, "FixedUpdate");
+                    Require(formation.GetComponent<Rigidbody2D>().simulated == false &&
+                        enemies.All(inEnemy => inEnemy.GetComponent<Rigidbody2D>().simulated == false) &&
+                        ufo.GetComponent<Rigidbody2D>().simulated == false, "No partial formation or projectile simulation.");
+                    var partial = formation.GetComponentsInChildren<Invader>(true);
+                    Require(((System.Collections.IList)Read(formation, "_invaders")).Count == 0 &&
+                        partial.All(inInvader => inInvader.gameObject.activeSelf == false && Read(inInvader, "Defeated") == null),
+                        "Partial individuals are inactive, unsubscribed and removed from ownership before deferred Destroy.");
+                    Require(partial.Length == (failure == 3 ? 12 : 0), "Mid-creation failure exercises eleven successful individuals and one failure.");
+                    if (failure == 3)
+                    {
+                        Set(template, "_middleFrames", Read(template, "_topFrames"));
+                        Require((bool)Call(formation, "Initialize", player, (Func<long>)(() => 0), (Func<int>)(() => 0)) == false,
+                            "Repairing the template cannot restart a failed Formation.");
+                    }
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(root);
+                }
+            }
+            foreach (int failure in Enumerable.Range(0, 5))
+            {
+                var root = new GameObject("Invader failure fixture");
+                try
+                {
+                    var invader = CloneFixture<Invader>("Invader", root);
+                    var type    = failure == 0 ? (InvaderType)99 : InvaderType.Top;
+                    if (failure == 1)
+                    {
+                        Set(invader, "_topFrames", null);
+                    }
+                    if (failure == 2)
+                    {
+                        Set(invader, "_topFrames", Array.Empty<Sprite>());
+                    }
+                    if (failure == 3)
+                    {
+                        Set(invader, "_topFrames", new Sprite[] { null });
+                    }
+                    if (failure == 4)
+                    {
+                        Set(invader, "_renderer", null);
+                    }
+                    string message = failure == 0 ? "Unknown Invader type: 99." : failure == 4 ?
+                        "Invader requires a SpriteRenderer reference and Collider2D." :
+                        "Invader requires non-empty Sprite frames without null entries for Top. Configure Invader Animation first.";
+                    ExpectInitializationError(message, () => Require((bool)Call(invader, "Initialize", type) == false, "Invalid Invader returns false."));
+                    invader.enabled = true;
+                    Call(invader, "BeginWave");
+                    Call(invader, "SetPlaying", true);
+                    Call(invader, "AdvanceAnimation");
+                    Require(invader.TryReceiveHit(null) == false && invader.GetComponent<Collider2D>().enabled == false &&
+                        (bool)Call(invader, "Initialize", InvaderType.Top) == false, "Failed Invader cannot resume or retry initialization.");
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(root);
+                }
+            }
+            Debug.Log("INITIALIZATION_FAILURE_PASS: expected errors, failure propagation, no subscriptions, partial cleanup and no restart.");
+        }
+
+        private static T CloneFixture<T>(string inName, GameObject inRoot) where T : Component
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<T>(ComponentGameplayMigration.PrefabPath + "/" + inName + ".prefab");
+            return UnityEngine.Object.Instantiate(prefab, inRoot.transform);
+        }
+
+        private static void ExpectInitializationError(string inMessage, Action inAction)
+        {
+            var errors = new System.Collections.Generic.List<string>();
+            Application.LogCallback capture = (inText, inStack, inType) =>
+            {
+                if (inType == LogType.Error || inType == LogType.Exception || inType == LogType.Assert)
+                {
+                    errors.Add(inText);
+                }
+            };
+            Application.logMessageReceived += capture;
+            try
+            {
+                inAction();
+            }
+            finally
+            {
+                Application.logMessageReceived -= capture;
+            }
+            Require(errors.Count == 1 && errors[0] == inMessage, "Exactly one expected error, no duplicate or null-reference exception: " + inMessage);
+            Debug.Log("EXPECTED_INITIALIZATION_ERROR_VERIFIED: " + inMessage);
         }
 
         private static void Set(object inTarget, string inName, object inValue)
