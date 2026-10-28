@@ -22,20 +22,17 @@ namespace UnityInvader
         [SerializeField]
         private Ufo       _ufo;
 
-        private IPositionProvider _player;
-        private Func<long>        _getNormalShotEndCount;
-        private Func<int>         _getScore;
-        private Rigidbody2D       _body;
-        private float             _elapsed;
-        private int               _direction = 1;
-        private bool              _playing;
-        private double            _shotTickElapsed;
-        private int               _shotPhase;
-        private bool              _rollingAttemptReady;
-        private int               _plungerColumnIndex;
-        private int               _squigglyColumnIndex;
-        private int               _ufoTicksRemaining;
-        private bool              _ufoPending;
+        private IPositionProvider   _player;
+        private Func<long>          _getNormalShotEndCount;
+        private EnemyShotController _enemyShots;
+        private Rigidbody2D         _body;
+        private float               _elapsed;
+        private int                 _direction = 1;
+        private bool                _playing;
+        private double              _shotTickElapsed;
+        private int                 _shotPhase;
+        private int                 _ufoTicksRemaining;
+        private bool                _ufoPending;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private float _debugMovementMultiplier = 1f;
@@ -54,21 +51,12 @@ namespace UnityInvader
         private const    float         MaximumX   = (ArcadeViewport.ScreenWidth / 2f - CellSize / 2f - (Columns - 1) * Spacing) * ArcadeViewport.UnitsPerPixel;
         private readonly List<Invader> _invaders  = new List<Invader>();
 
-        // ROM ColFireTable 0x1D00, indices 0x00..0x0F; one-based columns.
-        private static readonly int[] _plungerColumns = { 1, 7, 1, 1, 1, 4, 11, 1, 6, 3, 1, 1, 11, 9, 2, 8 };
-
-        // ColFireTable indices 0x06..0x14, inclusive.
-        private static readonly int[] _squigglyColumns = { 11, 1, 6, 3, 1, 1, 11, 9, 2, 8, 2, 11, 4, 7, 10 };
-
         private const double ShotTickPeriod = 1d / 60d;
 
         private const int   UfoReloadTicks = 0x0600;
         private const float FirstWaveY    = (208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
         // Provisional sprite-center anchor, not the ROM's rotated drawing coordinate.
         private const float InvasionY = (40f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
-
-        private static readonly int[] _reloadScoreMsb = { 0x02, 0x10, 0x20, 0x30 };
-        private static readonly int[] _reloadRates    = { 0x30, 0x10, 0x0B, 0x08, 0x07 };
 
         private void OnEnable()
         {
@@ -127,8 +115,9 @@ namespace UnityInvader
             }
             _player               = inPlayer;
             _getNormalShotEndCount = inGetNormalShotEndCount;
-            _getScore             = inGetScore;
             _body                 = GetComponent<Rigidbody2D>();
+            _enemyShots            = new EnemyShotController(_rollingShot, _plungerShot, _squigglyShot,
+                GetColumnMuzzle, inGetScore, Columns, Spacing * ArcadeViewport.UnitsPerPixel);
             CreateInvaders();
             BeginWave();
         }
@@ -137,9 +126,8 @@ namespace UnityInvader
         {
             _elapsed             = 0f;
             _direction           = 1;
-            _plungerColumnIndex  = 0; // Provisional: restart each Wave; preserve on death.
-            _squigglyColumnIndex = 0;
-            ResetEnemyShots();
+            _enemyShots.BeginWave();
+            ResetShotClock();
             ResetUfo();
 
             var initialPosition = new Vector2(32f - ArcadeViewport.ScreenWidth / 2f,
@@ -149,9 +137,7 @@ namespace UnityInvader
             _body.position     = initialPosition;
 
             _aliveCount = _invaders.Count;
-            _rollingShot.SetFast(false);
-            _plungerShot.SetFast(false);
-            _squigglyShot.SetFast(false);
+            _enemyShots.SetFast(false);
             foreach (var invader in _invaders)
             {
                 invader.BeginWave();
@@ -177,15 +163,14 @@ namespace UnityInvader
                 return;
             }
             _aliveCount--;
-            _rollingShot.SetFast(_aliveCount <= 8);
-            _plungerShot.SetFast(_aliveCount <= 8);
-            _squigglyShot.SetFast(_aliveCount <= 8);
+            _enemyShots.SetFast(_aliveCount <= 8);
         }
 
         internal void PreparePlayerRespawn()
         {
             // Clear all slots without resetting the rack, column pointers or movement state.
-            ResetEnemyShots();
+            _enemyShots.ResetFlights();
+            ResetShotClock();
             ResetUfo();
         }
 
@@ -210,18 +195,7 @@ namespace UnityInvader
         {
             bool playing    = _playing && isActiveAndEnabled;
             _body.simulated = playing;
-            if (_rollingShot != null)
-            {
-                _rollingShot.SetPlaying(playing);
-            }
-            if (_plungerShot != null)
-            {
-                _plungerShot.SetPlaying(playing);
-            }
-            if (_squigglyShot != null)
-            {
-                _squigglyShot.SetPlaying(playing);
-            }
+            _enemyShots.SetPlaying(playing);
             if (_ufo != null)
             {
                 _ufo.SetPlaying(playing);
@@ -294,24 +268,13 @@ namespace UnityInvader
             _shotPhase       = 0;
         }
 
-        private void ResetEnemyShots()
-        {
-            _rollingShot.ResetFlight();
-            _plungerShot.ResetFlight();
-            _squigglyShot.ResetFlight();
-            _rollingAttemptReady = false;
-            ResetShotClock();
-        }
-
         private void UpdateEnemyShots()
         {
             if (_playing == false)
             {
                 return;
             }
-            _rollingShot.PreparePhysicsStep();
-            _plungerShot.PreparePhysicsStep();
-            _squigglyShot.PreparePhysicsStep();
+            _enemyShots.PreparePhysicsStep();
             _ufo.PreparePhysicsStep();
             _shotTickElapsed += Time.fixedDeltaTime;
             while (_shotTickElapsed + 1e-7d >= ShotTickPeriod)
@@ -321,10 +284,10 @@ namespace UnityInvader
                 switch (_shotPhase)
                 {
                     case 0:
-                        ProcessEnemyShot(_rollingShot, _plungerShot, _squigglyShot, 0);
+                        _enemyShots.ProcessRolling(_player.Position, _body.position);
                         break;
                     case 1:
-                        ProcessEnemyShot(_plungerShot, _rollingShot, _squigglyShot, 1);
+                        _enemyShots.ProcessPlunger(_aliveCount);
                         break;
                     case 2:
                         ProcessUfoOrSquiggly();
@@ -365,7 +328,7 @@ namespace UnityInvader
                 _ufo.AdvanceStep();
                 return;
             }
-            if (_ufoPending && _aliveCount >= 8 && _squigglyShot.InFlight == false)
+            if (_ufoPending && _aliveCount >= 8 && _enemyShots.IsSquigglyInFlight == false)
             {
                 bool movingRight = (_getNormalShotEndCount() & 1L) != 0;
                 if (_ufo.TryLaunch(movingRight))
@@ -374,107 +337,21 @@ namespace UnityInvader
                 }
                 return;
             }
-            ProcessEnemyShot(_squigglyShot, _rollingShot, _plungerShot, 2);
+            _enemyShots.ProcessSquiggly();
         }
 
-        private void ProcessEnemyShot(EnemyShot inShot, EnemyShot inOther1, EnemyShot inOther2, int inPhase)
+        private Vector2? GetColumnMuzzle(int inColumn)
         {
-            if (inShot.InFlight)
-            {
-                inShot.AdvanceStep();
-                return;
-            }
-            if (inPhase == 0 && _rollingAttemptReady == false)
-            {
-                // ROM 047D..0489: skip the first idle attempt after slot reinitialization.
-                _rollingAttemptReady = true;
-                return;
-            }
-            if (inPhase == 1 && _aliveCount <= 1)
-            {
-                return;
-            }
-            int reload = GetReloadRate(_getScore());
-            if (CanReload(inOther1.StepCount, inOther2.StepCount, reload) == false)
-            {
-                return;
-            }
-            Vector2 position;
-            bool found;
-            switch (inPhase)
-            {
-                case 0:
-                    found = TryGetRollingMuzzle(out position);
-                    break;
-                case 1:
-                    found = TryGetTableMuzzle(_plungerColumns, ref _plungerColumnIndex, out position);
-                    break;
-                default:
-                    found = TryGetTableMuzzle(_squigglyColumns, ref _squigglyColumnIndex, out position);
-                    break;
-            }
-            if (found && inShot.TryLaunch(position) && inPhase == 0)
-            {
-                _rollingAttemptReady = false;
-            }
-        }
-
-        private static int GetReloadRate(int inScore)
-        {
-            // 170E..1728 compares only the high BCD byte, not the full score.
-            // Keep the existing unbounded Unity Score; beyond 9999 retain fastest reload.
-            int hundreds = Mathf.Clamp(inScore / 100, 0, 99);
-            int scoreMsb = ((hundreds / 10) << 4) | (hundreds % 10);
-            for (int index = 0; index < _reloadScoreMsb.Length; index++)
-            {
-                if (scoreMsb <= _reloadScoreMsb[index])
-                {
-                    return _reloadRates[index];
-                }
-            }
-            return _reloadRates[4];
-        }
-
-        private static bool CanReload(int inOther1Steps, int inOther2Steps, int inReload)
-        {
-            // 057C..0595: ignore zero, otherwise require strictly greater than reload.
-            return (inOther1Steps == 0 || inOther1Steps > inReload) &&
-                (inOther2Steps == 0 || inOther2Steps > inReload);
-        }
-
-        private bool TryGetTableMuzzle(int[] inColumns, ref int inOutIndex, out Vector2 outPosition)
-        {
-            int column = inColumns[inOutIndex] - 1;
-            inOutIndex = (inOutIndex + 1) % inColumns.Length;
-            return TryGetColumnMuzzle(column, out outPosition);
-        }
-
-        private bool TryGetRollingMuzzle(out Vector2 outPosition)
-        {
-            outPosition   = default;
-            float spacing = Spacing * ArcadeViewport.UnitsPerPixel;
-            int column    = Mathf.FloorToInt((_player.Position.x - _body.position.x) / spacing + 0.5f);
-            if (column < 0 || column >= Columns)
-            {
-                return false; // Do not clamp to an edge column or choose a different one.
-            }
-            return TryGetColumnMuzzle(column, out outPosition);
-        }
-
-        private bool TryGetColumnMuzzle(int inColumn, out Vector2 outPosition)
-        {
-            outPosition = default;
             for (int row = Rows - 1; row >= 0; row--)
             {
                 var invader = _invaders[row * Columns + inColumn];
                 if (invader.gameObject.activeSelf)
                 {
                     // Start below the existing 8px Invader hitbox; the shot position is its center.
-                    outPosition = (Vector2)invader.transform.position - Vector2.up * ((4f + EnemyShot.Height / 2f) * ArcadeViewport.UnitsPerPixel);
-                    return true;
+                    return (Vector2)invader.transform.position - Vector2.up * ((4f + EnemyShot.Height / 2f) * ArcadeViewport.UnitsPerPixel);
                 }
             }
-            return false; // An empty target column does not fall back to an adjacent column.
+            return null; // An empty target column does not fall back to an adjacent column.
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

@@ -14,11 +14,11 @@ Plunger列順：`1,7,1,1,1,4,11,1,6,3,1,1,11,9,2,8`。
 
 Squiggly列順：`11,1,6,3,1,1,11,9,2,8,2,11,4,7,10`。
 
-列は左から1始まりで、Formationが0始まりへ変換して指定列を下から検索します。表は循環します。空列でも表のポインタを進めて不発とし、別列へ代替しません（059C〜05A8）。飛行中やReload不成立では表を消費しません。Plungerは残り1体で新規発射を止め、飛行中の弾は終了まで継続します（04F1〜050Bの再初期化後のskip設定に対応）。Rollingは弾枠の再初期化ごとに最初の発射試行だけを見送ります（047D〜0489、04AB〜04B3）。
+列は左から1始まりで、EnemyShotControllerが0始まりへ変換して選択し、Formationが指定列の生存個体を下から検索して発射位置の値（なければnull）を返します。表は循環します。空列でも表のポインタを進めて不発とし、別列へ代替しません（059C〜05A8）。飛行中やReload不成立では表を消費しません。Plungerは残り1体で新規発射を止め、飛行中の弾は終了まで継続します（04F1〜050Bの再初期化後のskip設定に対応）。Rollingは弾枠の再初期化ごとに最初の発射試行だけを見送ります（047D〜0489、04AB〜04B3）。
 
 発射成立時のstep countは**1**（05B7〜05BF）、以後の移動ごとにbyteとして1加算します（05CF〜05D0）。発射判定では他の2種類のcountをそれぞれ確認し、**0は比較を省略、それ以外はReload値を厳密に超えている場合だけ可**とします（0579〜0595）。単純な秒数タイマーではありません。
 
-ScoreはDriverが所有し、初期化時に渡す`Func<int>`（`() => Score`）をFormationが発射試行時に呼んで最新値を取得します（Issue #110）。FormationはDriver型・インスタンスを直接保持せず、Scoreを複製しません。コールバックは初期化時にnull検証します。170E〜1728はScoreの上位BCD byteを`02,10,20,30`と比較し、対応する`30,10,0B,08,07`を選びます。下位2桁を比較しないため、実際の境界は次のとおりです。
+ScoreはDriverが所有し、初期化時に渡す`Func<int>`（`() => Score`）をEnemyShotControllerが発射試行時に呼んで最新値を取得します（Issue #110/#112）。Formation/ControllerはDriver型・インスタンスを直接保持せず、Scoreを複製しません。コールバックは初期化時にnull検証します。170E〜1728はScoreの上位BCD byteを`02,10,20,30`と比較し、対応する`30,10,0B,08,07`を選びます。下位2桁を比較しないため、実際の境界は次のとおりです。
 
 | Score（10進） | Reload（16進 / 10進） |
 | --- | --- |
@@ -32,7 +32,7 @@ ScoreはDriverが所有し、初期化時に渡す`Func<int>`（`() => Score`）
 
 ## Unityでの制御と近似
 
-Formation内だけに1/60秒の蓄積時計を持ち、種類別phaseで発射試行または飛行中の1stepを依頼します。shotSyncの種類対応とタイマーの下降順を使い、phaseは**0→2→1→0**です。同じ種類の更新は3仮想tickごとになります。暫定2秒周期・1秒位相差のInspector設定は廃止しました。
+Formation内だけに1/60秒の蓄積時計を持ち、種類別phaseでEnemyShotControllerのProcessRolling/ProcessPlunger/ProcessSquigglyへ発射試行または飛行中の1stepを依頼します。shotSyncの種類対応とタイマーの下降順を使い、phaseは**0→2→1→0**です。同じ種類の更新は3仮想tickごとになります。暫定2秒周期・1秒位相差のInspector設定は廃止しました。
 
 EnemyShot自身の独立したFixedUpdate時計はなくし、選ばれたphaseから`AdvanceStep`を呼びます。位置の正は引き続きRigidbody2Dです。移動先と既存Shield画素判定・下端消滅・Player Trigger処理はEnemyShotが担当し、Formationへ衝突処理は移していません。通常4px/step、残り8体以下で5px/stepは3種類に適用します。
 
@@ -50,6 +50,12 @@ Fデバッグ倍率は従来どおりFormationの移動時計だけへ適用し�
 - 見た目はRolling橙・Plunger水色・Squiggly紫の暫定矩形です。原作画像を抽出せず、既存の生成済み白Spriteを使用します。
 - Issue #79でUFOとのSquiggly処理枠共有を追加しました。phase 2でSquiggly終了を待ち、UFO飛行中はSquigglyの新規発射を止めます。出現条件・加点と近似は [UFO](UFO.md) を参照してください。原作4コマ画像・爆発・SE、弾同士の相殺は未実装です。
 - 参考動画との視覚・時間照合、描画FPS別測定、実画面/実キー、Development Build/製品ビルド実行は未確認です。
+
+## Controllerと保存互換性（Issue #112）
+
+EnemyShotControllerはFormationが初期化時に生成する通常のC#クラスです。3弾を配列で保持し、PreparePhysicsStep/SetPlaying/ResetFlights/SetFastを各一箇所の反復で実行します。発射条件・Reload・列選択・表ポインターを所有し、Formationの実体や55体のリストは受け取りません。Rollingの照準にはPlayer/Formation位置の値、列の発射位置にはFunc<int, Vector2?>、ScoreにはFunc<int>を使います。UFO/共有時計は所有せず、FormationにはIsSquigglyInFlightのboolだけを提供します。
+
+Formationの既存_rollingShot/_plungerShot/_squigglyShotというSerializeField名と参照は維持し、Controllerへ初期化時に渡します。Scene/Prefabの再生成・YAML編集・新規GameObjectはありません。Waveでは表を先頭へ戻して弾を回収、従来の時点で速度を戻します。死亡復帰の回収は表を保持し、Pauseは飛行・位置・StepCountを保持します。共有時計のリセットはFormationが行います。
 
 ## 保存と確認
 

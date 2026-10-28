@@ -78,6 +78,7 @@ namespace UnityInvader.Editor
             inDriver.EditorSetState(GameState.Playing);
             VerifyUfoControl(inDriver, formation, player, shot, ufo);
             VerifyScoreReload(inDriver, formation, enemies);
+            VerifyEnemyShotController(inDriver, formation, invaders, enemies);
             var bomb = inDriver.GetComponent<DebugCarpetBomb>();
             Call(bomb, "UpdateBombardment");
             Call(bomb, "CreatePool");
@@ -171,9 +172,107 @@ namespace UnityInvader.Editor
             Require(invaders[0].TryReceiveHit(debugShot), "Unsubscribed individual can accept a hit.");
         }
 
+        private static void VerifyEnemyShotController(GameplayDriver inDriver, InvaderFormation inFormation,
+            Invader[] inInvaders, EnemyShot[] inEnemies)
+        {
+            var controller = Read(inFormation, "_enemyShots");
+            Call(inFormation, "BeginWave");
+            for (int phase = 0; phase < 4; phase++)
+            {
+                Set(inFormation, "_shotTickElapsed", 0d);
+                if (phase >= 2)
+                {
+                    foreach (var shot in inEnemies.Where(inShot => inShot.gameObject.activeSelf))
+                    {
+                        Set(shot, "_stepCount", 49);
+                    }
+                }
+                Call(inFormation, "UpdateEnemyShots");
+                Require((int)Read(inFormation, "_shotPhase") == new[] { 2, 1, 0, 2 }[phase], "Shared phase order 0/2/1/0.");
+                Require(inEnemies.Count(inShot => inShot.gameObject.activeSelf) == Math.Min(phase, 3), "Rolling skips first attempt; each later phase launches its type.");
+            }
+            Call(controller, "SetFast", true);
+            var counts    = inEnemies.Select(inShot => (int)Read(inShot, "_stepCount")).ToArray();
+            var positions = inEnemies.Select(inShot => inShot.GetComponent<Rigidbody2D>().position).ToArray();
+            inDriver.EditorSetState(GameState.Attract);
+            Require(inEnemies.All(inShot => inShot.gameObject.activeSelf && (bool)Read(inShot, "_fast") &&
+                inShot.GetComponent<Rigidbody2D>().simulated == false), "Bulk pause preserves all flights and speed.");
+            inDriver.EditorSetState(GameState.Playing);
+            Require(inEnemies.Select(inShot => (int)Read(inShot, "_stepCount")).SequenceEqual(counts) &&
+                inEnemies.Select(inShot => inShot.GetComponent<Rigidbody2D>().position).SequenceEqual(positions), "Bulk resume preserves positions/counts.");
+            var mode = Physics2D.simulationMode;
+            try
+            {
+                Physics2D.simulationMode = SimulationMode2D.Script;
+                foreach (var shot in inEnemies)
+                {
+                    shot.GetComponent<Rigidbody2D>().linearVelocity = Vector2.down;
+                }
+                Call(controller, "PreparePhysicsStep");
+                Physics2D.Simulate(Time.fixedDeltaTime);
+                Require(inEnemies.Select(inShot => inShot.GetComponent<Rigidbody2D>().position).SequenceEqual(positions), "Bulk preparation cancels residual movement for all three shots.");
+            }
+            finally
+            {
+                Physics2D.simulationMode = mode;
+            }
+            int[] plunger  = { 1, 7, 1, 1, 1, 4, 11, 1, 6, 3, 1, 1, 11, 9, 2, 8 };
+            int[] squiggly = { 11, 1, 6, 3, 1, 1, 11, 9, 2, 8, 2, 11, 4, 7, 10 };
+            Call(inFormation, "BeginWave");
+            for (int type = 1; type <= 2; type++)
+            {
+                var table = type == 1 ? plunger : squiggly;
+                for (int index = 0; index <= table.Length; index++)
+                {
+                    if (type == 1)
+                    {
+                        Call(controller, "ProcessPlunger", 55);
+                    }
+                    else
+                    {
+                        Call(controller, "ProcessSquiggly");
+                    }
+                    var expected = inInvaders[44 + table[index % table.Length] - 1].transform.position - Vector3.up * 0.08f;
+                    Require(inEnemies[type].gameObject.activeSelf && Vector2.Distance(inEnemies[type].transform.position, expected) < 1e-6f, "Column table cycles through lowest living muzzle.");
+                    Call(inEnemies[type], "ResetFlight");
+                }
+            }
+            Call(inFormation, "PreparePlayerRespawn");
+            Require((int)Read(controller, "_plungerColumnIndex") == 1 && (int)Read(controller, "_squigglyColumnIndex") == 1 &&
+                inEnemies.All(inShot => (int)Read(inShot, "_stepCount") == 0), "Respawn resets all flights while preserving table pointers.");
+            Call(inFormation, "BeginWave");
+            Require((int)Read(controller, "_plungerColumnIndex") == 0 && (int)Read(controller, "_squigglyColumnIndex") == 0 &&
+                inEnemies.All(inShot => (bool)Read(inShot, "_fast") == false), "Wave resets table pointers and all speeds.");
+            foreach (var invader in inInvaders.Where((inInvader, inIndex) => inIndex % 11 == 0))
+            {
+                invader.gameObject.SetActive(false);
+            }
+            Call(controller, "ProcessPlunger", 55);
+            Require(inEnemies[1].gameObject.activeSelf == false && (int)Read(controller, "_plungerColumnIndex") == 1, "Empty column consumes table entry without fallback.");
+            inInvaders[50].gameObject.SetActive(false);
+            Call(controller, "ProcessPlunger", 55);
+            Require(Vector2.Distance(inEnemies[1].transform.position, inInvaders[39].transform.position - Vector3.up * 0.08f) < 1e-6f, "Next table entry selects next living row.");
+            Call(controller, "ResetFlights");
+            Call(controller, "ProcessPlunger", 1);
+            Require(inEnemies[1].gameObject.activeSelf == false, "Last living Invader prevents new Plunger launch.");
+            Require((bool)typeof(EnemyShot).GetMethod("TryLaunch", PrivateInstance).Invoke(inEnemies[1], new object[] { Vector2.zero }), "Launch existing Plunger flight.");
+            Call(controller, "ProcessPlunger", 1);
+            Require((int)Read(inEnemies[1], "_stepCount") == 2, "An existing Plunger flight continues with one living Invader.");
+            Call(controller, "ResetFlights");
+            var origin = inFormation.GetComponent<Rigidbody2D>().position;
+            Call(controller, "ProcessRolling", origin - Vector2.right, origin);
+            Call(controller, "ProcessRolling", origin - Vector2.right, origin);
+            Require(inEnemies[0].gameObject.activeSelf == false, "Rolling out of range is not clamped.");
+            Call(controller, "ProcessRolling", origin, origin);
+            Require(inEnemies[0].gameObject.activeSelf == false, "Rolling does not substitute for an empty column.");
+            Call(inFormation, "BeginWave");
+            Debug.Log("ENEMY_SHOT_CONTROLLER_PASS: phase order, bulk operations/physics preparation, tables/empty columns, Rolling limits and reset contracts.");
+        }
+
         private static void VerifyScoreReload(GameplayDriver inDriver, InvaderFormation inFormation, EnemyShot[] inEnemies)
         {
-            Require(Read(inFormation, "_getScore") is Func<int> &&
+            var controller = Read(inFormation, "_enemyShots");
+            Require(Read(controller, "_getScore") is Func<int> &&
                 typeof(InvaderFormation).GetFields(PrivateInstance).All(inField => inField.FieldType != typeof(GameplayDriver)),
                 "Formation has a score reader and no Driver field.");
             try
@@ -194,19 +293,19 @@ namespace UnityInvader.Editor
                 Set(inDriver, "_score", scores[index]);
                 Call(inFormation, "PreparePlayerRespawn");
                 Set(inEnemies[0], "_stepCount", rates[index]);
-                Call(inFormation, "ProcessEnemyShot", inEnemies[1], inEnemies[0], inEnemies[2], 1);
+                Call(controller, "ProcessPlunger", Alive(inFormation));
                 Require(inEnemies[1].gameObject.activeSelf == false, "Reload requires strictly more than the boundary StepCount.");
                 Set(inEnemies[0], "_stepCount", rates[index] + 1);
-                Call(inFormation, "ProcessEnemyShot", inEnemies[1], inEnemies[0], inEnemies[2], 1);
+                Call(controller, "ProcessPlunger", Alive(inFormation));
                 Require(inEnemies[1].gameObject.activeSelf, "Actual firing uses current score's Reload rate and permits zero in the other slot.");
             }
             Set(inDriver, "_score", 299);
             Call(inFormation, "PreparePlayerRespawn");
             Set(inEnemies[0], "_stepCount", 17);
-            Call(inFormation, "ProcessEnemyShot", inEnemies[1], inEnemies[0], inEnemies[2], 1);
+            Call(controller, "ProcessPlunger", Alive(inFormation));
             Require(inEnemies[1].gameObject.activeSelf == false, "Score 299 blocks StepCount 17.");
             Call(inDriver, "NotifyShotResolved", HitTargetType.InvaderBottom);
-            Call(inFormation, "ProcessEnemyShot", inEnemies[1], inEnemies[0], inEnemies[2], 1);
+            Call(controller, "ProcessPlunger", Alive(inFormation));
             Require(inDriver.Score == 309 && inEnemies[1].gameObject.activeSelf,
                 "Common scoring immediately changes the next firing decision through the original callback.");
             Set(inDriver, "_score", initialScore);

@@ -38,7 +38,9 @@ flowchart TD
     Formation -.->|Invadedを購読| Driver
     Driver -->|IsClearedを確認| Formation
     Formation -->|配置・アニメ・再開| Invader
-    Formation -->|種類別phase / TryLaunch / AdvanceStep / SetPlaying| EnemyShot[3種類のEnemyShot: 下降・画面外消滅・再利用]
+    Formation -->|phaseごとの処理 / 一括操作| Controller[EnemyShotController: 3弾の発射・共通操作]
+    Controller -->|TryLaunch / AdvanceStep / 共通操作| EnemyShot[3種類のEnemyShot: 下降・画面外消滅・再利用]
+    Controller -->|列番号から発射位置の値を取得| Formation
     Formation -->|Squiggly共有phase / TryLaunch / AdvanceStep / SetPlaying| Ufo
     EnemyShot -->|Trigger / IHitReceiver.TryReceiveHit| Player
     Player -.->|HitAccepted event| Driver
@@ -60,7 +62,8 @@ flowchart TD
 | Player | 入力値・移動・同時1発の射撃枠とrelease/再押下ゲート、通常弾の終了履歴を所有。FlightEndedで枠解放→履歴加算→ShotResolvedを通知。NormalShotEndCountは値のみ公開。次Waveで履歴リセット、死亡復帰では保持。HitAcceptedで被弾を通知。直接操作するゲーム内ComponentはPlayerShotだけ |
 | PlayerShot | 構成済みRigidbody2D/RendererとTrigger。GameObject.activeSelfが飛行状態、MonoBehaviour.enabledが進行可否。IHitReceiver.TryReceiveHit(this)成立後にTargetTypeを取得して消費し、FlightEnded(HitTargetType)を一度通知。Shield吸収・上端はNone、ResetFlightは無通知。得点表・通常弾/B弾の識別・Driver参照は持たない |
 | Invader | GameObjectの有効状態による生死、種類別Sprite配列・現在フレームindex・アニメ進行、種類から命中種別への対応付け、被弾反応。Inactive化後にDefeated(個体, 命中元)を一度だけ通知し、Formation参照は持たない |
-| InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、行からの種類選択・配置、集団移動の方向/周期・アニメ進行の共通タイミング、生存数の集計。敵弾/UFOの60Hz時計・種類別phase、3種の発射元/Reload制御。UFOの下降条件・出現カウンタ・開始待ち・Squiggly共有枠・発進時の最新通常弾終了回数による方向判定。既存_aliveCountからIsClearedを公開。弾の得点通知は行わない |
+| InvaderFormation | Kinematic Rigidbody2D、55個のInvader参照、行からの種類選択・配置、集団移動の方向/周期・アニメ進行の共通タイミング、生存数の集計。敵弾/UFOの60Hz時計・種類別phase、指定列の最下段生存個体の発射位置取得。UFOの下降条件・出現カウンタ・開始待ち・Squiggly共有枠・発進時の最新通常弾終了回数による方向判定。既存_aliveCountからIsClearedを公開。弾の得点通知は行わない |
+| EnemyShotController | 通常のC#クラス。3弾配列の一括準備・停止/再開・回収・速度変更、種類別発射条件、Reload計算、Rolling列選択、Plunger/Squiggly列テーブルとポインターを所有。列番号から発射位置を得るFunc<int, Vector2?>と最新ScoreのFunc<int>を受け、FormationやInvaderリスト、UFOは保持しない |
 | EnemyShot | Kinematic Rigidbody2D、移動step countと速度区分。Formationのphaseから1stepを受け、既存Shield判定と移動を実行。TriggerでPlayerへ被弾受付を依頼し、成立時または画面下端で非アクティブ化して再利用 |
 | Ufo | Kinematic Rigidbody2D、飛行方向、Sprite/Collider。共有phaseから2px移動を受け、退出・被弾で解除。IHitReceiverで命中を受理し、自身を非アクティブ化。飛行中はGameObject有効状態を正とし、独立時計やScoreを所有しない |
 | ArcadeViewport | 224:256の表示領域と論理px→Unity単位の倍率 |
@@ -84,7 +87,7 @@ shot.TryLaunch(position);
 
 Issue #97では通常弾の結果をPlayerShot→Player→Driverへ変更しました。PlayerはAwakeでFlightEndedを一度購読しOnDestroyで解除、DriverはStartでPlayer.HitAcceptedとShotResolvedを購読しOnDestroyで解除します。Pause/Disableでは購読を保持します。PlayerInputReaderはDriverのOnEnableで生成、OnDisableでDisposeし、Updateで取得したPlayerInputStateだけをPlayer.SetInputへ渡します。PlayerはFixedUpdateまで短い発射入力を保持します。停止・無効化では未処理の入力値・発射予約だけを破棄し、射撃受付状態（_fireReady）は保持します。WaveClear・Pauseからの再開時に新たなreleaseを一律には要求しません。Respawn時は_fireReady=falseとし、Playing中のrelease→再押下を必要とします。過去の直接購読判断はADR-0011、現在の判断は [ADR-0014](adr/0014-player-shot-results-and-scoring.md) を参照してください。
 
-Player自身のRenderer/ColliderはPrefab保存時、ShotはArcadeのinstance overrideで設定し、Awakeは構成検証だけを行います。SetPlayingやOnEnableから参照を再取得せず、Awakeで進行状態を上書きしないため、DriverとのAwake順に依存しません。FormationにはDriverのStartからPlayerをIPositionProviderとして一度渡し、Rolling照準に現在位置の値だけを使います。EnemyShotは接触先のIHitReceiverに被弾受付を依頼します。Issue #110でFormationのGameplayDriver型・インスタンスの直接保持は撤去しました。必要なScoreは初期化時にFunc<int>を受け取り、発射試行時に最新値を読みます。判断は [ADR-0011](adr/0011-player-dependencies.md) を参照してください。
+Player自身のRenderer/ColliderはPrefab保存時、ShotはArcadeのinstance overrideで設定し、Awakeは構成検証だけを行います。SetPlayingやOnEnableから参照を再取得せず、Awakeで進行状態を上書きしないため、DriverとのAwake順に依存しません。FormationにはDriverのStartからPlayerをIPositionProviderとして一度渡し、Rolling照準に現在位置の値だけを使います。EnemyShotは接触先のIHitReceiverに被弾受付を依頼します。Issue #110でFormationのGameplayDriver型・インスタンスの直接保持は撤去しました。必要なScoreのFunc<int>は初期化時に受け取り、EnemyShotControllerへ渡して発射試行時に最新値を読みます。判断は [ADR-0011](adr/0011-player-dependencies.md) を参照してください。
 
 Invaderは5×11個を一度生成し、次Waveでも同じ個体・Rendererを再利用します。Formationは行からInvaderType（Top/Middle/Bottom）を選んでInitializeへ渡します。Invaderは種類をHitTargetTypeへ対応付け、単一Prefabに保存した種類別の任意長Sprite配列から画像を選択します。現行は各2枚のA/Bで、画像全体の比率を維持します。表示用の子Visualだけを縮小し、親Colliderの寸法を変えません。ShotもBorder不要のSimple表示です。
 
@@ -137,7 +140,9 @@ Formationは通常の移動ステップ後、移動先Rigidbody2D座標と各生
 
 ### 3種類のEnemyShot（Issue #77）
 
-FormationがRollingのPlayer対応列、Plunger16列、Squiggly15列を選びます。単一の敵弾専用60Hz蓄積時計でRolling=0 / Plunger=1 / Squiggly=2のphaseを0→2→1の順に処理し、各種は3tickに1回だけ発射試行または移動します。旧2秒タイマーは廃止しました。他2種のstep countが0またはScore依存Reload値を厳密に超えている場合だけ新規発射できます。ScoreはDriverが所有し、初期化時に渡したFunc<int>を発射試行時に呼んで最新値を取得します。FormationにScoreのコピーや同期状態は持ちません。
+EnemyShotControllerがRollingのPlayer対応列、Plunger16列、Squiggly15列を選びます。Formationは列番号から生存個体の発射位置だけを返します。単一の敵弾専用60Hz蓄積時計でRolling=0 / Plunger=1 / Squiggly=2のphaseを0→2→1の順に処理し、各種は3tickに1回だけ発射試行または移動します。旧2秒タイマーは廃止しました。他2種のstep countが0またはScore依存Reload値を厳密に超えている場合だけ新規発射できます。ScoreはDriverが所有し、EnemyShotControllerが初期化時に受け取ったFunc<int>を発射試行時に呼んで最新値を取得します。Formation/ControllerにScoreのコピーや同期状態は持ちません。
+
+Issue #112でFormationは保存互換用の3つのSerializeFieldを維持し、初期化時にだけEnemyShotControllerへ渡します。以後はControllerの配列を使った一括APIとProcessRolling/ProcessPlunger/ProcessSquigglyを呼びます。UFO分岐・共有時計・phase順・countdown更新順はFormationに残し、Squigglyの飛行状態はbool値だけを問い合わせます。既存の時計設計を保った責務の分割として現文書に記録し、過去ADRは変更しません。
 
 EnemyShotは3つの独立したインスタンスで、発射時count=1・移動ごとに加算し、既存のShield画素判定・Player Trigger・下端消滅を共用します。独立FixedUpdate時計はなく、Formationのphaseから移動を依頼します。各物理stepの先頭で前stepのMovePosition速度を保持位置へ戻してから、選択された種類の移動先を設定します。Rigidbody2D/GameObject有効状態を正とする点は維持しています。
 

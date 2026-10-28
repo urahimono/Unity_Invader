@@ -408,10 +408,11 @@ namespace UnityInvader.Editor
 
         private static bool TryMuzzle(out Vector2 outPosition)
         {
-            object[] arguments = { default(Vector2) };
-            bool result        = (bool)typeof(InvaderFormation).GetMethod("TryGetRollingMuzzle", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_formation, arguments);
-            outPosition        = (Vector2)arguments[0];
-            return result;
+            var controller = PrivateValue<object>(_formation, "_enemyShots");
+            var result     = controller.GetType().GetMethod("GetRollingMuzzle", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(controller, new object[] { _player.Position, _formation.GetComponent<Rigidbody2D>().position });
+            outPosition = result is Vector2 position ? position : default;
+            return result != null;
         }
 
         private static void Defeat(Invader inInvader)
