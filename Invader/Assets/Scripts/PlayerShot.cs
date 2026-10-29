@@ -23,6 +23,11 @@ namespace UnityInvader
             ApplyPlayingState();
         }
 
+        private void OnDisable()
+        {
+            ApplyPlayingState();
+        }
+
         private void FixedUpdate()
         {
             if (TryHitShield())
@@ -35,11 +40,6 @@ namespace UnityInvader
         private void OnTriggerEnter2D(Collider2D inOther)
         {
             ResolveHit(inOther);
-        }
-
-        private void OnDisable()
-        {
-            ApplyPlayingState();
         }
 
         public bool TryLaunch(Vector2 inPosition)

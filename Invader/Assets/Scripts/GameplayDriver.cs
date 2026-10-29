@@ -56,22 +56,6 @@ namespace UnityInvader
             }
         }
 
-        private void Start()
-        {
-            InitializeGameplay();
-        }
-
-        private void Update()
-        {
-            if (_initialized)
-            {
-                _player.SetInput(_input.Read());
-            }
-            TryEnterWaveClear();
-            UpdateWaveClear();
-            UpdatePlayerDead();
-        }
-
         private void OnDisable()
         {
             _input?.Dispose();
@@ -92,6 +76,22 @@ namespace UnityInvader
                 _player.ShotResolved -= NotifyShotResolved;
                 _formation.Invaded -= NotifyInvaded;
             }
+        }
+
+        private void Start()
+        {
+            InitializeGameplay();
+        }
+
+        private void Update()
+        {
+            if (_initialized)
+            {
+                _player.SetInput(_input.Read());
+            }
+            TryEnterWaveClear();
+            UpdateWaveClear();
+            UpdatePlayerDead();
         }
 
         internal void NotifyPlayerHit()

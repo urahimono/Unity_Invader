@@ -59,11 +59,6 @@ namespace UnityInvader
             ApplyPlayingState();
         }
 
-        private void FixedUpdate()
-        {
-            UpdatePlayer();
-        }
-
         private void OnDisable()
         {
             _inputState  = default;
@@ -80,6 +75,11 @@ namespace UnityInvader
             {
                 _shot.FlightEnded -= ResolveShot;
             }
+        }
+
+        private void FixedUpdate()
+        {
+            UpdatePlayer();
         }
 
         public bool TryReceiveHit(Component inSource)

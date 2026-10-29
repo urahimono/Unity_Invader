@@ -39,20 +39,6 @@ namespace UnityInvader
             _bomb.Enable();
         }
 
-        private void FixedUpdate()
-        {
-            UpdateBombardment();
-        }
-
-        private void LateUpdate()
-        {
-            // Also clear transitions made by Driver.Update before the next rendered frame.
-            if (IsPlaying() == false || _waveNumber != _driver.WaveNumber)
-            {
-                ClearShots();
-            }
-        }
-
         private void OnDisable()
         {
             _bomb?.Dispose();
@@ -73,6 +59,20 @@ namespace UnityInvader
                     shot.FlightEnded -= ResolveShot;
                 }
             }
+        }
+
+        private void LateUpdate()
+        {
+            // Also clear transitions made by Driver.Update before the next rendered frame.
+            if (IsPlaying() == false || _waveNumber != _driver.WaveNumber)
+            {
+                ClearShots();
+            }
+        }
+
+        private void FixedUpdate()
+        {
+            UpdateBombardment();
         }
 
         private void ResolveShot(HitTargetType inTargetType)

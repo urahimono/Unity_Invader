@@ -39,14 +39,6 @@ namespace UnityInvader
             }
         }
 
-        private void LateUpdate()
-        {
-            if (_dirty)
-            {
-                UpdateTexture();
-            }
-        }
-
         private void OnDisable()
         {
             if (_collider != null)
@@ -64,6 +56,14 @@ namespace UnityInvader
             if (_texture != null)
             {
                 Destroy(_texture);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (_dirty)
+            {
+                UpdateTexture();
             }
         }
 
