@@ -26,11 +26,6 @@ namespace UnityInvader
             _fast.Enable();
         }
 
-        private void FixedUpdate()
-        {
-            _formation.SetDebugFastMovement(_fast.IsPressed());
-        }
-
         private void OnDisable()
         {
             _fast?.Dispose();
@@ -39,6 +34,11 @@ namespace UnityInvader
             {
                 _formation.SetDebugFastMovement(false);
             }
+        }
+
+        private void FixedUpdate()
+        {
+            _formation.SetDebugFastMovement(_fast.IsPressed());
         }
 #endif
     }

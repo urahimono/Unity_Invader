@@ -63,12 +63,6 @@ namespace UnityInvader
             }
         }
 
-        private void FixedUpdate()
-        {
-            UpdateFormation();
-            UpdateAttacks();
-        }
-
         private void OnDisable()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -89,6 +83,12 @@ namespace UnityInvader
                     invader.Defeated -= NotifyDefeated;
                 }
             }
+        }
+
+        private void FixedUpdate()
+        {
+            UpdateFormation();
+            UpdateAttacks();
         }
 
         internal bool Initialize(IPositionProvider inPlayer, Func<long> inGetNormalShotEndCount, Func<int> inGetScore)

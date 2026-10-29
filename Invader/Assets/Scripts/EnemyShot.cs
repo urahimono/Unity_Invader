@@ -33,14 +33,6 @@ namespace UnityInvader
             ApplyPlayingState();
         }
 
-        private void OnTriggerEnter2D(Collider2D inOther)
-        {
-            if (inOther.TryGetComponent<IHitReceiver>(out var receiver))
-            {
-                ResolveHit(receiver);
-            }
-        }
-
         private void OnDisable()
         {
             if (_renderer != null)
@@ -50,6 +42,14 @@ namespace UnityInvader
             if (_body != null)
             {
                 _body.simulated = false;
+            }
+        }
+
+        private void OnTriggerEnter2D(Collider2D inOther)
+        {
+            if (inOther.TryGetComponent<IHitReceiver>(out var receiver))
+            {
+                ResolveHit(receiver);
             }
         }
 

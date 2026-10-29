@@ -562,7 +562,24 @@ if (_controller == null)
 
 既存の `internal` 関数はアクセス修飾子を変更せず、通常の関数の `public` の後へ配置します。同じアクセスレベルでは関連する処理をまとめます。
 
-Unity イベント関数（`Awake`、`OnEnable`、`Start`、`Update`、`LateUpdate`、`OnDisable`、`OnDestroy`、`OnGUI` などの Unity Message）はアクセス修飾子に関係なく通常の関数より上にまとめ、初期化・更新・終了の流れが分かる順序にします。
+Unity イベント関数（MonoBehaviour Message）はアクセス修飾子に関係なく通常の関数より上にまとめ、以下のカテゴリ順・関数順で宣言します。同カテゴリ内でも、この固定順をアクセス修飾子より優先します。これはC#ソース中の宣言順序であり、Unityが関数を実行する順序を表すものではありません。
+
+| カテゴリ順 | カテゴリ | カテゴリ内の関数順（左から右） |
+| --- | --- | --- |
+| 1 | 基本ライフサイクル | `Awake` → `OnEnable` → `OnDisable` → `OnDestroy` → `Start` → `Update` → `LateUpdate` → `FixedUpdate` |
+| 2 | 物理・Trigger | `OnCollisionEnter2D` → `OnCollisionEnter` → `OnCollisionStay2D` → `OnCollisionStay` → `OnCollisionExit2D` → `OnCollisionExit` → `OnTriggerEnter2D` → `OnTriggerEnter` → `OnTriggerStay2D` → `OnTriggerStay` → `OnTriggerExit2D` → `OnTriggerExit` → `OnJointBreak2D` → `OnJointBreak` → `OnControllerColliderHit` |
+| 3 | アプリケーション | `OnApplicationFocus` → `OnApplicationPause` → `OnApplicationQuit` |
+| 4 | 描画・カメラ | `OnBecameVisible` → `OnBecameInvisible` → `OnWillRenderObject` → `OnPreCull` → `OnPreRender` → `OnRenderObject` → `OnPostRender` → `OnRenderImage` → `OnGUI` |
+| 5 | Animator | `OnAnimatorMove` → `OnAnimatorIK` |
+| 6 | マウス | `OnMouseEnter` → `OnMouseOver` → `OnMouseExit` → `OnMouseDown` → `OnMouseDrag` → `OnMouseUp` → `OnMouseUpAsButton` |
+| 7 | Editor・Inspector・Gizmo | `Reset` → `OnValidate` → `OnDrawGizmos` → `OnDrawGizmosSelected` |
+| 8 | その他（Transform → UI → Audio → Particle） | `OnTransformParentChanged` → `OnTransformChildrenChanged` → `OnChildRectTransformDimensionsChange` → `OnAudioFilterRead` → `OnParticleCollision` → `OnParticleTrigger` → `OnParticleSystemStopped` → `OnParticleUpdateJobScheduled` |
+
+存在しない関数は飛ばして相対順を保ちます。特に `OnDisable` / `OnDestroy` は `Start` より上、`FixedUpdate` は `LateUpdate` より下に置きます。今後追加するUnityイベント関数も、必ずこの固定順の該当位置へ挿入します。順序を揃えるためだけに関数を新設・削除しません。
+
+一覧にないUnity Messageは、該当カテゴリの類似機能の末尾に配置します。順序が不明な場合は規約決定の対象として報告します。UnityEventクラスのdelegate、通常のイベントハンドラー、Unity Messageではない同名関数、StateMachineBehaviour固有のメッセージは本規約の対象外です。
+
+宣言位置を変更するときは、関数に付随する属性・コメント・プリプロセッサガードも一緒に移し、`#if UNITY_EDITOR` / `#if UNITY_EDITOR || DEVELOPMENT_BUILD` 等の適用範囲を維持します。関数本体・アクセス修飾子・名前・属性・動作・購読内容は変更せず、通常関数同士の順序も維持します。
 
 Unity イベント関数はエンジンから呼ばれる入口として簡潔に保ちます。数行の単純な処理はそのままで構いません。複数の条件分岐、ループ、異なる責務の処理が混在する場合は、処理内容を表す名前の意味のある private メソッドへ切り出します。
 
