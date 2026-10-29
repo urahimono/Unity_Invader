@@ -28,6 +28,7 @@ namespace UnityInvader
         private float             _waveClearElapsed;
         private float             _playerDeadElapsed;
         private bool              _initialized;
+        private bool              _initializationAttempted;
 
         // Provisional death wait; exact animation/video timing is a later task.
         private const float PlayerDeadDelay = 0.5f;
@@ -73,7 +74,7 @@ namespace UnityInvader
 
         private void OnDisable()
         {
-            _input.Dispose();
+            _input?.Dispose();
             _input = null;
             if (_initialized)
             {
@@ -150,19 +151,43 @@ namespace UnityInvader
 
         private void InitializeGameplay()
         {
+            if (_initializationAttempted)
+            {
+                return;
+            }
+            _initializationAttempted = true;
             if (_player == null || _formation == null || _shields == null || _shields.Length != 4 ||
                 System.Array.Exists(_shields, inShield => inShield == null))
             {
                 Debug.LogError("Arcade requires Player, Formation and four Shield references.", this);
-                enabled = false;
+                StopInitialization();
                 return;
             }
-            _formation.Initialize(_player, _player.GetNormalShotEndCount, () => Score);
+            if (_player.IsInitialized == false ||
+                _formation.Initialize(_player, _player.GetNormalShotEndCount, () => Score) == false)
+            {
+                StopInitialization();
+                return;
+            }
             _formation.Invaded += NotifyInvaded;
             _player.HitAccepted += NotifyPlayerHit;
             _player.ShotResolved += NotifyShotResolved;
             _initialized = true;
             ChangeState(_developmentStartPlaying ? GameState.Playing : _currentState);
+        }
+
+        private void StopInitialization()
+        {
+            if (_player != null)
+            {
+                _player.SetPlaying(false);
+            }
+            if (_formation != null)
+            {
+                _formation.SetPlaying(false);
+            }
+            SetShieldsPlaying(false);
+            enabled = false;
         }
 
         private void UpdateWaveClear()
@@ -222,6 +247,10 @@ namespace UnityInvader
 
         private void SetShieldsPlaying(bool inPlaying)
         {
+            if (_shields == null)
+            {
+                return;
+            }
             foreach (var shield in _shields)
             {
                 if (shield != null)

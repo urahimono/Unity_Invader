@@ -16,6 +16,8 @@ namespace UnityInvader
         [NonSerialized]
         private bool   _rollingAttemptReady;
         [NonSerialized]
+        private bool   _initializationAttempted;
+        [NonSerialized]
         private int    _plungerColumnIndex;
         [NonSerialized]
         private int    _squigglyColumnIndex;
@@ -52,25 +54,49 @@ namespace UnityInvader
         private static readonly int[] _reloadScoreMsb  = { 0x02, 0x10, 0x20, 0x30 };
         private static readonly int[] _reloadRates     = { 0x30, 0x10, 0x0B, 0x08, 0x07 };
 
-        internal void Initialize(Func<int, Vector2?> inGetColumnMuzzle, Func<int> inGetScore, int inColumns, float inSpacing,
+        internal bool Initialize(Func<int, Vector2?> inGetColumnMuzzle, Func<int> inGetScore, int inColumns, float inSpacing,
             Func<bool, bool> inTryProcessUfoPhase, Action inTickUfoCountdown)
         {
+            if (_initializationAttempted)
+            {
+                return _shots != null;
+            }
+            _initializationAttempted = true;
             if (_rollingShot == null || _plungerShot == null || _squigglyShot == null ||
                 _rollingShot == _plungerShot || _rollingShot == _squigglyShot || _plungerShot == _squigglyShot)
             {
-                throw new ArgumentException("Three independent enemy shots are required.");
+                Debug.LogError("EnemyShotController requires three distinct, non-null enemy shot references.");
+                SetPlaying(false);
+                return false;
+            }
+            if (inGetColumnMuzzle == null || inGetScore == null || inTryProcessUfoPhase == null || inTickUfoCountdown == null)
+            {
+                Debug.LogError("EnemyShotController requires muzzle, score, UFO phase and countdown delegates.");
+                SetPlaying(false);
+                return false;
+            }
+            if (inColumns <= 0 || inSpacing <= 0f || float.IsNaN(inSpacing) || float.IsInfinity(inSpacing))
+            {
+                Debug.LogError("EnemyShotController requires a positive column count and finite positive spacing.");
+                SetPlaying(false);
+                return false;
             }
             _shots              = new[] { _rollingShot, _plungerShot, _squigglyShot };
-            _getColumnMuzzle    = inGetColumnMuzzle ?? throw new ArgumentNullException(nameof(inGetColumnMuzzle));
-            _getScore           = inGetScore ?? throw new ArgumentNullException(nameof(inGetScore));
+            _getColumnMuzzle    = inGetColumnMuzzle;
+            _getScore           = inGetScore;
             _columns            = inColumns;
             _spacing            = inSpacing;
-            _tryProcessUfoPhase = inTryProcessUfoPhase ?? throw new ArgumentNullException(nameof(inTryProcessUfoPhase));
-            _tickUfoCountdown   = inTickUfoCountdown ?? throw new ArgumentNullException(nameof(inTickUfoCountdown));
+            _tryProcessUfoPhase = inTryProcessUfoPhase;
+            _tickUfoCountdown   = inTickUfoCountdown;
+            return true;
         }
 
         internal void Update(Vector2 inPlayerPosition, Vector2 inFormationPosition, int inAliveCount)
         {
+            if (_shots == null)
+            {
+                return;
+            }
             _shotTickElapsed += Time.fixedDeltaTime;
             while (_shotTickElapsed + 1e-7d >= ShotTickPeriod)
             {
@@ -106,6 +132,10 @@ namespace UnityInvader
 
         internal void PreparePhysicsStep()
         {
+            if (_shots == null)
+            {
+                return;
+            }
             foreach (var shot in _shots)
             {
                 shot.PreparePhysicsStep();
@@ -114,14 +144,28 @@ namespace UnityInvader
 
         internal void SetPlaying(bool inPlaying)
         {
-            foreach (var shot in _shots)
+            // Stop even partially configured saved shots before initialization has succeeded.
+            bool playing = inPlaying && _shots != null;
+            if (_rollingShot != null)
             {
-                shot.SetPlaying(inPlaying);
+                _rollingShot.SetPlaying(playing);
+            }
+            if (_plungerShot != null)
+            {
+                _plungerShot.SetPlaying(playing);
+            }
+            if (_squigglyShot != null)
+            {
+                _squigglyShot.SetPlaying(playing);
             }
         }
 
         internal void SetFast(bool inFast)
         {
+            if (_shots == null)
+            {
+                return;
+            }
             foreach (var shot in _shots)
             {
                 shot.SetFast(inFast);
@@ -137,6 +181,10 @@ namespace UnityInvader
 
         internal void ResetFlights()
         {
+            if (_shots == null)
+            {
+                return;
+            }
             foreach (var shot in _shots)
             {
                 shot.ResetFlight();
@@ -161,6 +209,10 @@ namespace UnityInvader
 
         private void ProcessShot(int inType, int inAliveCount, Vector2 inPlayerPosition, Vector2 inFormationPosition)
         {
+            if (_shots == null)
+            {
+                return;
+            }
             var shot = _shots[inType];
             if (shot.InFlight)
             {

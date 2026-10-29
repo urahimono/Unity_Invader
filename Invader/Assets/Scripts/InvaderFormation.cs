@@ -25,6 +25,8 @@ namespace UnityInvader
         private float               _elapsed;
         private int                 _direction = 1;
         private bool                _playing;
+        private bool                _initializationAttempted;
+        private bool                _initialized;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private float _debugMovementMultiplier = 1f;
@@ -46,6 +48,12 @@ namespace UnityInvader
         private const float FirstWaveY = (208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
         // Provisional sprite-center anchor, not the ROM's rotated drawing coordinate.
         private const float InvasionY  = (40f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
+
+        private void Awake()
+        {
+            _body = GetComponent<Rigidbody2D>();
+            ApplyPlayingState();
+        }
 
         private void OnEnable()
         {
@@ -83,35 +91,51 @@ namespace UnityInvader
             }
         }
 
-        internal void Initialize(IPositionProvider inPlayer, Func<long> inGetNormalShotEndCount, Func<int> inGetScore)
+        internal bool Initialize(IPositionProvider inPlayer, Func<long> inGetNormalShotEndCount, Func<int> inGetScore)
         {
+            if (_initializationAttempted)
+            {
+                return _initialized;
+            }
+            _initializationAttempted = true;
             if (inGetScore == null)
             {
-                throw new ArgumentNullException(nameof(inGetScore));
+                Debug.LogError("Formation requires a score reader.", this);
+                return FailInitialization();
             }
             if (inGetNormalShotEndCount == null)
             {
-                throw new ArgumentNullException(nameof(inGetNormalShotEndCount));
+                Debug.LogError("Formation requires a normal shot history reader.", this);
+                return FailInitialization();
             }
             if (_invaderPrefab == null)
             {
-                throw new InvalidOperationException("Formation requires its Invader prefab.");
+                Debug.LogError("Formation requires its Invader prefab.", this);
+                return FailInitialization();
             }
-            if (inPlayer == null || _ufo == null || _enemyShots == null)
+            if (inPlayer == null || _ufo == null || _enemyShots == null || _body == null)
             {
-                throw new InvalidOperationException("Formation requires Player position, EnemyShotController and UFO. Configure Arcade first.");
+                Debug.LogError("Formation requires Player position, Rigidbody2D, EnemyShotController and UFO. Configure Arcade first.", this);
+                return FailInitialization();
             }
             _player               = inPlayer;
             _getNormalShotEndCount = inGetNormalShotEndCount;
-            _enemyShots.Initialize(GetColumnMuzzle, inGetScore, Columns, Spacing * ArcadeViewport.UnitsPerPixel,
-                TryProcessUfoPhase, TickUfoCountdown);
-            _body = GetComponent<Rigidbody2D>();
-            CreateInvaders();
+            if (_enemyShots.Initialize(GetColumnMuzzle, inGetScore, Columns, Spacing * ArcadeViewport.UnitsPerPixel,
+                TryProcessUfoPhase, TickUfoCountdown) == false || CreateInvaders() == false)
+            {
+                return FailInitialization();
+            }
+            _initialized = true;
             BeginWave();
+            return true;
         }
 
         internal void BeginWave()
         {
+            if (_initialized == false)
+            {
+                return;
+            }
             _elapsed             = 0f;
             _direction           = 1;
             _enemyShots.BeginWave();
@@ -135,11 +159,11 @@ namespace UnityInvader
 
         internal void SetPlaying(bool inPlaying)
         {
-            _playing = inPlaying;
-            if (inPlaying == false)
+            _playing = _initialized && inPlaying;
+            if (_playing == false)
             {
                 _elapsed = 0f;
-                _enemyShots.ResetClock();
+                _enemyShots?.ResetClock();
             }
             ApplyPlayingState();
         }
@@ -156,13 +180,17 @@ namespace UnityInvader
 
         internal void PreparePlayerRespawn()
         {
+            if (_initialized == false)
+            {
+                return;
+            }
             // Clear all slots without resetting the rack, column pointers or movement state.
             _enemyShots.ResetFlights();
             _enemyShots.ResetClock();
             _ufo.ResetCycle();
         }
 
-        private void CreateInvaders()
+        private bool CreateInvaders()
         {
             for (int row = 0; row < Rows; row++)
             {
@@ -172,18 +200,44 @@ namespace UnityInvader
                     var invader                     = Instantiate(_invaderPrefab, transform);
                     invader.name                    = $"Invader ({row},{column})";
                     invader.transform.localPosition = new Vector3(column * Spacing, -row * Spacing, 0f) * ArcadeViewport.UnitsPerPixel;
-                    invader.Initialize(type);
-                    invader.Defeated += NotifyDefeated;
                     _invaders.Add(invader);
+                    if (invader.Initialize(type) == false)
+                    {
+                        return false;
+                    }
+                    invader.SetPlaying(false);
+                    invader.Defeated += NotifyDefeated;
                 }
             }
+            return true;
+        }
+
+        private bool FailInitialization()
+        {
+            _playing = false;
+            enabled  = false;
+            ApplyPlayingState();
+            foreach (var invader in _invaders)
+            {
+                invader.Defeated -= NotifyDefeated;
+                invader.gameObject.SetActive(false);
+                Destroy(invader.gameObject);
+            }
+            _invaders.Clear();
+            _aliveCount           = 0;
+            _player               = null;
+            _getNormalShotEndCount = null;
+            return false;
         }
 
         private void ApplyPlayingState()
         {
-            bool playing    = _playing && isActiveAndEnabled;
-            _body.simulated = playing;
-            _enemyShots.SetPlaying(playing);
+            bool playing = _initialized && _playing && isActiveAndEnabled;
+            if (_body != null)
+            {
+                _body.simulated = playing;
+            }
+            _enemyShots?.SetPlaying(playing);
             if (_ufo != null)
             {
                 _ufo.SetPlaying(playing);

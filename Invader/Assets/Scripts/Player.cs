@@ -31,6 +31,8 @@ namespace UnityInvader
 
         public long NormalShotEndCount => _normalShotEndCount;
 
+        public bool IsInitialized { get; private set; }
+
         public Vector2 Position => transform.position;
 
         private const float Speed    = 60f * ArcadeViewport.UnitsPerPixel;
@@ -40,9 +42,16 @@ namespace UnityInvader
         {
             if (_shot == null || _renderer == null || _hitCollider == null)
             {
-                throw new InvalidOperationException("Player requires saved PlayerShot, renderer and hit collider references. Configure Player Hit first.");
+                Debug.LogError("Player requires saved PlayerShot, renderer and hit collider references. Configure Player Hit first.", this);
+                // Missing saved references must not leave the attached collider active.
+                GetComponent<SpriteRenderer>().enabled = false;
+                GetComponent<BoxCollider2D>().enabled  = false;
+                enabled = false;
+                ApplyPlayingState();
+                return;
             }
             _shot.FlightEnded += ResolveShot;
+            IsInitialized = true;
         }
 
         private void OnEnable()
@@ -67,12 +76,15 @@ namespace UnityInvader
 
         private void OnDestroy()
         {
-            _shot.FlightEnded -= ResolveShot;
+            if (IsInitialized && _shot != null)
+            {
+                _shot.FlightEnded -= ResolveShot;
+            }
         }
 
         public bool TryReceiveHit(Component inSource)
         {
-            if (_playing == false || isActiveAndEnabled == false || _hitAccepted || _hitCollider.enabled == false)
+            if (IsInitialized == false || _playing == false || isActiveAndEnabled == false || _hitAccepted || _hitCollider.enabled == false)
             {
                 return false;
             }
@@ -94,7 +106,7 @@ namespace UnityInvader
 
         internal void SetPlaying(bool inPlaying)
         {
-            _playing = inPlaying && _hitAccepted == false;
+            _playing = IsInitialized && inPlaying && _hitAccepted == false;
             if (_playing == false)
             {
                 _inputState  = default;
@@ -105,6 +117,10 @@ namespace UnityInvader
 
         internal void Respawn()
         {
+            if (IsInitialized == false)
+            {
+                return;
+            }
             SetPlaying(false);
             _shot.ResetFlight();
             ReleaseShot();
@@ -153,10 +169,19 @@ namespace UnityInvader
 
         private void ApplyPlayingState()
         {
-            bool playing         = _playing && isActiveAndEnabled;
-            _renderer.enabled    = playing;
-            _hitCollider.enabled = playing;
-            _shot.SetPlaying(playing);
+            bool playing = IsInitialized && _playing && isActiveAndEnabled;
+            if (_renderer != null)
+            {
+                _renderer.enabled = playing;
+            }
+            if (_hitCollider != null)
+            {
+                _hitCollider.enabled = playing;
+            }
+            if (_shot != null)
+            {
+                _shot.SetPlaying(playing);
+            }
         }
 
         private void UpdatePlayer()

@@ -19,6 +19,8 @@ namespace UnityInvader
         private Collider2D _collider;
         private Sprite[]   _animationFrames;
         private int        _frameIndex;
+        private bool       _initializationAttempted;
+        private bool       _initialized;
 
         public event Action<Invader, Component> Defeated;
 
@@ -26,7 +28,7 @@ namespace UnityInvader
 
         public bool TryReceiveHit(Component inSource)
         {
-            if (isActiveAndEnabled == false || _collider.enabled == false)
+            if (_initialized == false || isActiveAndEnabled == false || _collider.enabled == false)
             {
                 return false;
             }
@@ -36,9 +38,21 @@ namespace UnityInvader
             return true;
         }
 
-        internal void Initialize(InvaderType inType)
+        internal bool Initialize(InvaderType inType)
         {
+            if (_initializationAttempted)
+            {
+                return _initialized;
+            }
+            _initializationAttempted = true;
             _collider = GetComponent<Collider2D>();
+            if (_renderer == null || _collider == null)
+            {
+                Debug.LogError("Invader requires a SpriteRenderer reference and Collider2D.", this);
+                enabled = false;
+                SetPlaying(false);
+                return false;
+            }
             switch (inType)
             {
                 case InvaderType.Top:
@@ -54,17 +68,29 @@ namespace UnityInvader
                     TargetType       = HitTargetType.InvaderBottom;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(inType), inType, "Unknown Invader type.");
+                    Debug.LogError($"Unknown Invader type: {inType}.", this);
+                    enabled = false;
+                    SetPlaying(false);
+                    return false;
             }
             if (_animationFrames == null || _animationFrames.Length == 0 ||
                 Array.Exists(_animationFrames, inFrame => inFrame == null))
             {
-                throw new InvalidOperationException("Invader requires non-empty Sprite frames for its type. Configure Invader Animation first.");
+                Debug.LogError($"Invader requires non-empty Sprite frames without null entries for {inType}. Configure Invader Animation first.", this);
+                enabled = false;
+                SetPlaying(false);
+                return false;
             }
+            _initialized = true;
+            return true;
         }
 
         internal void BeginWave()
         {
+            if (_initialized == false)
+            {
+                return;
+            }
             gameObject.SetActive(true);
             _frameIndex      = 0;
             _renderer.sprite = _animationFrames[_frameIndex];
@@ -72,12 +98,23 @@ namespace UnityInvader
 
         internal void SetPlaying(bool inPlaying)
         {
-            _renderer.enabled = inPlaying && isActiveAndEnabled;
-            _collider.enabled = inPlaying && isActiveAndEnabled;
+            bool playing = _initialized && inPlaying && isActiveAndEnabled;
+            if (_renderer != null)
+            {
+                _renderer.enabled = playing;
+            }
+            if (_collider != null)
+            {
+                _collider.enabled = playing;
+            }
         }
 
         internal void AdvanceAnimation()
         {
+            if (_initialized == false)
+            {
+                return;
+            }
             _frameIndex      = (_frameIndex + 1) % _animationFrames.Length;
             _renderer.sprite = _animationFrames[_frameIndex];
         }
