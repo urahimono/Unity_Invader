@@ -4,7 +4,7 @@ namespace UnityInvader
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D))]
-    public sealed class EnemyShot : MonoBehaviour
+    public sealed class EnemyShot : MonoBehaviour, IHitReceiver
     {
         [SerializeField]
         private SpriteRenderer _renderer;
@@ -14,6 +14,8 @@ namespace UnityInvader
         private bool        _playing;
         private bool        _fast;
         private bool        _resolvingHit;
+
+        public HitTargetType TargetType => HitTargetType.None;
 
         internal bool InFlight => gameObject.activeSelf;
 
@@ -51,6 +53,20 @@ namespace UnityInvader
             {
                 ResolveHit(receiver);
             }
+        }
+
+        public bool TryReceiveHit(Component inSource)
+        {
+            if (_playing == false || isActiveAndEnabled == false || _resolvingHit)
+            {
+                return false;
+            }
+            if (inSource is PlayerShot shot && shot.isActiveAndEnabled)
+            {
+                ResetFlight();
+                return true;
+            }
+            return false;
         }
 
         internal bool TryLaunch(Vector2 inPosition)

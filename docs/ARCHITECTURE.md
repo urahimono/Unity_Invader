@@ -55,6 +55,7 @@ flowchart TD
     Controller -->|列番号から発射位置の値を取得| Formation
     Formation -->|共有phase / TickCountdown / ResetCycle / SetPlaying| Ufo
     EnemyShot -->|Trigger / IHitReceiver.TryReceiveHit| Player
+    Shot -->|IHitReceiver.TryReceiveHit / 相殺| EnemyShot
     Player -.->|HitAccepted event| Driver
     Formation -->|IPositionProvider.Position / Playerに束縛したFuncで終了回数を取得| Player
     Shot -->|Physics2D領域検索 / 移動区間の画素判定| Shield[Shield: 残存画素・局所破壊・描画]
@@ -149,6 +150,12 @@ PlayerDeadでは既存SetPlaying(false)で入力・射撃・編隊・弾・UFO�
 Formationは通常の移動ステップ後、移動先Rigidbody2D座標と各生存Invaderのローカル位置から最下位置を判定します。論理y=40未満でInvadedイベントを同期通知し、Driverは初期化済み・有効・Playing中だけLivesを0にして直ちにGameOverへ遷移します。DriverがInitializeGameplayで一度購読しOnDestroyで解除、停止・Wave変更では購読を維持します（Issue #107）。PlayerDead・復帰経路は使いません。既存ApplyPlayingStateでPlayer・自機弾・編隊・敵弾3種類・UFO・Shieldを停止し、同じFixedUpdateの残りの編隊移動も中断します。Score/Wave・Shield画素・個体の生死は保持します。敵弾Reload用Score参照はIssue #110でFunc<int>へ移し、FormationのDriver型付きフィールド・初期化引数は撤去しました。
 
 接触判定ではなく生存個体アンカーの座標判定です。原作ROMの描画座標とUnityのSprite中心は異なり、40pxは暫定対応です。演出・原作動画との見た目の一致は未確認です。根拠・差分は [侵攻GameOver](GAME_OVER.md) を参照してください。既存の責務と通知方式の拡張に留まり、新規ADRは追加しません。
+
+### 弾同士の相殺（Issue #133・暫定）
+
+EnemyShotはIHitReceiverも実装し、Playing中かつ自身と命中元PlayerShotが有効な飛行中の場合だけ受理します。受理時に自身のResetFlightで非アクティブ化・step count=0とし、PlayerShotは既存のFinishFlight(None)からFlightEndedを一度通知します。Playerの射撃枠解放・通常弾履歴更新、B弾所有者の通知経路は変更しません。Score・Lives・Invader・Shieldは相殺で変更せず、敵弾の再使用は既存Controllerのphase・Reload・列選択・UFO共有枠に従います。処理済み・停止中・PlayerShot以外の命中元は受理しません。
+
+既存のPhysics2D Triggerとレイヤー10↔11を使用し、Scene・Prefab・物理設定の変更や全体管理者への衝突処理追加はありません。これは最小限の暫定仕様で、参考動画での干渉確認、弾種差・画素判定・すり抜け・爆発待ち等の原作との照合は未完了です。
 
 ### 3種類のEnemyShot（Issue #77）
 
