@@ -178,3 +178,11 @@ Scene/Prefab移行・Unityコンパイル・Play動作の実行状況はPR本文
 ### 生存数連動の編隊移動（Issue #139）
 
 [ROM解説](https://computerarcheology.com/Arcade/SpaceInvaders/)の生存個体の走査周期と[注釈付きROM](https://computerarcheology.com/Arcade/SpaceInvaders/Code.html)のRackBump（0x1597）・右移動量選択（0x18F1）に基づく。個体を順次描画する原作を編隊一括移動で近似し、正規化した進捗をFormation内部で所有する。50Hz物理更新では1体時に通常1～2回、F中には約12回の移動を同じFixedUpdateで実行し、各回の境界clamp・侵食・アニメ・侵攻通知を維持する。停止通知で残りの移動を中断する。新ゲーム・Waveは進捗0・右2pxへ復元する。既存責務内の局所変更であり、新規ADRは追加しない。アーケードアーカイブス2版動画との実速度・描画順・反転frameの厳密比較は未実施。手動確認はREADMEを参照。
+
+### 生存個体の左右境界（Issue #141）
+
+Formationの各MoveFormationで、`gameObject.activeSelf`がtrueの個体の`transform.localPosition.x`の最小・最大を最大55件走査する。セル半幅8pxを考慮した画面内の個体中心範囲からローカル端を差し引き、親Rigidbody2D.positionのclamp範囲と反転位置を求める。生存0件なら移動処理を返す。全55体では従来の範囲と一致し、外側の列の全滅に応じて移動範囲が広がる。親原点が画面外へ出ても生存セルが画面内なら許容する。
+
+生死・位置の正、集団移動の責務、撃破通知、初期化・停止・復帰フローは変更しない。境界キャッシュ・追加イベント・個体の新APIは設けず、描画/Colliderのenabledや物理同期を要するboundsには依存しない。撃破個体は破棄せず再利用する既存契約を維持し、不正な個体破棄を生存扱いの変更で隠蔽しない。Issue #139の移動進捗・加速・左端反転時の右3px選択と、各移動の侵食・アニメ・侵攻通知を維持する。局所的な境界計算変更のため新規ADRは追加しない。
+
+これは生存ローカル座標とセル幅16pxによる近似であり、原作のVRAM走査・Spriteの画素形状による端判定は未再現。参考動画による厳密な端位置の照合は未実施。手動確認手順と期待結果はREADMEを参照する。

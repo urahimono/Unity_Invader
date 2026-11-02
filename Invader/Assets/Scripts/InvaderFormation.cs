@@ -42,7 +42,7 @@ namespace UnityInvader
         public  const    int           Spacing    = 16;
         public  const    int           CellSize   = 16;
         private const    float         MinimumX   = (-ArcadeViewport.ScreenWidth / 2f + CellSize / 2f) * ArcadeViewport.UnitsPerPixel;
-        private const    float         MaximumX   = (ArcadeViewport.ScreenWidth / 2f - CellSize / 2f - (Columns - 1) * Spacing) * ArcadeViewport.UnitsPerPixel;
+        private const    float         MaximumX   = (ArcadeViewport.ScreenWidth / 2f - CellSize / 2f) * ArcadeViewport.UnitsPerPixel;
         private readonly List<Invader> _invaders  = new List<Invader>();
 
         private const float FirstWaveY = (208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
@@ -272,9 +272,30 @@ namespace UnityInvader
 
         private void MoveFormation()
         {
+            float leftmostX  = float.PositiveInfinity;
+            float rightmostX = float.NegativeInfinity;
+            foreach (var invader in _invaders)
+            {
+                if (invader.gameObject.activeSelf)
+                {
+                    float localX = invader.transform.localPosition.x;
+
+                    leftmostX  = Mathf.Min(leftmostX, localX);
+                    rightmostX = Mathf.Max(rightmostX, localX);
+                }
+            }
+            if (leftmostX > rightmostX)
+            {
+                return;
+            }
+            // The rack origin may leave the screen; only living cells constrain it.
+            // Local offsets avoid stale child world poses during multiple rack steps.
+            float minimumX = MinimumX - leftmostX;
+            float maximumX = MaximumX - rightmostX;
+
             var position = _body.position;
-            position.x   = Mathf.Clamp(position.x + _direction * (_horizontalStep * ArcadeViewport.UnitsPerPixel), MinimumX, MaximumX);
-            if ((_direction > 0 && position.x >= MaximumX) || (_direction < 0 && position.x <= MinimumX))
+            position.x   = Mathf.Clamp(position.x + _direction * (_horizontalStep * ArcadeViewport.UnitsPerPixel), minimumX, maximumX);
+            if ((_direction > 0 && position.x >= maximumX) || (_direction < 0 && position.x <= minimumX))
             {
                 position.y -= 8f * ArcadeViewport.UnitsPerPixel;
                 _direction = -_direction;
