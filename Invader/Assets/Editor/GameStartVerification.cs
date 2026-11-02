@@ -78,16 +78,17 @@ namespace UnityInvader.Editor
             var shot                               = (PlayerShot)Read(player, "_shot");
             var shields                            = (Shield[])Read(inDriver, "_shields");
             var invaders                           = formation.GetComponentsInChildren<Invader>(true);
-            var settings                           = InputSystem.settings;
-            var mode                               = settings.updateMode;
-            var background                         = settings.backgroundBehavior;
-            var editorInput                        = settings.editorInputBehaviorInPlayMode;
-            settings.updateMode                    = InputSettings.UpdateMode.ProcessEventsManually;
-            settings.backgroundBehavior            = InputSettings.BackgroundBehavior.IgnoreFocus;
-            settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
-            var keyboard                           = InputSystem.AddDevice<Keyboard>();
+            var originalSettings                   = InputSystem.settings;
+            var settings                           = UnityEngine.Object.Instantiate(originalSettings);
+            Keyboard keyboard                      = null;
             try
             {
+                InputSystem.settings                   = settings;
+                settings.updateMode                    = InputSettings.UpdateMode.ProcessEventsManually;
+                settings.backgroundBehavior            = InputSettings.BackgroundBehavior.IgnoreFocus;
+                settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+                keyboard                               = InputSystem.AddDevice<Keyboard>();
+
                 var origin = player.Position;
                 Pump(inDriver, keyboard, Key.Space, Key.RightArrow);
                 Call(player, "FixedUpdate");
@@ -145,10 +146,18 @@ namespace UnityInvader.Editor
             }
             finally
             {
-                InputSystem.RemoveDevice(keyboard);
-                settings.updateMode                    = mode;
-                settings.backgroundBehavior            = background;
-                settings.editorInputBehaviorInPlayMode = editorInput;
+                try
+                {
+                    if (keyboard != null)
+                    {
+                        InputSystem.RemoveDevice(keyboard);
+                    }
+                }
+                finally
+                {
+                    InputSystem.settings = originalSettings;
+                    UnityEngine.Object.DestroyImmediate(settings);
+                }
             }
         }
 

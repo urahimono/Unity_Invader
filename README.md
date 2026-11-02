@@ -23,6 +23,8 @@ Unity Hubから `Invader/` を指定して、上記バージョンのEditorで�
 
 リトライは同じSceneで所有者の状態を復元します。通常弾・敵弾・UFO・B弾、Shieldの損傷、履歴・待機時計をリセットします。SpaceとBは新ゲーム中のrelease後に再押下してください。旧`Development Start Playing`設定は互換用に保持しますが、実行時は無視します。EditorのPause/Resumeは途中状態の保持用であり、新規ゲーム開始ではありません。
 
+開発用メニュー **Unity Invader > Component Gameplay > Pause (Attract)** は、開始待ちと同じAttractへ切り替えます。この状態でEnterを離して押すと、通常の開始操作として**新規ゲームへリセット**されます。途中状態を保持して再開する場合はEnterを使わず、同メニューの **Resume (Playing)** を選んでください。これはUnityツールバーのPause（PlayerLoopの一時停止）とは別の操作です。
+
 EditorとDevelopment Buildでは、Gameビュー左上の黒背景に開発用の`DEBUG`表示（State・Lives・Wave）が出ます。GameplayDriverの現在値を直接読み、PlayerDead・GameOver中も表示します。通常の製品ビルドでは描画しません。原作HUDとは別の確認用表示です。保存済みArcadeに設定済みで、再設定は **Unity Invader > Configure Debug Status Overlay** を使います。
 
 ## Windowsでdevelopを更新してUnityを起動する
