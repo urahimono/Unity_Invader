@@ -22,8 +22,9 @@ namespace UnityInvader
         private IPositionProvider   _player;
         private Func<long>          _getNormalShotEndCount;
         private Rigidbody2D         _body;
-        private float               _elapsed;
-        private int                 _direction = 1;
+        private double              _movementProgress;
+        private int                 _direction      = 1;
+        private int                 _horizontalStep = 2;
         private bool                _playing;
         private bool                _initializationAttempted;
         private bool                _initialized;
@@ -40,7 +41,6 @@ namespace UnityInvader
         public  const    int           Columns    = 11;
         public  const    int           Spacing    = 16;
         public  const    int           CellSize   = 16;
-        private const    float         StepPeriod = 20f / 60f;
         private const    float         MinimumX   = (-ArcadeViewport.ScreenWidth / 2f + CellSize / 2f) * ArcadeViewport.UnitsPerPixel;
         private const    float         MaximumX   = (ArcadeViewport.ScreenWidth / 2f - CellSize / 2f - (Columns - 1) * Spacing) * ArcadeViewport.UnitsPerPixel;
         private readonly List<Invader> _invaders  = new List<Invader>();
@@ -65,6 +65,7 @@ namespace UnityInvader
 
         private void OnDisable()
         {
+            _movementProgress = 0d;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             _debugMovementMultiplier = 1f;
 #endif
@@ -136,8 +137,9 @@ namespace UnityInvader
             {
                 return;
             }
-            _elapsed             = 0f;
+            _movementProgress    = 0d;
             _direction           = 1;
+            _horizontalStep      = 2;
             _enemyShots.BeginWave();
             _enemyShots.ResetClock();
             _ufo.ResetCycle();
@@ -162,7 +164,7 @@ namespace UnityInvader
             _playing = _initialized && inPlaying;
             if (_playing == false)
             {
-                _elapsed = 0f;
+                _movementProgress = 0d;
                 _enemyShots?.ResetClock();
             }
             ApplyPlayingState();
@@ -250,7 +252,7 @@ namespace UnityInvader
 
         private void UpdateFormation()
         {
-            if (_playing == false)
+            if (_playing == false || _aliveCount == 0)
             {
                 return;
             }
@@ -258,10 +260,12 @@ namespace UnityInvader
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             elapsed *= _debugMovementMultiplier;
 #endif
-            _elapsed += elapsed;
-            while (_playing && _elapsed + 1e-7f >= StepPeriod)
+            // Preserve the completed fraction on defeat; never reprice old elapsed time
+            // using the new alive count. One rack step approximates one 60Hz scan.
+            _movementProgress += elapsed * 60d / _aliveCount;
+            while (_playing && _aliveCount > 0 && _movementProgress + 1e-7d >= 1d)
             {
-                _elapsed -= StepPeriod;
+                _movementProgress = Math.Max(0d, _movementProgress - 1d);
                 MoveFormation();
             }
         }
@@ -269,11 +273,13 @@ namespace UnityInvader
         private void MoveFormation()
         {
             var position = _body.position;
-            position.x   = Mathf.Clamp(position.x + _direction * (2f * ArcadeViewport.UnitsPerPixel), MinimumX, MaximumX);
+            position.x   = Mathf.Clamp(position.x + _direction * (_horizontalStep * ArcadeViewport.UnitsPerPixel), MinimumX, MaximumX);
             if ((_direction > 0 && position.x >= MaximumX) || (_direction < 0 && position.x <= MinimumX))
             {
                 position.y -= 8f * ArcadeViewport.UnitsPerPixel;
                 _direction = -_direction;
+                // ROM RackBump (1597/18F1) selects the rightward delta at the left edge.
+                _horizontalStep = _direction > 0 && _aliveCount == 1 ? 3 : 2;
             }
             var movement = position - _body.position;
             foreach (var invader in _invaders)
