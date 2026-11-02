@@ -101,10 +101,16 @@ ScoreとWave番号はDriver、生存数はFormationのInspectorで確認でき�
 
 旧GameplaySimulation・表示Push・論理モデル専用のEditor検証/設定メニューは削除しました。新メニューは `ComponentGameplayMigration` と `ComponentGameplayVerification` です。移行のバッチ入口は `-executeMethod UnityInvader.Editor.ComponentGameplayMigration.Migrate`（`-batchmode -quit`）、ログはリポジトリの `Logs/` へ指定します。
 
-独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。追加残機・Lives HUD、弾同士の相殺、Invader侵攻による敗北条件は未実装です。
+独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。追加残機・Lives HUD、原作HUDや一部の演出は未実装です。
 
-## 1P開始・リトライの限定検証（Issue #131）
+## 開始・リトライ／弾相殺の手動確認（Issues #131・#133）
 
-Unity 6000.6.4f1で専用バッチプロセスを起動します。`-batchmode -nographics -projectPath <Invaderの絶対パス> -executeMethod UnityInvader.Editor.GameStartVerification.Run -logFile <リポジトリ直下>/Logs/game-start.log` を指定し、`-quit`は付けません。検証は自ら終了します。終了コード0と今回のログの`GAME_START_PASS`を確認してください。仮想Keyboardによる入力と同期的なowner操作で、保存Bootstrap起動・長押し・2回リトライ・状態復元を確認します。Physics2Dの実接触や実時間の待機、通常製品ビルドの操作確認は別途必要です。
+保存済み `Bootstrap.unity` をPlayし、次を確認してください。ゲーム動作の実確認はユーザー環境のUnity 6000.6.4f1で行います。過去に追加した専用Editorバッチ検証 `GameStartVerification` / `ProjectileCancellationVerification` は保守対象から外して削除しました（追加当時もUnityでは未実施）。これらの`-executeMethod`入口は現在使えません。
 
-このCloud作業ではUnity Editorがないため、上記の限定Play検証、既存の`InvaderDefeatedVerification.Run`／`RunInitializationFailures`、実際の被弾・侵攻・敵弾・UFO再出現と製品ビルドは未実施です。
+1. 起動直後がAttractで停止しており、左右・Spaceではゲームが始まらず、Enterを離してから押すとPlayingになり移動・射撃できる。
+2. Enter長押しやPlaying中のEnterでScore・Waveがリセットされない。
+3. 3回の被弾またはInvader侵攻でGameOverになり、EnterでScore=0・Lives=3・Wave=1、Invader55体・Player初期位置・Shield4基が復元され、再び攻撃が進行する。リトライを複数回試す。
+4. 通常PlayerShotとRolling／Plunger／Squigglyの敵弾が接触したとき双方が終了し、Score／Livesは変化しない。自機弾が再発射できる。開発用B弾も可能な範囲で同様に確認する。
+5. 通常の被弾・死亡復帰、Shieldの損傷・次Wave復元、UFO出現・得点、全滅から次Waveへの移行が引き続き動作する。
+
+物理接触や実時間の待機、製品ビルドでの操作確認は、静的なコード確認の成功だけでは代用できません。
