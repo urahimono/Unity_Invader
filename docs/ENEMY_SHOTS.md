@@ -42,13 +42,23 @@ Physics2Dは既存の0.02秒刻みのままです。1回のFixedUpdateで通常1
 
 Fデバッグ倍率は従来どおりFormationの移動時計だけへ適用し、敵弾時計・下降速度・Player・待機時間・グローバル時間は変えません。B絨毯爆撃は既存PlayerShot経路を使用します。
 
+## PlayerShotとの相殺（Issue #133・暫定）
+
+Playing中に有効な飛行中のPlayerShotとEnemyShotがTrigger接触した場合、3種類とも両弾を終了します。EnemyShotがIHitReceiverとして受理してResetFlight（非アクティブ化・step count=0）し、PlayerShotは既存のFinishFlight(None)で一度だけFlightEndedを通知します。通常弾はPlayerの射撃枠を解放し終了履歴を1増やします。B弾も同じPlayerShot経路で、通常弾履歴は増やしません。相殺ではScore・Lives・Invader生存数・Shield形状を変更しません。
+
+終了済み・停止中・PlayerShot以外の命中元は受理しません。敵弾スロットの再使用は従来のphase・Reload・列ポインタ・UFO共有枠に従い、Controllerは変更しません。既存PrefabのTriggerとPhysics2Dレイヤー10↔11を使い、設定変更は不要です。
+
+参考のアーケードアーカイブス2プレイ動画では弾同士の干渉は未確認であり、この相殺は暫定仕様です。弾種別の無敵・貫通・確率、ROMのすり抜け、厳密な画素判定順、爆発Sprite・待ち時間・SEは追加していません。動画との照合を別途必要とします。
+
+限定検証の入口は `-executeMethod UnityInvader.Editor.ProjectileCancellationVerification.Run`（`-quit`なし、`-logFile`はルート`Logs/`配下）です。BootstrapからPlay Modeへ入り、3弾種の実Trigger、通常弾の通知・履歴・再発射、B弾、残留通知・停止・再利用と非加点等を確認します。今回のCloud環境にはUnity Editorがなく、この検証のコンパイル・実行は未実施です。
+
 ## 未解決の差分
 
-- 敵弾の爆発アニメーションと待ち時間は未実装です。ROMでは爆発完了後に弾枠が再初期化されるのに対し、本実装はShield/Player命中・下端到達で即座に弾を解除しcount=0へ戻します。この差は他種のReload成立時刻にも影響します。
+- 敵弾の爆発アニメーションと待ち時間は未実装です。ROMでは爆発完了後に弾枠が再初期化されるのに対し、本実装はShield/Player命中・下端到達・PlayerShotとの相殺で即座に弾を解除しcount=0へ戻します。この差は他種のReload成立時刻にも影響します。
 - Scoreは既存のintで保持し、9999超でも巻き戻さず最速Reloadを継続します。4桁BCDの桁あふれは再現しません。
 - Rolling列選択の範囲外不発・clampなし、発射位置・3×8px矩形判定、既存Shield破壊mask、既存の死亡待機/復帰・Wave進行は従来のUnity側仕様を維持しています。ROMの座標・描画衝突との完全一致ではありません。
 - 見た目はRolling橙・Plunger水色・Squiggly紫の暫定矩形です。原作画像を抽出せず、既存の生成済み白Spriteを使用します。
-- Issue #79でUFOとのSquiggly処理枠共有を追加しました。phase 2でSquiggly終了を待ち、UFO飛行中はSquigglyの新規発射を止めます。出現条件・加点と近似は [UFO](UFO.md) を参照してください。原作4コマ画像・爆発・SE、弾同士の相殺は未実装です。
+- Issue #79でUFOとのSquiggly処理枠共有を追加しました。phase 2でSquiggly終了を待ち、UFO飛行中はSquigglyの新規発射を止めます。出現条件・加点と近似は [UFO](UFO.md) を参照してください。原作4コマ画像・爆発・SEは未実装です。
 - 参考動画との視覚・時間照合、描画FPS別測定、実画面/実キー、Development Build/製品ビルド実行は未確認です。
 
 ## Controllerと保存互換性（Issue #112/#114）
