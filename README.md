@@ -67,7 +67,7 @@ Editor / Development Buildでは、Gameビューで **Bキーを長押しする�
 
 Playerの16×16px Triggerへ敵弾が命中すると、DriverがLivesを1機減らしてPlayerDeadへ遷移します。初期3機は操作中の1機を含み、暫定0.5秒後、残機があれば初期位置へ戻ってPlayingへ直接復帰し、0機ならGameOverで停止します。編隊の進捗・Score・Waveは保持します。LivesはDriver Inspectorで確認できます。詳細と検証状況は [Lives・復帰](docs/LIVES.md)、被弾の基礎実装は [Player被弾](docs/PLAYER_HIT.md) を参照してください。
 
-Gameビューで左右矢印キーを押すと移動し、Spaceで射撃します。同時発射は1発で、押しっぱなしでは再発射せず、離して再押下が必要です。発射中の押下も消費します。ShotはPlayerの子ではなく、Player移動後もShotのXは一定です。画面上端と命中時に非アクティブ化し、同じShotを次の発射に再利用します。
+Gameビューで左右矢印キーを押すと移動し、Spaceで射撃します。同時発射は1発で、押しっぱなしでは再発射せず、離して再押下が必要です。発射中の押下も消費します。ShotはPlayerの子ではなく、Player移動後もShotのXは一定です。画面上端と命中時は簡易爆発表示で停止し、16/60秒相当の待機完了まで同じShotを再利用できません（0.02秒更新では14回、約0.28秒）。待機中の押下も予約しません。命中結果・得点は即時に確定します。
 
 DriverがState・Score・Wave・Livesと死亡待機、Playerが入力・移動・射撃受付と復帰、Shotが自身のTriggerと消費、Invaderが自身の撃破/表示、Formationが55体の一斉移動・A/B・生存集計を担当します。GameplaySimulationと旧表示Controller/モデル/スナップショットは廃止しました。[Architecture](docs/ARCHITECTURE.md) と [ADR-0008](docs/adr/0008-component-gameplay.md) が現在の責務の正本です。
 
@@ -75,7 +75,7 @@ DriverがState・Score・Wave・Livesと死亡待機、Playerが入力・移動�
 
 Rolling・Plunger・Squigglyの3種類が独立したEnemyShotを再利用します。Squigglyは固定15列、Plungerは固定16列の最下段生存Invaderから発射し、空列でも表を進めます。Formationの敵弾専用60Hz phaseと他弾のstep count・Score依存Reloadで発射/更新を制御し、旧2秒タイマーは廃止しました。色付き3×8px矩形と初期phase・Wave時の列ポインタ初期化は暫定です。保存済みScene・Prefabを使用し、Squiggly再設定は **Unity Invader > Configure Squiggly EnemyShot** です。[ROM根拠・Unity上の近似・未解決事項](docs/ENEMY_SHOTS.md) を参照してください。
 
-UFOは編隊が初期高さより下降してからカウンタを進め、生存8体以上かつSquiggly枠が空いた時に出現します。方向・得点は通常PlayerShotの終了履歴で決まり、B弾は履歴対象外です。命中弾終了後に15周期の表から加点し、開発用オーバーレイのScoreで確認できます。再設定は **Unity Invader > Configure UFO**、仕様と時間/座標の近似は [UFO](docs/UFO.md) を参照してください。
+UFOは編隊が初期高さより下降してからカウンタを進め、生存8体以上かつSquiggly枠が空いた時に出現します。方向・得点は通常PlayerShotの終了履歴で決まり、B弾は履歴対象外です。命中時に通常弾の終了履歴を更新して15周期の表から加点し、開発用オーバーレイのScoreで確認できます。再設定は **Unity Invader > Configure UFO**、仕様と時間/座標の近似は [UFO](docs/UFO.md) を参照してください。
 
 ## ローカルで必要な最小限の確認
 
@@ -110,7 +110,7 @@ ScoreとWave番号はDriver、生存数はFormationのInspectorで確認でき�
 1. 起動直後がAttractで停止しており、左右・Spaceではゲームが始まらず、Enterを離してから押すとPlayingになり移動・射撃できる。
 2. Enter長押しやPlaying中のEnterでScore・Waveがリセットされない。
 3. 3回の被弾またはInvader侵攻でGameOverになり、EnterでScore=0・Lives=3・Wave=1、Invader55体・Player初期位置・Shield4基が復元され、再び攻撃が進行する。リトライを複数回試す。
-4. 通常PlayerShotとRolling／Plunger／Squigglyの敵弾が接触したとき双方が終了し、Score／Livesは変化しない。自機弾が再発射できる。開発用B弾も可能な範囲で同様に確認する。
+4. 通常PlayerShotとRolling／Plunger／Squigglyの敵弾が接触したとき双方が爆発待機へ入り、Score／Livesは変化しない。待機完了後にSpaceを離し再押下すると自機弾が再発射できる。開発用B弾も可能な範囲で同様に確認する。
 5. 通常の被弾・死亡復帰、Shieldの損傷・次Wave復元、UFO出現・得点、全滅から次Waveへの移行が引き続き動作する。
 
 物理接触や実時間の待機、製品ビルドでの操作確認は、静的なコード確認の成功だけでは代用できません。
