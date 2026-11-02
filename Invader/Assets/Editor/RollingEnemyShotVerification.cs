@@ -115,6 +115,9 @@ namespace UnityInvader.Editor
                     {
                         return;
                     }
+                    Require(_driver.CurrentState == GameState.Attract, "Saved startup must wait in Attract.");
+                    // This existing enemy-shot fixture resumes explicitly; Enter startup is verified separately.
+                    _driver.EditorSetState(GameState.Playing);
                     _formation  = UnityEngine.Object.FindAnyObjectByType<InvaderFormation>();
                     _player     = UnityEngine.Object.FindAnyObjectByType<Player>();
                     _playerShot = UnityEngine.Object.FindObjectsByType<PlayerShot>(FindObjectsInactive.Include).Single();
