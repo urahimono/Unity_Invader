@@ -106,7 +106,7 @@ Invaderは5×11個を一度生成し、次Waveでも同じ個体・Rendererを�
 
 Issue #101では画像参照・現在フレームindexをInvaderが所有します。BeginWaveで先頭へ戻し、Formationの既存MoveFormationから55体すべてへAdvanceAnimationを呼びます。個体ごとの時計は追加せず、死亡個体のフレーム進行も従来どおりです。停止/再開・死亡復帰でフレームをリセットしません。保存済み設定の限定更新はConfigure Invader Animationを使い、Arcadeの再生成は行いません。生成用Editorコードも既存Prefabの未設定配列を補完し、設定済みの任意長配列を維持します。既存の個体表示責務への適合であり、新規ADRは追加しません。
 
-Issue #99ではFormationがCreateInvadersで各個体のDefeatedを一度だけ購読し、OnDestroyで解除するようにしました。BeginWaveや一時停止では購読を変更しません。現在のNotifyDefeatedは生存数と8体以下の敵弾速度だけを更新します。Issue #105で得点通知を弾の所有者へ移したため、Formationは命中元による得点分岐を行いません。
+Issue #99ではFormationがCreateInvadersで各個体のDefeatedを一度だけ購読し、OnDestroyで解除するようにしました。BeginWaveや一時停止では購読を変更しません。NotifyDefeatedは生存数と8体以下の敵弾速度を更新します。Issue #139では移動進捗を保持したまま、次回の進捗加算に更新後の生存数を使います。Issue #105で得点通知を弾の所有者へ移したため、Formationは命中元による得点分岐を行いません。
 
 Issue #89では衝突対象をレイヤーで制限します。Player=8、Invader/UFO=9、PlayerShot=10、EnemyShot=11をPrefabへ保存し、Arcadeは継承します。Physics2DではPlayerShot↔PlayerとEnemyShot↔Invader/UFOだけを除外し、他の組合せは維持します。新規生成も同じレイヤーを使い、既存設定更新はConfigure Gameplay Collisionsです。ShieldのDefaultレイヤー・移動区間の画素判定・上下別マスクには変更しません。レイヤー設定の判断は [ADR-0013](adr/0013-hit-receivers-and-ufo-scoring.md)、現在の結果通知・加点順は [ADR-0014](adr/0014-player-shot-results-and-scoring.md) を参照します。
 
@@ -114,13 +114,13 @@ Issue #89では衝突対象をレイヤーで制限します。Player=8、Invade
 
 - Driver.Update → Player.SetInput：左右矢印・SpaceをReaderで取得し、PlayerInputStateの値を渡す。Playerがrelease/再押下と占有を判定し、短い発射入力を次のFixedUpdateまで保持する。Player.Updateは持たない。
 - Player.FixedUpdate：60px/秒相当で左右移動し、端でclamp。受付済みの発射を行う。左右同時押しは従来どおり右優先。
-- Formation.FixedUpdate：通常20/60秒ごとに2px横移動。端では8px下降・方向反転し、全個体のA/Bを交換する。開発用F長押しは移動用の経過時間加算だけを10倍にし、既存の各移動・侵食ステップを繰り返す。敵弾専用時計とTime.timeScale / fixedDeltaTimeは変更しない。離した後も処理済みステップを除いた端数だけを引き継ぐ。
+- Formation.FixedUpdate：生存数Nに対しN/60秒を1移動とし、各FixedUpdateで移動進捗へ `fixedDeltaTime * 60 / N` を加算する（0体では移動しない）。進捗1ごとに一括移動し端数を保持するため、撃破前の時間を新周期で再計算しない。通常は2px横移動。左端反転時に1体なら以降の右行程を3pxとし、左行程は常に2px。右行程中の最後の撃破では次の左端反転まで2pxを維持する。端では8px下降・方向反転し、全個体のA/Bを交換する。開発用F長押しは移動用の経過時間加算だけを10倍にし、既存の各移動・侵食ステップを繰り返す。敵弾専用時計とTime.timeScale / fixedDeltaTimeは変更しない。離した後も処理済みステップを除いた端数だけを引き継ぐ。
 - Shot：Rigidbody2Dが240px/秒相当で上昇。FixedUpdateで画面上端を確認し、OnTriggerEnter2Dで接触対象を処理する。
 - Driver.Update：WaveClear待機とPlayerDead待機。次WaveではLives・Score・Player位置・Shot占有を保持し、編隊を初期化する。停止中の入力は受理せず、次Waveでも停止前の射撃受付状態を保持する。死亡からの復帰では編隊を初期化しない。
 
 Unityの既存Fixed Timestep（0.02秒）を使います。Issue #89のProjectSettings変更はレイヤー名・接触組合せで、物理stepや速度等の設定値は変更しません。全体の独自60Hz時計や「Player→Shot→Formation→Collision」の旧tick順序は廃止しました。Issue #77で追加した敵弾専用60Hz時計・種類別phaseは、Issue #116でEnemyShotControllerへ移し、Physics2Dは0.02秒刻みのままです。速度・周期は従来相当に換算しますが、接触タイミング・境界・端の到達frameは厳密一致を保証せず、描画FPS別の実測も未確認です。
 
-非Playing・Driver無効時はPlayer移動/射撃とFormation更新を止め、表示とCollider/物理シミュレーションを停止します。既存Shotの位置・占有と個体の生死は保持します。停止時は未実行入力とFormationの経過時間を破棄し、再開時に停止時間を取り戻しません。Player単体のDisableでも自身とShotを、Formation単体のDisableでも配下の表示・物理を停止します。
+非Playing・Driver無効時はPlayer移動/射撃とFormation更新を止め、表示とCollider/物理シミュレーションを停止します。既存Shotの位置・占有と個体の生死は保持します。停止時は未実行入力とFormationの移動進捗を破棄し、再開時に停止時間を取り戻しません。Player単体のDisableでも自身とShotを、Formation単体のDisableでも配下の表示・物理を停止します。
 
 ## 座標・命中・進行
 
@@ -174,3 +174,7 @@ Controllerの共有phase 2・Formationの下降条件・8体以上の開始条�
 旧モデル・旧Push専用のEditor検証と旧設定ツールは削除しました。代わりに接続・物理設定・Missing Script・Play中の55体と生存集計を確認する `Verify Component Gameplay Setup`、Editor限定の一時停止/再開メニュー、READMEの最小限の操作確認を用意しています。接続チェックは衝突やWave進行の成功を意味しません。
 
 Scene/Prefab移行・Unityコンパイル・Play動作の実行状況はPR本文を参照してください。独立PoC [Physics2DProbe](../Invader/Assets/Prototypes/Physics2DProbe/README.md) は今回変更せず、本編から参照しません。
+
+### 生存数連動の編隊移動（Issue #139）
+
+[ROM解説](https://computerarcheology.com/Arcade/SpaceInvaders/)の生存個体の走査周期と[注釈付きROM](https://computerarcheology.com/Arcade/SpaceInvaders/Code.html)のRackBump（0x1597）・右移動量選択（0x18F1）に基づく。個体を順次描画する原作を編隊一括移動で近似し、正規化した進捗をFormation内部で所有する。50Hz物理更新では1体時に通常1～2回、F中には約12回の移動を同じFixedUpdateで実行し、各回の境界clamp・侵食・アニメ・侵攻通知を維持する。停止通知で残りの移動を中断する。新ゲーム・Waveは進捗0・右2pxへ復元する。既存責務内の局所変更であり、新規ADRは追加しない。アーケードアーカイブス2版動画との実速度・描画順・反転frameの厳密比較は未実施。手動確認はREADMEを参照。

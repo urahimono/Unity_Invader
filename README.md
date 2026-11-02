@@ -71,7 +71,7 @@ Gameビューで左右矢印キーを押すと移動し、Spaceで射撃しま�
 
 DriverがState・Score・Wave・Livesと死亡待機、Playerが入力・移動・射撃受付と復帰、Shotが自身のTriggerと消費、Invaderが自身の撃破/表示、Formationが55体の一斉移動・A/B・生存集計を担当します。GameplaySimulationと旧表示Controller/モデル/スナップショットは廃止しました。[Architecture](docs/ARCHITECTURE.md) と [ADR-0008](docs/adr/0008-component-gameplay.md) が現在の責務の正本です。
 
-1px＝0.01 Unity単位、224×256の画面比率です。速度はPlayer=60px/秒、Shot=240px/秒、Formationは20/60秒ごとに2px、端で8px下降します。既存Fixed Timestep 0.02秒を使い、ProjectSettingsを変更しません。旧60Hz時計・tick順序は維持せず、Triggerの境界・命中タイミングには差があります。同時接触で1発が倒すのは最大1体ですが、左右どちらが先かは保証しません。
+1px＝0.01 Unity単位、224×256の画面比率です。速度はPlayer=60px/秒、Shot=240px/秒、Formationは生存数Nに対してN/60秒ごとに2px、端で8px下降・反転します（55体：約0.917秒、20体：約0.333秒、8体：約0.133秒、1体：約0.0167秒）。最後の1体は左端で右向きに反転した後の右移動が3pxになり、左移動は2pxです。右移動中に1体になった場合、その右行程は2pxのままです。既存Fixed Timestep 0.02秒を使い、ProjectSettingsを変更しません。旧60Hz時計・tick順序は維持せず、Triggerの境界・命中タイミングには差があります。同時接触で1発が倒すのは最大1体ですが、左右どちらが先かは保証しません。
 
 Rolling・Plunger・Squigglyの3種類が独立したEnemyShotを再利用します。Squigglyは固定15列、Plungerは固定16列の最下段生存Invaderから発射し、空列でも表を進めます。Formationの敵弾専用60Hz phaseと他弾のstep count・Score依存Reloadで発射/更新を制御し、旧2秒タイマーは廃止しました。色付き3×8px矩形と初期phase・Wave時の列ポインタ初期化は暫定です。保存済みScene・Prefabを使用し、Squiggly再設定は **Unity Invader > Configure Squiggly EnemyShot** です。[ROM根拠・Unity上の近似・未解決事項](docs/ENEMY_SHOTS.md) を参照してください。
 
@@ -114,3 +114,19 @@ ScoreとWave番号はDriver、生存数はFormationのInspectorで確認でき�
 5. 通常の被弾・死亡復帰、Shieldの損傷・次Wave復元、UFO出現・得点、全滅から次Waveへの移行が引き続き動作する。
 
 物理接触や実時間の待機、製品ビルドでの操作確認は、静的なコード確認の成功だけでは代用できません。
+
+### 編隊加速の手動確認（Issue #139）
+
+Unity 6000.6.4f1でBootstrapをPlayし、Enterを離して押して開始します。生存数はFormation Inspectorで観測し、Spaceまたは開発用Bで実際に撃破してください。`_aliveCount`だけの書き換えや個体の手動無効化は集計と生死が不一致になるため使いません。
+
+| 操作・観測 | 期待結果 |
+| --- | --- |
+| 55・20・8・1体付近で移動間隔を比較 | N/60秒を目安に連続加速する。0.02秒の物理更新で量子化され、1体時は1更新に1～2移動する |
+| Bで連続撃破し、撃破直前・直後を比較 | 進捗を維持して以後の加算だけが加速し、過去の経過時間による大量移動がない |
+| 2体→右移動中に1体にする。左右の反転を観測 | 現在の右行程は2px、左行程は2px、次の左端反転後の右行程は3px。左移動中に1体になった場合も次の右行程から3px |
+| UnityツールバーのPauseとStepでFormationの位置を観測 | 1px=0.01単位。反転以外は移動回数×2pxまたは3px。複数移動のある物理更新は単一移動と区別する。端は既存範囲へclampし、8px下降・反転する |
+| Fを長押しして離す（55体・1体の両方） | 編隊の進捗だけ10倍。1体では約12移動/物理更新となり、解除後は通常速度に戻る。Player移動・射撃、敵弾3種のphase・UFO時計はFで加速しない（敵弾は従来の8体以下の高速化を維持） |
+| Pause (Attract)→数秒待機→Resume (Playing)、DriverとFormationのDisable/Enable、Player被弾→復帰 | 停止中に進まず、復帰時に停止時間を取り戻さない。位置・方向・生死・アニメを維持し、移動進捗は0から再開する |
+| Shield到達・侵攻・全滅・次Wave・GameOver後Enter | 各移動でShield侵食と同期アニメを維持。侵攻でGameOverとなり残り移動を中断。0体では移動せずWaveClear。新ゲーム・次Waveは55体・進捗0・右2pxへ戻る |
+
+これはROMの生存個体走査を編隊一括移動で近似した仕様です。原作の順次描画やアーケードアーカイブス2版動画との厳密な速度・反転frame比較は未確認です。
