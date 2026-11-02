@@ -44,17 +44,17 @@ Fデバッグ倍率は従来どおりFormationの移動時計だけへ適用し�
 
 ## PlayerShotとの相殺（Issue #133・暫定）
 
-Playing中に有効な飛行中のPlayerShotとEnemyShotがTrigger接触した場合、3種類とも両弾を終了します。EnemyShotがIHitReceiverとして受理してResetFlight（非アクティブ化・step count=0）し、PlayerShotは既存のFinishFlight(None)で一度だけFlightEndedを通知します。通常弾はPlayerの射撃枠を解放し終了履歴を1増やします。B弾も同じPlayerShot経路で、通常弾履歴は増やしません。相殺ではScore・Lives・Invader生存数・Shield形状を変更しません。
+Playing中に有効な飛行中のPlayerShotとEnemyShotがTrigger接触した場合、3種類とも両弾を終了します。EnemyShotがIHitReceiverとして受理して爆発待機（占有とstep countを保持）へ入り、PlayerShotは既存のFinishFlight(None)で一度だけFlightEndedを通知します。通常弾は終了履歴を即時に1増やし、爆発完了のBecameReusableでPlayerの射撃枠を解放します。B弾も同じPlayerShot経路で、通常弾履歴は増やしません。相殺ではScore・Lives・Invader生存数・Shield形状を変更しません。
 
-終了済み・停止中・PlayerShot以外の命中元は受理しません。敵弾スロットの再使用は従来のphase・Reload・列ポインタ・UFO共有枠に従い、Controllerは変更しません。既存PrefabのTriggerとPhysics2Dレイヤー10↔11を使い、設定変更は不要です。
+終了済み・爆発中・停止中・PlayerShot以外の命中元は受理しません。PlayerShotも爆発中は命中元になりません。敵弾スロットの再使用は従来のphase・Reload・列ポインタ・UFO共有枠に従い、Controllerは変更しません。既存PrefabのTriggerとPhysics2Dレイヤー10↔11を使い、設定変更は不要です。
 
-参考のアーケードアーカイブス2プレイ動画では弾同士の干渉は未確認であり、この相殺は暫定仕様です。弾種別の無敵・貫通・確率、ROMのすり抜け、厳密な画素判定順、爆発Sprite・待ち時間・SEは追加していません。動画との照合を別途必要とします。
+参考のアーケードアーカイブス2プレイ動画では弾同士の干渉は未確認であり、この相殺は暫定仕様です。弾種別の無敵・貫通・確率、ROMのすり抜け、厳密な画素判定順、精密な爆発Sprite・SEは追加していません。爆発待機はIssue #143でROMのカウントを近似します。動画との照合を別途必要とします。
 
-Issue #133で追加した専用Editor検証はUnity未実行のまま保守対象から外して削除しました。現在の確認は保存済みBootstrapからPlayingへ進み、Rolling／Plunger／Squigglyそれぞれとの実接触で双方が消え、通常弾が再射撃可能になること、Score／Livesが変わらないこと、敵弾が後に再発射されることを手動で確認します。B弾の相殺と通常弾履歴への非加算も可能な範囲で確認してください。Unityでの実接触と製品ビルドは未確認です。
+Issue #133で追加した専用Editor検証はUnity未実行のまま保守対象から外して削除しました。現在の確認は保存済みBootstrapからPlayingへ進み、Rolling／Plunger／Squigglyそれぞれとの実接触で双方が停止して簡易爆発表示になり、待機完了後に通常弾が再射撃可能になること、Score／Livesが変わらないこと、敵弾が後に再発射されることを手動で確認します。B弾の相殺と通常弾履歴への非加算も可能な範囲で確認してください。Unityでの実接触と製品ビルドは未確認です。
 
 ## 未解決の差分
 
-- 敵弾の爆発アニメーションと待ち時間は未実装です。ROMでは爆発完了後に弾枠が再初期化されるのに対し、本実装はShield/Player命中・下端到達・PlayerShotとの相殺で即座に弾を解除しcount=0へ戻します。この差は他種のReload成立時刻にも影響します。
+- 爆発待機は実装済みですが、原作の爆発画像・SE・画素単位判定・ISR/描画フレーム一致は未実装です。
 - Scoreは既存のintで保持し、9999超でも巻き戻さず最速Reloadを継続します。4桁BCDの桁あふれは再現しません。
 - Rolling列選択の範囲外不発・clampなし、発射位置・3×8px矩形判定、既存Shield破壊mask、既存の死亡待機/復帰・Wave進行は従来のUnity側仕様を維持しています。ROMの座標・描画衝突との完全一致ではありません。
 - 見た目はRolling橙・Plunger水色・Squiggly紫の暫定矩形です。原作画像を抽出せず、既存の生成済み白Spriteを使用します。
@@ -74,3 +74,17 @@ Issue #114では、旧3フィールドを一時保持したままEditor APIでCo
 Unity 6000.6.4f1の隔離コピー・非表示バッチでコンパイル・Scene保存・限定Playが成功しました。15/16列と循環・空列・Reload境界、Rolling初回見送り、実Rigidbody2Dのphase順・非phase停止・4/5px切替、3弾の自然同時飛行を確認しました。SquigglyでShieldを削って開いた穴を通過し、実Physics2D TriggerでPlayer被弾・Lives=2・復帰時の3弾解除も確認しています。
 
 復帰の観測では検証側だけで既存の死亡待機を進め、次の自然発射より前に解除結果を確認しました。B+F検証では追加被弾を避けるためPlayer Colliderだけを一時的に無効化し、既存PlayerShotの実接触によるScore=990・Wave=2・Shield復元を確認しました。製品の待機・当たり判定に検証用の変更はありません。詳しい結果はPR本文、ログ・一時検証コードはGit対象外のリポジトリ直下`Logs/`に保存しています。
+
+## 爆発待機と通知（Issue #143）
+
+[注釈付きROM](https://computerarcheology.com/Arcade/SpaceInvaders/Code.html)のGameObj1（03BB〜）、状態3の2026カウンタとEndOfBlowup（03D1〜03F7、0436〜）、Invader命中の状態5と別タイマー（1512〜152C、AExplodeTime 1538〜）、Fireの非0状態による発射拒否を根拠にします。Unityでは通常消滅とInvader命中の両方を弾側の16/60秒待機へ近似し、Invader自体の生死・描画・移動は変更しません。UFO命中も同じ待機を使用し、ROM固有のUFO爆発演出は再現しません。
+
+PlayerShotは命中した更新では残量を減らさず、次のFixedUpdateから進めます。既存0.02秒では14回＝約0.28秒（16/60秒との差は約+13.3ms）です。Triggerは物理更新後、Shield/上端はFixedUpdate内で開始するため、初回の位相差・表示フレーム差も残ります。待機中は移動・Shield破壊・Trigger受理を止め、GameObject.activeSelfを保持して再発射を拒否します。既存Rendererを黄色にして幅広く縮尺変更する簡易表示で、完了・強制回収時に発射前の色と縮尺へ戻します。上端の表示は画面境界で切れる場合があります。
+
+FlightEndedは「飛行の結果確定」であり、爆発開始時に一度だけ即時通知します。通常弾はPlayerが終了履歴を加算してShotResolvedを通知し、Driverが加点してからWaveClearを判定します。UFOは更新済み通常弾履歴を使い、B弾は同じFlightEnded経路で加点しますが通常弾履歴を進めません。自然な爆発完了でのみBecameReusableを発行し、Playerが射撃枠を解放します。B弾は従来のTryLaunchによるプール検索で爆発中の弾を再利用しません。待機中のSpace押下は消費され、予約しません。
+
+敵弾はShotBlowingUp（0644〜0669）とROM mirror（1B30/40/50）のカウント4を根拠に、衝突・Shield吸収・下端到達で残り4回へ設定し、次の自身のAdvanceStepから減らします。新しい時計はなく、3種類とも既存phase 0→2→1から4回進めます。通常は4×3/60＝約0.20秒ですが、開始から次のphaseまでの位相で約0.15〜0.20秒、さらに0.02秒の物理更新による量子化があります。ROMが衝突を検出した自身の処理内で最初の減算を行う経路との差も含む近似です。爆発中はsimulated=false、移動・Shield破壊・Trigger受理・StepCount加算を止め、占有とStepCountを保持します。完了時のResetFlightで0へ戻すので、他種のReload比較とSquiggly/UFO共有枠も完了まで維持されます。
+
+相殺は双方が待機へ入り、以後の接触を受理しません。Player被弾では同期的に全体が停止してから敵弾が待機へ入り、復帰時に既存の一括回収で中断します。Pause/Disableは残量を保持し、再開時に停止時間を取り戻しません（敵弾の時計・phaseは既存どおりリセット）。ResetFlightは爆発中も即時・無通知で残量と表示を初期化します。死亡復帰・新ゲーム・B弾回収・敵弾の次Wave回収を維持します。通常弾は次Waveでも占有を保持する既存契約のため、WaveClear中に止めた爆発を次Waveで再開します。
+
+今回のUnity確認はコンパイル成功に限ります。既存の保存済み接続検証はバッチ起動でArcadeを開く前提を満たせず、入口で停止して未完了です。実接触、待機時間と見た目、Space連打、Pause/復帰、B/F併用、全滅・UFO得点はPlayでの手動確認が必要です。過去の節のPlay検証実績は今回の爆発待機を検証したものではありません。

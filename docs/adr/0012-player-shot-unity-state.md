@@ -8,6 +8,8 @@
 
 - Partially superseded by: [ADR-0014](0014-player-shot-results-and-scoring.md)（通常弾の結果通知・履歴所有・加点順）
 
+- Partially superseded by: [ADR-0015](0015-shot-explosion-occupancy.md)（飛行・爆発の占有表現と枠解放時点）
+
 ## Context
 
 Issue #87ではUnityが保持する状態と独自boolの二重管理をなくします。構成済みInactive PrefabからInstantiate→TryLaunchだけで発射できるAPI、入力受付と通知順は維持します。

@@ -37,7 +37,7 @@ Issue #57 / ADR-0008に基づき、PlayingはComponent・Physics2D中心に構�
 
 上記のPlayingの責務は現在構造の説明です。Formation等に残る上位への直接依存を推奨する規約ではありません。Issue #83/#85の適用範囲と現在構造は [ARCHITECTURE.md](ARCHITECTURE.md)・[ADR-0010](adr/0010-player-shot-lifecycle-and-events.md) を参照してください。
 
-位置はTransform/Rigidbody2D、Invaderの生死はGameObject有効状態を正として、旧モデルや表示スナップショットに二重保持しません。PlayerShotの飛行状態はGameObject.activeSelf、進行可否はMonoBehaviour.enabledを正とし、待機・終了時はInactiveにします。物理・表示・速度はこの状態から導出し、独自boolで複製しません。Playerは入力受付時の同時1発制限に必要な射撃枠を所有し、発射成功・FlightEnded・Respawnで更新します。Formationの生存数など、責務に必要な集計値は保持できます。描画は個体Component自身で反映でき、Driver→表示専用ControllerへのPushを必須としません。表示を分離する場合は、不変の値をPushする方式も使えます。
+位置はTransform/Rigidbody2D、Invaderの生死はGameObject有効状態を正として、旧モデルや表示スナップショットに二重保持しません。PlayerShotの飛行・爆発中の占有はGameObject.activeSelf、進行可否はMonoBehaviour.enabledを正とし、再使用可能時はInactiveにします。飛行と爆発の区別は爆発残量を正とし、物理・表示・速度を導出して独自boolで複製しません。Playerは入力受付時の同時1発制限に必要な射撃枠を所有し、発射成功・爆発完了のBecameReusable・Respawnで更新します。Formationの生存数など、責務に必要な集計値は保持できます。描画は個体Component自身で反映でき、Driver→表示専用ControllerへのPushを必須としません。表示を分離する場合は、不変の値をPushする方式も使えます。
 
 `int`・`bool`・enum等の値の取得は、責務に必要な範囲で可能です。公開Getter一般を禁止するものではありません。ゲーム進行を外部へ任意に変更させるpublic APIや、将来用途だけのManager・Interface・イベントバスは追加しません。
 
@@ -74,7 +74,7 @@ public event Action<HitTargetType> FlightEnded;
 _shot.FlightEnded += ResolveShot;
 ```
 
-現在はPlayerが通常弾のFlightEndedを購読し、射撃枠解放と終了履歴更新後にShotResolvedを発行します。DriverはPlayerのHitAcceptedとShotResolvedを購読し、PlayerShotを直接参照しません。PlayerはPlayerInputStateの値を受け取り、直接操作するゲーム内ComponentはPlayerShotだけです。変更前の判断はADR-0011、現在の責務分担は [ADR-0014](adr/0014-player-shot-results-and-scoring.md) に記録します。
+現在はPlayerが通常弾のFlightEndedを購読し、終了履歴更新後にShotResolvedを即時発行し、爆発完了のBecameReusableで射撃枠を解放します。DriverはPlayerのHitAcceptedとShotResolvedを購読し、PlayerShotを直接参照しません。PlayerはPlayerInputStateの値を受け取り、直接操作するゲーム内ComponentはPlayerShotだけです。変更前の判断はADR-0011、現在の責務分担は [ADR-0014](adr/0014-player-shot-results-and-scoring.md) に記録します。
 
 IHitReceiver.TryReceiveHit(Component inSource)の命中受付と、TargetTypeの読み取りを分けます。PlayerShotは受理後に種別を取得し、自然終了時に通知します。通常弾のUFO得点はPlayerの更新済み履歴からDriverが計算し、+1補正は行いません。B弾は所有者DebugCarpetBombがFlightEndedを生成時に一度購読し、Driverの共通NotifyShotResolvedへ結果を渡します。破棄時に解除し、再利用・回収では購読を増やしません。Player履歴は進めず、Driverや弾にB弾専用API・識別を持ち込みません。友軍接触の制限は既存Physics2Dレイヤー設定を維持します。
 

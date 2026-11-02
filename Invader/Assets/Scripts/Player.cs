@@ -51,6 +51,7 @@ namespace UnityInvader
                 return;
             }
             _shot.FlightEnded += ResolveShot;
+            _shot.BecameReusable += ReleaseShot;
             IsInitialized = true;
         }
 
@@ -74,6 +75,7 @@ namespace UnityInvader
             if (IsInitialized && _shot != null)
             {
                 _shot.FlightEnded -= ResolveShot;
+                _shot.BecameReusable -= ReleaseShot;
             }
         }
 
@@ -157,7 +159,6 @@ namespace UnityInvader
 
         private void ResolveShot(HitTargetType inTargetType)
         {
-            ReleaseShot();
             _normalShotEndCount++;
             ShotResolved?.Invoke(inTargetType);
         }

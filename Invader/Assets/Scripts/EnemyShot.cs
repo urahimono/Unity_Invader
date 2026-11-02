@@ -14,6 +14,9 @@ namespace UnityInvader
         private bool        _playing;
         private bool        _fast;
         private bool        _resolvingHit;
+        private int         _explosionSteps;
+        private Color       _flightColor;
+        private Vector3     _flightScale;
 
         public HitTargetType TargetType => HitTargetType.None;
 
@@ -22,8 +25,9 @@ namespace UnityInvader
         internal int StepCount => _stepCount;
 
         // Placeholder rectangle, not the original shot animations or collision shapes.
-        public const float Width  = 3f;
-        public const float Height = 8f;
+        public  const float Width          = 3f;
+        public  const float Height         = 8f;
+        private const int   ExplosionSteps = 4;
 
         private void Awake()
         {
@@ -57,13 +61,13 @@ namespace UnityInvader
 
         public bool TryReceiveHit(Component inSource)
         {
-            if (_playing == false || isActiveAndEnabled == false || _resolvingHit)
+            if (_playing == false || isActiveAndEnabled == false || _resolvingHit || _explosionSteps > 0)
             {
                 return false;
             }
-            if (inSource is PlayerShot shot && shot.isActiveAndEnabled)
+            if (inSource is PlayerShot shot && shot.CanHit)
             {
-                ResetFlight();
+                BeginExplosion();
                 return true;
             }
             return false;
@@ -80,6 +84,8 @@ namespace UnityInvader
             _body.position     = inPosition;
             _stepCount         = 1; // ROM 05BF: starting a shot counts as its first step.
             _resolvingHit      = false;
+            _flightColor       = _renderer.color;
+            _flightScale       = _renderer.transform.localScale;
             gameObject.SetActive(true);
             return true;
         }
@@ -97,13 +103,20 @@ namespace UnityInvader
 
         internal void ResetFlight()
         {
-            _stepCount = 0;
+            if (_explosionSteps > 0)
+            {
+                _renderer.color                = _flightColor;
+                _renderer.transform.localScale = _flightScale;
+            }
+            _explosionSteps = 0;
+            _resolvingHit   = false;
+            _stepCount      = 0;
             gameObject.SetActive(false);
         }
 
         internal void PreparePhysicsStep()
         {
-            if (_playing && isActiveAndEnabled)
+            if (_playing && isActiveAndEnabled && _explosionSteps == 0)
             {
                 // MovePosition's velocity must not persist on another type's phase.
                 _body.MovePosition(_body.position);
@@ -114,6 +127,18 @@ namespace UnityInvader
         {
             if (_playing == false || isActiveAndEnabled == false)
             {
+                return;
+            }
+            if (_explosionSteps > 0)
+            {
+                if (_explosionSteps == 1)
+                {
+                    ResetFlight();
+                }
+                else
+                {
+                    _explosionSteps--;
+                }
                 return;
             }
             _stepCount = (_stepCount + 1) & 0xFF; // ROM INC byte at 05D0.
@@ -133,7 +158,7 @@ namespace UnityInvader
             CacheBody();
             bool playing         = _playing && isActiveAndEnabled;
             _renderer.enabled    = playing;
-            _body.simulated      = playing;
+            _body.simulated      = playing && _explosionSteps == 0;
             _body.linearVelocity = Vector2.zero;
         }
 
@@ -144,12 +169,12 @@ namespace UnityInvader
             if (Shield.TryAbsorbShot(_body.position, position,
                 new Vector2(Width, Height) * ArcadeViewport.UnitsPerPixel, false))
             {
-                ResetFlight();
+                BeginExplosion();
                 return;
             }
             if (position.y + Height / 2f * ArcadeViewport.UnitsPerPixel <= -ArcadeViewport.ScreenHeight / 2f * ArcadeViewport.UnitsPerPixel)
             {
-                ResetFlight();
+                BeginExplosion();
                 return;
             }
             _body.MovePosition(position);
@@ -157,16 +182,25 @@ namespace UnityInvader
 
         private void ResolveHit(IHitReceiver inReceiver)
         {
-            if (_playing == false || isActiveAndEnabled == false || _resolvingHit)
+            if (_playing == false || isActiveAndEnabled == false || _resolvingHit || _explosionSteps > 0)
             {
                 return;
             }
             _resolvingHit = true;
             if (inReceiver.TryReceiveHit(this))
             {
-                ResetFlight();
+                BeginExplosion();
             }
             _resolvingHit = false;
+        }
+
+        private void BeginExplosion()
+        {
+            // Count only subsequent updates of this type; keep StepCount for Reload.
+            _explosionSteps                = ExplosionSteps;
+            _renderer.color                = Color.yellow;
+            _renderer.transform.localScale = Vector3.Scale(_flightScale, new Vector3(2f, 0.5f, 1f));
+            ApplyPlayingState();
         }
     }
 }

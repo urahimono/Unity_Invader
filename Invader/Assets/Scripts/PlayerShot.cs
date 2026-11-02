@@ -12,11 +12,20 @@ namespace UnityInvader
         [SerializeField]
         private Rigidbody2D    _body;
 
-        public event Action<HitTargetType> FlightEnded;
+        private float   _explosionRemaining;
+        private Color   _flightColor;
+        private Vector3 _flightScale;
 
-        public  const float Width  = 1f;
-        public  const float Height = 4f;
-        private const float Speed  = 240f * ArcadeViewport.UnitsPerPixel;
+        // Flight result is immediate; the slot becomes reusable only after the explosion.
+        public event Action<HitTargetType> FlightEnded;
+        internal event Action BecameReusable;
+
+        internal bool CanHit => isActiveAndEnabled && _explosionRemaining <= 0f;
+
+        public  const float Width             = 1f;
+        public  const float Height            = 4f;
+        private const float Speed             = 240f * ArcadeViewport.UnitsPerPixel;
+        private const float ExplosionDuration = 16f / 60f;
 
         private void OnEnable()
         {
@@ -30,6 +39,11 @@ namespace UnityInvader
 
         private void FixedUpdate()
         {
+            if (_explosionRemaining > 0f)
+            {
+                AdvanceExplosion();
+                return;
+            }
             if (TryHitShield())
             {
                 return;
@@ -51,6 +65,8 @@ namespace UnityInvader
             }
             _body.position     = inPosition;
             transform.position = inPosition;
+            _flightColor       = _renderer.color;
+            _flightScale       = _renderer.transform.localScale;
             gameObject.SetActive(true);
             return true;
         }
@@ -62,15 +78,22 @@ namespace UnityInvader
 
         internal void ResetFlight()
         {
+            if (_explosionRemaining > 0f)
+            {
+                _renderer.color                = _flightColor;
+                _renderer.transform.localScale = _flightScale;
+            }
+            _explosionRemaining = 0f;
             gameObject.SetActive(false);
         }
 
         private void ApplyPlayingState()
         {
             bool playing         = isActiveAndEnabled;
+            bool flying          = playing && _explosionRemaining <= 0f;
             _renderer.enabled    = playing;
-            _body.simulated      = playing;
-            _body.linearVelocity = playing ? Vector2.up * Speed : Vector2.zero;
+            _body.simulated      = flying;
+            _body.linearVelocity = flying ? Vector2.up * Speed : Vector2.zero;
         }
 
         private void CheckScreenExit()
@@ -95,17 +118,33 @@ namespace UnityInvader
 
         private void FinishFlight(HitTargetType inTargetType = HitTargetType.None)
         {
-            if (gameObject.activeSelf == false)
+            if (gameObject.activeSelf == false || _explosionRemaining > 0f)
             {
                 return;
             }
-            ResetFlight();
+            // ROM state 3 and the separate Invader state 5 both wait 16 counts.
+            // Begin now; only subsequent FixedUpdates consume the wait.
+            _explosionRemaining            = ExplosionDuration;
+            _renderer.color                = Color.yellow;
+            _renderer.transform.localScale = Vector3.Scale(_flightScale, new Vector3(4f, 0.75f, 1f));
+            ApplyPlayingState();
             FlightEnded?.Invoke(inTargetType);
+        }
+
+        private void AdvanceExplosion()
+        {
+            if (_explosionRemaining > Time.fixedDeltaTime)
+            {
+                _explosionRemaining -= Time.fixedDeltaTime;
+                return;
+            }
+            ResetFlight();
+            BecameReusable?.Invoke();
         }
 
         private void ResolveHit(Collider2D inOther)
         {
-            if (isActiveAndEnabled == false)
+            if (CanHit == false)
             {
                 return;
             }

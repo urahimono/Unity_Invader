@@ -1,6 +1,7 @@
 # ADR-0014: 通常弾の結果・履歴をPlayerで確定してから加点する
 
-- Status: Accepted
+- Status: Partially Superseded
+- Partially superseded by: [ADR-0015](0015-shot-explosion-occupancy.md)（命中時Inactive化・枠解放のみ）
 - Date: 2026-10-27
 - Supersedes: ADR-0011/0012のDriverによる通常弾購読・履歴所有、ADR-0013の通常弾の加点通知経路・終了予定分補正、およびADR-0008の最終撃破時の加点・全滅通知順のみ
 
