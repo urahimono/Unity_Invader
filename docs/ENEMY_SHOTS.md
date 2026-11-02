@@ -50,7 +50,7 @@ Playing中に有効な飛行中のPlayerShotとEnemyShotがTrigger接触した�
 
 参考のアーケードアーカイブス2プレイ動画では弾同士の干渉は未確認であり、この相殺は暫定仕様です。弾種別の無敵・貫通・確率、ROMのすり抜け、厳密な画素判定順、爆発Sprite・待ち時間・SEは追加していません。動画との照合を別途必要とします。
 
-限定検証の入口は `-executeMethod UnityInvader.Editor.ProjectileCancellationVerification.Run`（`-quit`なし、`-logFile`はルート`Logs/`配下）です。BootstrapからPlay Modeへ入り、3弾種の実Trigger、通常弾の通知・履歴・再発射、B弾、残留通知・停止・再利用と非加点等を確認します。今回のCloud環境にはUnity Editorがなく、この検証のコンパイル・実行は未実施です。
+Issue #133で追加した専用Editor検証はUnity未実行のまま保守対象から外して削除しました。現在の確認は保存済みBootstrapからPlayingへ進み、Rolling／Plunger／Squigglyそれぞれとの実接触で双方が消え、通常弾が再射撃可能になること、Score／Livesが変わらないこと、敵弾が後に再発射されることを手動で確認します。B弾の相殺と通常弾履歴への非加算も可能な範囲で確認してください。Unityでの実接触と製品ビルドは未確認です。
 
 ## 未解決の差分
 

@@ -32,7 +32,7 @@ PlayerにはRigidbody2Dを追加しません。EnemyShotの既存Kinematic Rigid
 
 ## 必要最小限の確認
 
-既存の専用バッチ `UnityInvader.Editor.RollingEnemyShotVerification.Run` を拡張し、通常のEditorインポートでは自動実行しません。
+Issue #61当時は既存の専用バッチを拡張して検証しました。専用検証クラスは現在保守対象から外して削除済みです。以下は当時の確認内容と結果の記録で、今後は通常のPlay操作で必要箇所を確認します。
 
 1. Prefab Collider・Scene参照、Bootstrap起動、非Playingの被弾拒否を確認。
 2. 有効なColliderを持つPlayerを敵弾から離し、既存の速度切替・下端消滅・Score/Wave・PlayerShot実接触を確認。

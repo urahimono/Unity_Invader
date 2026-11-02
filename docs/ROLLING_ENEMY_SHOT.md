@@ -33,7 +33,7 @@ EnemyShotはKinematic Rigidbody2DとTriggerを持ち、FixedUpdateで0.05秒周�
 
 ## 起動とEditor API設定
 
-通常は生成処理不要です。保存済みの `Assets/Scenes/Bootstrap.unity` を開いてPlayするとArcadeへ切り替わり、開発用Playing開始フラグにより約2秒後からRollingが発射されます。左右矢印でPlayerを動かし、Spaceで自機弾を発射します。EnemyShotはHierarchy上では待機中は非アクティブ、飛行中は有効になります。PrefabのVisualとBoxCollider2DをInspectorで確認できます。
+通常は生成処理不要です。保存済みの `Assets/Scenes/Bootstrap.unity` を開いてPlayするとArcadeへ切り替わり、EnterでAttractからPlayingへ開始すると、既存の発射条件に従ってRollingが発射されます。左右矢印でPlayerを動かし、Spaceで自機弾を発射します。EnemyShotはHierarchy上では待機中は非アクティブ、飛行中は有効になります。PrefabのVisualとBoxCollider2DをInspectorで確認できます。
 
 参照を再設定する場合だけ、Play停止中に **Unity Invader > Configure Rolling EnemyShot** を実行します。
 
@@ -41,9 +41,9 @@ EnemyShotはKinematic Rigidbody2DとTriggerを持ち、FixedUpdateで0.05秒周�
 
 Scene/PrefabのYAMLは手書きせず、Editor APIの生成結果を採用しました。Arcadeの既存metaは同一で、EnemyShot Prefabと新規スクリプトにはそれぞれmetaを追加しています。
 
-## 確認手段
+## 当時の検証記録と現在の確認手段
 
-専用バッチ入口 `UnityInvader.Editor.RollingEnemyShotVerification.Run` は設定保存後にBootstrapからPlayし、次を確認します。通常のEditorインポートでは実行しません。
+Issue #59当時の専用バッチ検証では、設定保存後にBootstrapからPlayし、以下を確認しました。この検証クラスは後の内部設計変更で古くなり、現在は保守対象から外して削除しました。次回の動作確認ではBootstrap→Enterで開始し、以下の観点を手動で確認します。
 
 - 自動発射と通常4px step、停止中の位置/占有/非表示/物理停止。
 - 本物の個体撃破通知で残数を8へ減らし、飛行中の5px stepへの切替。
@@ -58,4 +58,4 @@ Scene/PrefabのYAMLは手書きせず、Editor APIの生成結果を採用しま
 
 初回のサンドボックス内起動はライセンスサービスへの接続待ちとなり、権限昇格後の初回インポート直後のPlayは追加ドメインリロードで中断しました。確認入口をインポート完了待ちにして再実行し、成功ログ `Logs/issue59-unity-play-check.log` を保存しています。初回中断ログも `Logs/` に保持しています。
 
-非表示・nographicsバッチのため、描画の目視、実キーボードによるPlayer移動、原作の見た目/発射頻度の正確さ、全FPS条件は未検証です。これらを成功扱いにはしません。専用バッチ実行時は `-batchmode -nographics -executeMethod UnityInvader.Editor.RollingEnemyShotVerification.Run` と `-logFile <リポジトリ>/Logs/<ログ名>` を指定します。確認入口が終了するため `-quit` は付けません。
+当時の非表示・nographicsバッチでは、描画の目視、実キーボードによるPlayer移動、原作の見た目/発射頻度の正確さ、全FPS条件は未検証でした。これらを成功扱いにはしません。現在は上記の専用バッチ実行入口は存在しません。
