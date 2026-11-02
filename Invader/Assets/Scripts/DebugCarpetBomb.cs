@@ -20,6 +20,7 @@ namespace UnityInvader
         private int            _laneIndex = LaneCount;
         private int            _waveNumber;
         private float          _untilBurst;
+        private bool           _bombReady = true;
 
         private const int PoolSize   = 96;
         private const int LaneCount  = 23;
@@ -37,12 +38,14 @@ namespace UnityInvader
         {
             _bomb = new InputAction("DebugCarpetBomb", InputActionType.Button, "<Keyboard>/b");
             _bomb.Enable();
+            _driver.GameStarting += ResetForNewGame;
         }
 
         private void OnDisable()
         {
             _bomb?.Dispose();
             _bomb = null;
+            _driver.GameStarting -= ResetForNewGame;
             ClearShots();
         }
 
@@ -100,6 +103,11 @@ namespace UnityInvader
             if (_bomb.IsPressed() == false)
             {
                 _untilBurst = 0f;
+                _bombReady  = true;
+                return;
+            }
+            if (_bombReady == false)
+            {
                 return;
             }
             _untilBurst -= Time.fixedDeltaTime;
@@ -188,6 +196,17 @@ namespace UnityInvader
                 {
                     shot.ResetFlight();
                 }
+            }
+        }
+
+        private void ResetForNewGame()
+        {
+            ClearShots();
+            _bombReady  = false;
+            _waveNumber = 0;
+            if (_shots != null)
+            {
+                ShuffleLanes();
             }
         }
 #endif

@@ -19,7 +19,9 @@ Unityを使用してSpace Invadersの挙動を再現する個人開発・学習�
 
 Unity Hubから `Invader/` を指定して、上記バージョンのEditorで開いてください。
 
-`Assets/Scenes/Bootstrap.unity` を開いてPlayすると、`Arcade.unity` に切り替わります。
+`Assets/Scenes/Bootstrap.unity` を開いてPlayすると、`Arcade.unity` に切り替わります。起動直後はAttract（開始待ち）で停止します。**Enter**で1Pゲームを開始し、GameOver後もEnterで最初からリトライできます（Score=0、Wave=1、Lives=3）。左右矢印は移動、Spaceは射撃です。開始操作はUnityでの割当であり、原作の開始ボタンを断定しません。Enterは一度離してから押してください。長押しやPlaying/PlayerDead/WaveClear中の押下ではリセットしません。
+
+リトライは同じSceneで所有者の状態を復元します。通常弾・敵弾・UFO・B弾、Shieldの損傷、履歴・待機時計をリセットします。SpaceとBは新ゲーム中のrelease後に再押下してください。旧`Development Start Playing`設定は互換用に保持しますが、実行時は無視します。EditorのPause/Resumeは途中状態の保持用であり、新規ゲーム開始ではありません。
 
 EditorとDevelopment Buildでは、Gameビュー左上の黒背景に開発用の`DEBUG`表示（State・Lives・Wave）が出ます。GameplayDriverの現在値を直接読み、PlayerDead・GameOver中も表示します。通常の製品ビルドでは描画しません。原作HUDとは別の確認用表示です。保存済みArcadeに設定済みで、再設定は **Unity Invader > Configure Debug Status Overlay** を使います。
 
@@ -47,7 +49,7 @@ Unityのバージョンは更新後の `Invader/ProjectSettings/ProjectVersion.t
 2. Play停止中に **Unity Invader > Migrate Arcade to Components** を実行します。未保存Sceneには保存確認が出ます。既存Arcadeを開き、Player・InvaderFormation・PlayerShotという3つのルートを置き換えて保存します。これらに手作業の調整があれば、実行前に退避してください。
 3. `Assets/Prefabs/Gameplay/` にPlayer・PlayerShot・InvaderのPrefabと白い弾画像をEditor APIで生成します。既存Prefabは上書きしないため再実行時も調整を保持します。既存DriverのStateと開発用開始フラグは保持し、Score=0・Wave=1へ設定します。Spriteのimport/slicing設定やPackage、ProjectSettings、Bootstrap、SampleSceneは変更しません。
 4. Arcadeを開いたまま **Unity Invader > Verify Component Gameplay Setup** を実行し、`COMPONENT_GAMEPLAY_SETUP_PASS` を確認します。接続・Rigidbody/Collider・カメラ倍率・Missing Scriptを確認するだけで、衝突/入力/Waveのテストではありません。
-5. **Assets/Scenes/Bootstrap.unity** を開いてPlayし、Arcadeへ切り替わることを確認します。Gameplayの `Development Start Playing` が有効ならPlaying、無効ならAttractのままです。開始/リトライ・クレジットの実装は含みません。
+5. **Assets/Scenes/Bootstrap.unity** を開いてPlayし、Arcadeへ切り替わることを確認します。Attractで停止した後、EnterでPlayingへ進むことを確認します。旧開発用開始フラグには依存しません。クレジットは対象外です。
 
 移行メニューは既存の素材 `Assets/Sprites/Player/Player.png` と `Assets/Sprites/Invader/InvaderSprites.png` のTop/Middle/BottomのA/B（6枚）をそのまま使用します。Playerの全体画像を幅16px相当、Invaderの480×241px・PPU30・Center Pivotを約16×8.03px相当で表示する比率を維持します。画像は追加抽出・加工しません。Shot画像はメニューで生成する単色です。Simple描画と子Visualの倍率を使い、9-slice用Borderには依存しません。
 
@@ -97,4 +99,10 @@ ScoreとWave番号はDriver、生存数はFormationのInspectorで確認でき�
 
 旧GameplaySimulation・表示Push・論理モデル専用のEditor検証/設定メニューは削除しました。新メニューは `ComponentGameplayMigration` と `ComponentGameplayVerification` です。移行のバッチ入口は `-executeMethod UnityInvader.Editor.ComponentGameplayMigration.Migrate`（`-batchmode -quit`）、ログはリポジトリの `Logs/` へ指定します。
 
-独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。追加残機・Lives HUD・開始/リトライ、弾同士の相殺、Invader侵攻による敗北条件は未実装です。
+独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。追加残機・Lives HUD、弾同士の相殺、Invader侵攻による敗北条件は未実装です。
+
+## 1P開始・リトライの限定検証（Issue #131）
+
+Unity 6000.6.4f1で専用バッチプロセスを起動します。`-batchmode -nographics -projectPath <Invaderの絶対パス> -executeMethod UnityInvader.Editor.GameStartVerification.Run -logFile <リポジトリ直下>/Logs/game-start.log` を指定し、`-quit`は付けません。検証は自ら終了します。終了コード0と今回のログの`GAME_START_PASS`を確認してください。仮想Keyboardによる入力と同期的なowner操作で、保存Bootstrap起動・長押し・2回リトライ・状態復元を確認します。Physics2Dの実接触や実時間の待機、通常製品ビルドの操作確認は別途必要です。
+
+このCloud作業ではUnity Editorがないため、上記の限定Play検証、既存の`InvaderDefeatedVerification.Run`／`RunInitializationFailures`、実際の被弾・侵攻・敵弾・UFO再出現と製品ビルドは未実施です。

@@ -36,10 +36,13 @@ namespace UnityInvader
         // ROM 1D54..1D62; the 16th stored value is skipped by the wrap at 044C.
         private static readonly int[] _ufoScores = { 100, 50, 50, 100, 150, 100, 100, 50, 300, 100, 100, 100, 50, 150, 100 };
 
-        [Tooltip("Temporary development start path; real game-start transitions are not implemented.")]
+        [Tooltip("Legacy saved setting. Startup always waits in Attract; use Enter to start.")]
+        [HideInInspector]
         [FormerlySerializedAs("developmentStartPlaying")]
         [SerializeField]
         private bool _developmentStartPlaying;
+
+        internal event System.Action GameStarting;
 
         public GameState CurrentState => _currentState;
 
@@ -85,13 +88,7 @@ namespace UnityInvader
 
         private void Update()
         {
-            if (_initialized)
-            {
-                _player.SetInput(_input.Read());
-            }
-            TryEnterWaveClear();
-            UpdateWaveClear();
-            UpdatePlayerDead();
+            UpdateGameplay();
         }
 
         internal void NotifyPlayerHit()
@@ -139,6 +136,24 @@ namespace UnityInvader
             TryEnterWaveClear();
         }
 
+        private void UpdateGameplay()
+        {
+            if (_initialized == false)
+            {
+                return;
+            }
+            bool startPressed = _input.ReadStartPressed();
+            if (startPressed && (_currentState == GameState.Attract || _currentState == GameState.GameOver))
+            {
+                BeginNewGame();
+                return;
+            }
+            _player.SetInput(_input.Read());
+            TryEnterWaveClear();
+            UpdateWaveClear();
+            UpdatePlayerDead();
+        }
+
         private void TryEnterWaveClear()
         {
             if (_initialized == false || isActiveAndEnabled == false || _currentState != GameState.Playing || _formation.IsCleared == false)
@@ -173,7 +188,33 @@ namespace UnityInvader
             _player.HitAccepted += NotifyPlayerHit;
             _player.ShotResolved += NotifyShotResolved;
             _initialized = true;
-            ChangeState(_developmentStartPlaying ? GameState.Playing : _currentState);
+            if (_developmentStartPlaying)
+            {
+                _developmentStartPlaying = false;
+            }
+            ChangeState(GameState.Attract);
+        }
+
+        private void BeginNewGame()
+        {
+            // Reuse initialized owners; do not recreate objects or subscribe a second time.
+            _player.SetPlaying(false);
+            _formation.SetPlaying(false);
+            SetShieldsPlaying(false);
+            GameStarting?.Invoke();
+            _score              = 0;
+            _waveNumber         = 1;
+            _lives              = 3;
+            _waveClearElapsed   = 0f;
+            _playerDeadElapsed  = 0f;
+            _player.Respawn();
+            _player.ResetShotHistory();
+            _formation.BeginWave();
+            foreach (var shield in _shields)
+            {
+                shield.BeginWave();
+            }
+            ChangeState(GameState.Playing);
         }
 
         private void StopInitialization()

@@ -16,7 +16,17 @@ Issue #124では初期化失敗を例外ではなく成功・失敗の値で扱�
 | Arcade | Driver、Player、単一PlayerShot、Formation、Rolling/Plunger/Squiggly各1個のEnemyShot、単一Ufo、Shield4基、カメラ |
 | SampleScene | 既存サンプル。今回変更なし |
 
-1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食、Issue #79でUFO、Issue #81でInvader侵攻によるGameOverを追加しています。待機デモ・開始/リトライ・追加残機/Lives HUD・HighScore保存、弾の相殺は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md)・[UFO](UFO.md)・[侵攻GameOver](GAME_OVER.md) を参照してください。
+1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食、Issue #79でUFO、Issue #81でInvader侵攻によるGameOverを追加しています。待機デモ・追加残機/Lives HUD・HighScore保存、弾の相殺は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md)・[UFO](UFO.md)・[侵攻GameOver](GAME_OVER.md) を参照してください。
+
+## 1P開始とGameOver後の新規ゲーム（Issue #131）
+
+保存Bootstrap→Arcadeの初期化成功後は必ずAttractです。保存済みSceneの`_developmentStartPlaying: 1`は旧互換データとして残しますが、Driverは無視して実行時にfalseにします。Scene/Prefabの変更は不要です。初期化失敗時は従来どおり停止し、開始入力で復帰させません。
+
+PlayerInputReaderは左右/SpaceのPlayerInputStateとは別に、Enterのrelease→押下を`ReadStartPressed()`でDriverへ返します。Driverは各Updateで押下を消費し、AttractまたはGameOverのときだけ`BeginNewGame()`へ進みます。Playerへ開始操作を渡しません。Disable/Enableではreaderを作り直し、Enterのreleaseを再要求します。PlayerReadyの待機・演出は追加しません。
+
+新規ゲームは同一Scene再初期化です。Driverは所有者を停止し、`GameStarting`を通知してからScore=0 / Wave=1 / Lives=3と待機時計を設定します。Playerの`Respawn`と`ResetShotHistory`、Formationの`BeginWave`（敵弾3種・列選択・phase/時計・UFO cycle・55体の位置/生死/アニメを含む）、Shield4基の`BeginWave`を呼び、最後にPlayingへ移します。Initializeやイベント購読は再実行しません。既存オブジェクトと購読を再利用でき、Sceneロードのライフサイクルを追加しないためこの方式を選びました。
+
+`GameStarting`は所有者停止後・新規状態復元前の通知です。DebugCarpetBombは自身のOnEnable/OnDisableで購読/解除し、自身の弾を無通知で回収して発射待機とレーンをリセットします。新ゲームではBのreleaseを要求します。DriverはB弾の内部や下位のEnemyShotController/Ufoを直接操作しません。PlayerのRespawn後のSpace releaseゲート、通常の死亡0.5秒・WaveClear1秒・Pause/Resume・得点通知と初期化一度きりの契約は維持します。
 
 ## Playingの責務
 
