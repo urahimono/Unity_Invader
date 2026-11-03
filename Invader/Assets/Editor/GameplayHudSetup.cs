@@ -48,10 +48,17 @@ namespace UnityInvader.Editor
             rect.rotation = Quaternion.identity;
             rect.localScale = Vector3.one * ArcadeViewport.UnitsPerPixel;
 
+            Font font = GameplayHudFont.Create();
             // Provisional layout: no claim of matching an unspecified reference video/font.
             Text score = ConfigureText(rect, "Score", new Vector2(8f, 236f), new Vector2(208f, 12f), TextAnchor.MiddleLeft);
             Text lives = ConfigureText(rect, "Lives", new Vector2(8f, 4f), new Vector2(208f, 12f), TextAnchor.MiddleLeft);
             Text gameOver = ConfigureText(rect, "Game Over", new Vector2(40f, 120f), new Vector2(144f, 16f), TextAnchor.MiddleCenter);
+            foreach (Text text in new[] { score, lives, gameOver })
+            {
+                text.font = font;
+                text.resizeTextForBestFit = false;
+                text.supportRichText = false;
+            }
             score.text = $"SCORE {drivers[0].Score}";
             lives.text = $"LIVES {drivers[0].Lives}";
             gameOver.text = "GAME OVER";
@@ -62,6 +69,8 @@ namespace UnityInvader.Editor
             data.FindProperty("_lives").objectReferenceValue = lives;
             data.FindProperty("_gameOver").objectReferenceValue = gameOver;
             data.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssets();
+            ComponentGameplayVerification.Verify();
             EditorSceneManager.MarkSceneDirty(scene);
             if (EditorSceneManager.SaveScene(scene) == false)
             {
@@ -87,7 +96,6 @@ namespace UnityInvader.Editor
             rect.sizeDelta = inSize;
             rect.localRotation = Quaternion.identity;
             rect.localScale = Vector3.one;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = 8;
             text.color = Color.white;
             text.alignment = inAlignment;

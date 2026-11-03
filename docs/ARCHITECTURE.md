@@ -102,7 +102,9 @@ GameplayHudはSceneに保存されたDriver・Score/Lives/GameOverのText参照�
 
 Canvasは224×256、倍率0.01のWorld Spaceとしてカメラ内のゲーム領域に合わせます。テキストは入力を受け取らず、EventSystemや新しいパッケージは不要です。既存のDebugStatusOverlayはコード・Scene設定とも変更せず、独立して有効／無効にできます。Editor APIのConfigure Gameplay HUDでHUDだけを配置・参照設定してArcadeへ保存します。
 
-現在の白文字・Unity内蔵フォント・上部Score／下部Lives／中央GAME OVERの配置は、参考動画が未指定のため原作一致を未確認の暫定表示です。Livesは既存仕様どおり操作中の1機を含む総数を数値表示します。原作フォントや予備機アイコン、HighScoreは追加しません。追加残機の判定はDriverが担当します。既存の値読み取り原則に従う表示追加としてArchitectureへ記録し、新規ADRは追加しません。
+SCORE・LIVES・GAME OVERのTextは、自作5×7ドット・文字送り6px・行高8pxの固定ビットマップFontを共有します。GameplayHudFontは既存のHUD設定ツールからのみ呼ばれるEditor用素材生成処理で、英大文字・数字・空白の二値PNGとFont・Materialを保存します。Point・MipMapなし・非圧縮、Textサイズ8・Best Fitなしとし、Canvasの1単位＝論理1pxと既存矩形配置を維持します。GameplayHudの参照・LateUpdateでの値読み取り・GameOver表示条件、Driverの状態所有と通知経路は変更しません。UFO得点のTextは従来設定を維持します。既存の表示責務の範囲内でフォント素材だけを置き換えるため、新規ADRは追加しません。
+
+白文字・自作字体・上部Score／下部Lives／中央GAME OVERの配置は、参考動画が未指定のため原作一致を未確認の暫定表示です。Livesは既存仕様どおり操作中の1機を含む総数を数値表示します。原作フォントや予備機アイコン、HighScoreは追加しません。追加残機の判定はDriverが担当します。
 
 ### 1500点の追加残機
 
