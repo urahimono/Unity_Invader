@@ -261,3 +261,15 @@ Pause/Disableは残量を保持して復帰後に再開し、ResetFlightは残�
 待機はUniTask.DelayのDeltaTime、Update PlayerLoopを使用し、暫定0.25秒です。TimeScale=0では残時間を保持し、Editor PauseではPlayerLoop停止により進行しません。Componentが所有するCancellationTokenSourceをGameStartingとOnDisableでキャンセル・破棄し、全表示を消去します。Scene破棄もOnDisableで処理します。キャンセル済み待機は再利用された枠を操作せず、通常完了と障害はForget(Debug.LogException)で観測します。GameStarting後は新しいCTSで再利用し、Disable中は通知を購読しません。
 
 `Configure Enemy Defeat Effects`がEditor APIで自作の暫定Sprite 2枚と56枠・参照を生成保存します。InspectorのSprite・色・表示時間で調整でき、既存設定への再実行では画像と調整値を維持します。Notion「原作仕様・調査」は確認済みですが、動画との直接照合は未実施で、模様・色・時間の原作一致は主張しません。既存の表示責務と非同期寿命の原則の局所適用のため、新規ADRは追加しません。
+
+## UFO獲得得点の表示
+
+`GameplayDriver.UfoScoreAwarded(int)`は、既存の`NotifyShotResolved(Ufo)`が進行状態のガードを通り、加点・追加残機処理を終えた時点で、実際のScore差分を通知します。UFO得点表と通常弾終了履歴の参照はDriverだけが行い、既存の加点条件・履歴更新・Wave判定を維持します。
+
+`UfoScoreDisplay`は既存Gameplay HUDのWorld Space Canvas内に保存した単一Textを再利用します。`Ufo.Defeated(Vector3)`で位置とフレーム番号を一時保存し、そのフレームの`UfoScoreAwarded`で位置を一度だけ消費して実獲得点を表示します。現在の通常弾は`TryReceiveHit → Ufo.Defeated → FlightEnded → Playerの終了履歴更新 → ShotResolved → Driver加点`、B弾は`FlightEnded → DebugCarpetBomb → Driver加点`まで同一呼出し内で同期実行される契約を利用します。加点が拒否されれば表示せず、一時位置はLateUpdateで破棄します。自然退出は撃破通知を発行せず、古い位置や位置のない加点通知から表示を作りません。将来通知を非同期化する場合は、この同一フレームの対応付けを再検討します。
+
+Componentは表示位置・待機の寿命だけを所有し、Score・UFOサイクル・撃破演出を操作しません。文字は撃破位置を中心に、既存Canvasの描画順と黒いOutlineで赤い爆発に重ねて読み取れる暫定設定です。表示時間（暫定0.8秒）はComponent、フォント・サイズ・色・縁取りはText/Outlineで調整できます。原作資料はNotion「原作仕様・調査」を確認していますが、動画との直接照合は未実施で、表示時間・字体・描画の原作一致は主張しません。
+
+待機はComponent所有のCancellationTokenSourceとUniTask.NextFrame（Update）を使い、Driverが有効なフレームだけTime.deltaTimeを減算します。TimeScale=0・Driver Disableによる進行停止では時間を保持し、Editor PauseではPlayerLoop停止により待機します。WaveClear・PlayerDead中はDriverが有効なら進行します。再表示・GameStarting・自身のOnDisableでキャンセル・破棄・全消去し、Scene破棄もOnDisableで終了します。キャンセル済み処理は新しい表示を操作せず、非同期の障害はForget(Debug.LogException)で記録します。OnEnable/OnDisableで購読・解除し、生成・Scene検索を実行時に行いません。
+
+`Configure UFO Score Display`で既存Canvasへの追加と参照保存をEditor APIで行います。再実行では表示時間・文字設定を維持し、参照と初期非表示状態を設定します。既存の表示責務・イベントと待機寿命の設計原則を局所適用するため、新規ADRは追加しません。
