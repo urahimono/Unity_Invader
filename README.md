@@ -35,6 +35,8 @@ Arcadeには、通常製品ビルドでも表示される正式HUD（上部のSC
 
 確認は、BootstrapからPlay→AttractでSCORE 0／LIVES 3／GAME OVER非表示→Enterで開始→撃破による加点→被弾によるLIVES減少→GameOverでGAME OVER表示→Enterの新ゲームで0／3・GAME OVER非表示へ戻る順に行います。DEBUG無効でも正式HUDが更新され、横長・縦長のGameビューでもカメラの224:256領域内に収まることを確認してください。実施済み・未実施の範囲はPR本文を参照します。
 
+1500点に到達すると、1ゲームにつき一度だけ残機が1増えます。初期3機は操作中の1機を含み、死亡や次Waveでは獲得済み状態を維持し、GameOver後Enterの新ゲームで再び獲得可能になります。根拠と未確認範囲は [Lives・追加残機](docs/LIVES.md) を参照してください。
+
 ## Windowsでdevelopを更新してUnityを起動する
 
 ルートの `LaunchDevelopUnity.bat` をダブルクリックすると、作業ツリーを確認し、`develop` へ切り替えて `git pull --ff-only origin develop` を実行した後、`Invader/` をUnity Editorで開きます。GitがPATH上で使用でき、originへアクセスできる必要があります。
@@ -152,7 +154,7 @@ ScoreとWave番号はDriver、生存数はFormationのInspectorで確認でき�
 
 旧GameplaySimulation・表示Push・論理モデル専用のEditor検証/設定メニューは削除しました。新メニューは `ComponentGameplayMigration` と `ComponentGameplayVerification` です。移行のバッチ入口は `-executeMethod UnityInvader.Editor.ComponentGameplayMigration.Migrate`（`-batchmode -quit`）、ログはリポジトリの `Logs/` へ指定します。
 
-独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。追加残機・Lives HUD、原作HUDや一部の演出は未実装です。
+独立した [Physics2DProbe](Invader/Assets/Prototypes/Physics2DProbe/README.md) は参考として残し、本編は参照しません。原作HUDの厳密な再現や一部の演出は未実装です。
 
 ## 開始・リトライ／弾相殺の手動確認（Issues #131・#133）
 
