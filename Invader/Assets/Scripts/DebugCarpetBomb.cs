@@ -1,5 +1,7 @@
 using UnityEngine;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine.InputSystem;
 #endif
 
@@ -19,8 +21,10 @@ namespace UnityInvader
         private PlayerShot[]   _shots;
         private int            _laneIndex = LaneCount;
         private int            _waveNumber;
-        private float          _untilBurst;
         private bool           _bombReady = true;
+
+        private CancellationTokenSource _burstCancellation;
+        private UniTaskCompletionSource _burstGate;
 
         private const int PoolSize   = 96;
         private const int LaneCount  = 23;
@@ -51,6 +55,7 @@ namespace UnityInvader
 
         private void OnDestroy()
         {
+            StopBurstLoop();
             if (_shots == null)
             {
                 return;
@@ -102,7 +107,7 @@ namespace UnityInvader
             }
             if (_bomb.IsPressed() == false)
             {
-                _untilBurst = 0f;
+                StopBurstLoop();
                 _bombReady  = true;
                 return;
             }
@@ -110,18 +115,85 @@ namespace UnityInvader
             {
                 return;
             }
-            _untilBurst -= Time.fixedDeltaTime;
-            if (_untilBurst > 0f)
-            {
-                return;
-            }
             if ((_shots == null || _shots.Length == 0) && CreatePool() == false)
             {
                 return;
             }
-            FireBurst();
-            // Never catch up with an unbounded burst after a slow frame.
-            _untilBurst = 0.04f + (float)_random.NextDouble() * 0.04f;
+            if (_burstCancellation == null)
+            {
+                _burstCancellation = new CancellationTokenSource();
+                RunBurstLoopAsync(_burstCancellation, _waveNumber).Forget(HandleBurstException);
+                return;
+            }
+            // Resume inline here, preserving this component's FixedUpdate execution order.
+            UniTaskCompletionSource gate = _burstGate;
+            _burstGate = null;
+            gate?.TrySetResult();
+        }
+
+        private async UniTask RunBurstLoopAsync(CancellationTokenSource inCancellation, int inWaveNumber)
+        {
+            CancellationToken token = inCancellation.Token;
+            try
+            {
+                while (CanContinueBurst(inCancellation, inWaveNumber))
+                {
+                    FireBurst();
+                    float interval = 0.04f + (float)_random.NextDouble() * 0.04f;
+                    double nextBurstAt = Time.fixedTimeAsDouble + interval;
+                    // Fixed clock avoids Delay's rendered-frame skip during multiple physics steps.
+                    await UniTask.WaitUntil(() => Time.fixedTimeAsDouble >= nextBurstAt,
+                        PlayerLoopTiming.FixedUpdate, token, cancelImmediately: true);
+                    if (CanContinueBurst(inCancellation, inWaveNumber) == false)
+                    {
+                        return;
+                    }
+                    _burstGate = new UniTaskCompletionSource();
+                    await _burstGate.Task;
+                    // Only UpdateBombardment releases this gate, after checking input and State.
+                }
+            }
+            catch (System.OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // Release, State/Wave exit, reset and destruction are normal cancellation paths.
+            }
+            finally
+            {
+                if (_burstCancellation == inCancellation)
+                {
+                    _burstCancellation = null;
+                    _burstGate = null;
+                }
+                inCancellation.Dispose();
+            }
+        }
+
+        private bool CanContinueBurst(CancellationTokenSource inCancellation, int inWaveNumber)
+        {
+            return _burstCancellation == inCancellation && isActiveAndEnabled && IsPlaying() &&
+                _driver.WaveNumber == inWaveNumber && _bombReady && _bomb != null && _bomb.IsPressed();
+        }
+
+        private void StopBurstLoop()
+        {
+            CancellationTokenSource cancellation = _burstCancellation;
+            UniTaskCompletionSource gate = _burstGate;
+            _burstCancellation = null;
+            _burstGate = null;
+            if (cancellation != null)
+            {
+                CancellationToken token = cancellation.Token;
+                cancellation.Cancel();
+                // The gate wait must also finish; do not leave an abandoned pending task.
+                gate?.TrySetCanceled(token);
+            }
+            // RunBurstLoopAsync owns Dispose in its finally, even on immediate cancellation.
+        }
+
+        private void HandleBurstException(System.Exception inException)
+        {
+            Debug.LogException(inException, this);
+            enabled = false;
         }
 
         private bool CreatePool()
@@ -185,7 +257,7 @@ namespace UnityInvader
 
         private void ClearShots()
         {
-            _untilBurst = 0f;
+            StopBurstLoop();
             if (_shots == null)
             {
                 return;
