@@ -1,5 +1,15 @@
 {
+  "scopedRegistries": [
+    {
+      "name": "OpenUPM",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "io.github.hatayama.uloopmcp"
+      ]
+    }
+  ],
   "dependencies": {
+    "io.github.hatayama.uloopmcp": "3.21.3",
     "com.unity.2d.animation": "16.0.1",
     "com.unity.2d.aseprite": "6.0.0",
     "com.unity.2d.psdimporter": "15.0.1",
