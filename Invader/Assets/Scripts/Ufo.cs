@@ -16,6 +16,8 @@ namespace UnityInvader
         private int           _ticksRemaining;
         private bool          _pending;
 
+        public event System.Action<Vector3> Defeated;
+
         public HitTargetType TargetType => HitTargetType.Ufo;
 
         internal bool InFlight => gameObject.activeSelf;
@@ -61,7 +63,9 @@ namespace UnityInvader
                 return false;
             }
             // Consume before returning; later Trigger callbacks cannot accept this UFO again.
+            Vector3 position = transform.position;
             ResetFlight();
+            Defeated?.Invoke(position);
             return true;
         }
 

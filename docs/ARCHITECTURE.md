@@ -251,3 +251,13 @@ Formationの各MoveFormationで、`gameObject.activeSelf`がtrueの個体の`tra
 PlayerShotは16/60秒を既存FixedUpdateで進め（0.02秒では開始後14回）、EnemyShotは既存Controllerの自身のphaseで4回進めます。Invader命中の別16カウントも弾側の待機へ近似し、対象の生死・生存集計は即時のままです。両弾とも待機中はsimulated=falseで移動・再命中・Shield破壊を止め、既存Rendererの黄色と縮尺による簡易表示だけを行います。EnemyShotのStepCountは完了まで加算せず保持し、ResetFlightで0へ戻します。ReloadとSquiggly/UFO共有枠は既存Controllerで維持します。
 
 Pause/Disableは残量を保持して復帰後に再開し、ResetFlightは残量・色・縮尺を即時かつ無通知で復元します。死亡復帰・新ゲームは通常弾と敵弾を回収、次Waveは敵弾を回収し通常弾の占有・爆発残量を保持、B弾は既存の非Playing回収を維持します。通常弾の待機中の押下は予約しません。根拠・初回更新・時間誤差・未検証事項は[敵弾資料](ENEMY_SHOTS.md#爆発待機と通知issue-143)、通知と占有の判断は[ADR-0015](adr/0015-shot-explosion-occupancy.md)を参照してください。
+
+## インベーダー・UFO撃破表示
+
+`EnemyDefeatEffects`はArcade直下の表示専用Componentです。Formationは個体生成時に`Track`で各Invaderを一度登録し、演出が既存`Invader.Defeated`を購読します。管理下の個体を外部へ公開せず、表示用途に限定した登録接続を採用します。Formationの生存数更新・進行責務は変更しません。Ufoは受理済み命中でInactive化した後、保存した撃破位置を`Defeated(Vector3)`で通知します。自然退出・ResetFlight・ResetCycleでは通知しません。
+
+演出は撃破時のワールド位置をScene直下の56個のSpriteRendererへ記録し再利用します。個体やFormationのTransform移動・非アクティブ化に追従せず、WaveClearやPlayerDeadでも表示寿命まで継続します。得点・Lives・Wave・再出現カウンタ・共有phaseは所有しません。56枠は55体とUFOの同時表示に対応し、全枠使用中は追加の表示だけを警告して省略します。毎フレーム検索・撃破時Instantiateはありません。
+
+待機はUniTask.DelayのDeltaTime、Update PlayerLoopを使用し、暫定0.25秒です。TimeScale=0では残時間を保持し、Editor PauseではPlayerLoop停止により進行しません。Componentが所有するCancellationTokenSourceをGameStartingとOnDisableでキャンセル・破棄し、全表示を消去します。Scene破棄もOnDisableで処理します。キャンセル済み待機は再利用された枠を操作せず、通常完了と障害はForget(Debug.LogException)で観測します。GameStarting後は新しいCTSで再利用し、Disable中は通知を購読しません。
+
+`Configure Enemy Defeat Effects`がEditor APIで自作の暫定Sprite 2枚と56枠・参照を生成保存します。InspectorのSprite・色・表示時間で調整でき、既存設定への再実行では画像と調整値を維持します。Notion「原作仕様・調査」は確認済みですが、動画との直接照合は未実施で、模様・色・時間の原作一致は主張しません。既存の表示責務と非同期寿命の原則の局所適用のため、新規ADRは追加しません。
