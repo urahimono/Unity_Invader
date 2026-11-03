@@ -22,7 +22,7 @@ namespace UnityInvader
         private int              _score;
         [SerializeField]
         private int              _waveNumber   = 1;
-        [Tooltip("Includes the current Player. Extra lives are not implemented yet.")]
+        [Tooltip("Includes the current Player. One extra life is awarded at 1500 points per game.")]
         [SerializeField]
         [Min(0)]
         private int              _lives        = 3;
@@ -30,6 +30,7 @@ namespace UnityInvader
         private PlayerInputReader _input;
         private bool              _initialized;
         private bool              _initializationAttempted;
+        private bool              _extraLifeAwarded;
 
         private CancellationTokenSource _waveClearCancellation;
         private double                  _waveClearRemaining;
@@ -43,6 +44,8 @@ namespace UnityInvader
         private const float PlayerDeadDelay = 0.5f;
 
         private const double WaveClearDelay = 1.0;
+
+        private const int ExtraLifeScore = 1500;
 
         // ROM 1D54..1D62; the 16th stored value is skipped by the wrap at 044C.
         private static readonly int[] _ufoScores = { 100, 50, 50, 100, 150, 100, 100, 50, 300, 100, 100, 100, 50, 150, 100 };
@@ -134,6 +137,7 @@ namespace UnityInvader
             {
                 return;
             }
+            int previousScore = _score;
             switch (inTargetType)
             {
                 case HitTargetType.InvaderTop:
@@ -148,6 +152,11 @@ namespace UnityInvader
                 case HitTargetType.Ufo:
                     _score += _ufoScores[(int)(_player.NormalShotEndCount % _ufoScores.Length)];
                     break;
+            }
+            if (_extraLifeAwarded == false && previousScore < ExtraLifeScore && _score >= ExtraLifeScore)
+            {
+                _extraLifeAwarded = true;
+                _lives++;
             }
             TryEnterWaveClear();
         }
@@ -220,6 +229,7 @@ namespace UnityInvader
             _score              = 0;
             _waveNumber         = 1;
             _lives              = 3;
+            _extraLifeAwarded   = false;
             _waveClearRemaining = 0.0;
             _playerDeadRemaining = 0.0;
             _player.Respawn();

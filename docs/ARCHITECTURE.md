@@ -20,7 +20,7 @@ BootstrapはStartから一度だけ非同期読み込みを起動し、開始済
 
 待機はScene読み込み要求の完了まで継続する方針で、staticな非同期メソッドは完了後にBootstrapやArcadeの状態を操作しません。UniTask 2.5.11のToUniTaskは既定UpdateでのisDone確認に加えてAsyncOperation.completed通知でも完了するため、特定のPlayerLoop位置やArcadeのAwake/Startとの新しい順序保証は追加しません。読み込みの所要フレームは同期方式と異なり得ます。Bootstrap→Arcade→初期化成功後Attract→EnterでPlayingという契約と2Scene構成は維持します。Play停止時のエンジン側の読み込み終了を独自に制御せず、停止・再実行の実確認状況はPRに記録します。既存の非同期設計原則を局所適用するため新規ADRは追加しません。
 
-1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食、Issue #79でUFO、Issue #81でInvader侵攻によるGameOverを追加しています。待機デモ・追加残機・HighScore保存は未実装です。弾の相殺と爆発待機は実装済みですが、精密な視覚再現は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md)・[UFO](UFO.md)・[侵攻GameOver](GAME_OVER.md) を参照してください。
+1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食、Issue #79でUFO、Issue #81でInvader侵攻によるGameOverを追加しています。待機デモ・HighScore保存は未実装です。弾の相殺と爆発待機は実装済みですが、精密な視覚再現は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md)・[UFO](UFO.md)・[侵攻GameOver](GAME_OVER.md) を参照してください。
 
 ## 1P開始とGameOver後の新規ゲーム（Issue #131）
 
@@ -94,7 +94,13 @@ GameplayHudはSceneに保存されたDriver・Score/Lives/GameOverのText参照�
 
 Canvasは224×256、倍率0.01のWorld Spaceとしてカメラ内のゲーム領域に合わせます。テキストは入力を受け取らず、EventSystemや新しいパッケージは不要です。既存のDebugStatusOverlayはコード・Scene設定とも変更せず、独立して有効／無効にできます。Editor APIのConfigure Gameplay HUDでHUDだけを配置・参照設定してArcadeへ保存します。
 
-現在の白文字・Unity内蔵フォント・上部Score／下部Lives／中央GAME OVERの配置は、参考動画が未指定のため原作一致を未確認の暫定表示です。Livesは既存仕様どおり操作中の1機を含む総数を数値表示します。原作フォントや予備機アイコン、HighScore、追加残機などは追加しません。既存の値読み取り原則に従う表示追加としてArchitectureへ記録し、新規ADRは追加しません。
+現在の白文字・Unity内蔵フォント・上部Score／下部Lives／中央GAME OVERの配置は、参考動画が未指定のため原作一致を未確認の暫定表示です。Livesは既存仕様どおり操作中の1機を含む総数を数値表示します。原作フォントや予備機アイコン、HighScoreは追加しません。追加残機の判定はDriverが担当します。既存の値読み取り原則に従う表示追加としてArchitectureへ記録し、新規ADRは追加しません。
+
+### 1500点の追加残機
+
+GameplayDriverが非シリアライズの獲得済みフラグを所有します。共通NotifyShotResolvedの従来の加点後、加点前Scoreが1500未満・加点後が1500以上・未獲得ならフラグを確定してLivesを1増やし、その後TryEnterWaveClearへ進みます。得点表・通常弾/UFO/B弾の通知経路と、同期的な加点→WaveClearの順序は維持します。無得点の通知、到達後の追加得点では再獲得しません。
+
+新規ゲーム開始時にScore=0・Lives=3とともにフラグをリセットします。死亡復帰・Wave移行・Disable/Enableではリセットしません。GameplayHudの既存Lives読取を利用し、新しい通知や表示状態を追加しません。Notionの基準は初期3機・1500点で追加1機・各Playerにつき1回で、独立した残機上限は未確認のためクランプは追加しません。根拠・時刻・当時の検証との区別は [LIVES](LIVES.md) を参照します。既存Driver責務への局所追加であり、新規ADRは不要と判断します。
 
 ### DebugCarpetBombの連続発射
 
