@@ -35,11 +35,15 @@ Notion資料には2種類の爆発spriteを交互表示する記録がありま�
 
 ## ゲーム画面HUD
 
-Arcadeには、通常製品ビルドでも表示される正式HUD（上部のSCORE、下部のLIVES、GameOver時のGAME OVER）を保存しています。LIVESは操作中の1機を含む総数です。GameplayDriverの現在値を表示するだけで、得点計算・残機管理・入力は変更しません。配置・内蔵フォントは参考動画未指定の暫定表示で、原作の厳密な見た目を再現済みとは扱いません。
+Arcadeには、通常製品ビルドでも表示される正式HUD（上部のSCORE、下部のLIVES、GameOver時のGAME OVER）を保存しています。LIVESは操作中の1機を含む総数です。GameplayDriverの現在値を表示するだけで、得点計算・残機管理・入力は変更しません。文字は自作5×7ドットのビットマップフォント（英大文字・数字・空白、文字送り6px、行高8px）です。配置・字体は参考動画未指定の暫定表示で、原作の厳密な見た目を再現済みとは扱いません。
 
 既存のDEBUG表示とは独立しています。見た目を確認する際は必要に応じてPlay中のDebugStatusOverlayだけを無効にできます。正式HUDの再設定は、Play停止中に **Unity Invader > Configure Gameplay HUD** を実行します。ArcadeのHUDだけを配置・設定して保存するため、ゲーム本編の再生成は不要です。
 
 確認は、BootstrapからPlay→AttractでSCORE 0／LIVES 3／GAME OVER非表示→Enterで開始→撃破による加点→被弾によるLIVES減少→GameOverでGAME OVER表示→Enterの新ゲームで0／3・GAME OVER非表示へ戻る順に行います。DEBUG無効でも正式HUDが更新され、横長・縦長のGameビューでもカメラの224:256領域内に収まることを確認してください。実施済み・未実施の範囲はPR本文を参照します。
+
+フォントの生成元は`GameplayHudFont.cs`、保存先は`Assets/Fonts/GameplayHud/`です。既存のConfigure Gameplay HUDで再生成できます。字形は外部フォント・原作素材から抽出せずコードで定義し、PNGは透明／白の二値、Pointフィルタ・MipMap無効・非圧縮で保存します。Textはサイズ8・Best Fit無効で1texelを論理1pxに対応させ、既存のCanvasと矩形配置を維持します。UFO得点のText・Outlineは変更しません。
+
+見た目の確認はGameビューを224×256または整数倍（448×512など）にし、DEBUG表示を無効にして上記の状態を撮影してください。Play中のScore/Lives Textに一時的に`SCORE 2147483647`／`LIVES 2147483647`を入力してPauseし、必要ならGameplayHudを一時無効にして、切れずに表示されることを確認します（Play停止後は保存しない）。文字の各ドットの寸法、半透明の滲み、GAME OVERの中央配置、既存のゲーム描画とUFO得点・撃破演出が変わらないことを確認します。非整数倍率では画面全体の拡大率に応じて物理ピクセルの幅が不均等になり得ます。画面倍率・カメラの仕様は変更していません。
 
 1500点に到達すると、1ゲームにつき一度だけ残機が1増えます。初期3機は操作中の1機を含み、死亡や次Waveでは獲得済み状態を維持し、GameOver後Enterの新ゲームで再び獲得可能になります。根拠と未確認範囲は [Lives・追加残機](docs/LIVES.md) を参照してください。
 
