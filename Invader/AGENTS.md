@@ -9,5 +9,6 @@
 - `.unity` / `.prefab` のYAML直接編集は原則避ける。Scene / Prefabを機械生成する場合はUnity Editor APIを優先する。直接編集が必要な場合は理由と検証方法を説明する。
 - MonoBehaviourを必要以上に増やさず、Unity依存コードとゲームロジックの責務を意識する。
 - 将来使うかもしれないという理由だけで抽象化せず、Space Invadersの再現に必要な設計に留める。
+- 時間待機・非同期処理の追加や変更では、[設計原則「非同期処理と時間待機」](../docs/PROJECT_PRINCIPLES.md#非同期処理と時間待機) を確認する。
 - 既存のSampleSceneやテンプレート素材を依頼なく変更・削除しない。
 - Unity Editorでの起動・コンパイル・動作確認を行ったかを報告する。Git上の検証だけでUnity動作確認済みとしない。
