@@ -187,8 +187,10 @@ Unityの既存Fixed Timestep（0.02秒）を使います。Issue #89のProjectSe
 
 - Player初期位置：(112,24)、移動範囲x=8〜216、Sprite幅16px。
 - Shot：幅1×高さ4px。位置は下端中央、発射位置はPlayerの8px上、Collider中心は下端から2px上。
-- Formation左上初期位置：(32,208)、間隔16px、Colliderは16×8px。Spriteは既存480×241/PPU30の約16×8.03pxの比率を維持。
+- Formation左上初期位置：Wave 1は(32,208)、以降はDriverから`BeginWave(int inWaveNumber)`へ渡すWave番号でYだけ変更。ROMの`0x78`との差を論理pxとして適用し、Wave 2=184、3=168、4～6=160、7～9=152、10以降はWave 2～9を8Wave周期で反復。間隔16px、Colliderは16×8px。Spriteは既存480×241/PPU30の約16×8.03pxの比率を維持。
 - Score：Top=30、Middle=20、Bottom=10。55体の合計は990。Driverが通知の受理時に加算する。HUDは未実装。
+
+Wave番号は引き続きDriverのみが所有し、Formationは開始位置の計算時に値を受け取るだけで保持しません。初期化時の待機配置はWave 1、新規ゲームはDriverがWave=1へ戻してから`BeginWave(_waveNumber)`、WaveClear待機完了時は番号を加算してから同APIを呼びます。番号更新の順序以外は待機・キャンセル・Shield復元・Player履歴リセット・Playing復帰を維持します。通常の死亡復帰は`PreparePlayerRespawn`を使い、編隊位置を戻しません。ROM根拠は[07EA、0A09～0A1C、AlienStartTable](https://www.computerarcheology.com/Arcade/SpaceInvaders/Code.html#AlienStartTable)です。既存のDriver／Formation責務の範囲内の引数追加であり、新規ADRは不要と判断します。
 
 ShotはInvaderへ同期的に命中を依頼し、Invaderは自身をInactive化してFormationの_aliveCountを更新します。Shotは成立後にTargetTypeを取得して爆発待機へ入り、FlightEndedでPlayerが終了履歴加算→ShotResolvedを発行します。射撃枠は待機完了のBecameReusableで解放します。Driverは更新済み履歴で加点した後、TryEnterWaveClearでPlayingかつFormation.IsClearedなら一度だけWaveClearへ移行します。B弾はFlightEndedを所有者DebugCarpetBombが受け、同じNotifyShotResolvedへ結果を渡します。B弾はPlayerの履歴を進めません。Updateでも同じ全滅判定を補完的に呼び、予約フラグ・別の生存カウンタは持ちません。UFOも同じ終了結果から加点し、終了予定分+1補正はありません。
 

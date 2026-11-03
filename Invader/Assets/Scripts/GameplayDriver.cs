@@ -239,7 +239,7 @@ namespace UnityInvader
             _playerDeadRemaining = 0.0;
             _player.Respawn();
             _player.ResetShotHistory();
-            _formation.BeginWave();
+            _formation.BeginWave(_waveNumber);
             foreach (var shield in _shields)
             {
                 shield.BeginWave();
@@ -289,13 +289,13 @@ namespace UnityInvader
                 }
                 _waveClearCancellation = null;
                 _waveClearRemaining = 0.0;
-                _formation.BeginWave();
+                _waveNumber++;
+                _formation.BeginWave(_waveNumber);
                 _player.ResetShotHistory(); // ROM 09FD copies the mirror, including 208D/208F.
                 foreach (var shield in _shields)
                 {
                     shield.BeginWave();
                 }
-                _waveNumber++;
                 ChangeState(GameState.Playing);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
