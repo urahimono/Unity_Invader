@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -25,13 +28,18 @@ namespace UnityInvader
         private int              _lives        = 3;
 
         private PlayerInputReader _input;
-        private float             _waveClearElapsed;
         private float             _playerDeadElapsed;
         private bool              _initialized;
         private bool              _initializationAttempted;
 
+        private CancellationTokenSource _waveClearCancellation;
+        private double                  _waveClearRemaining;
+        private double                  _waveClearStartedAt;
+
         // Provisional death wait; exact animation/video timing is a later task.
         private const float PlayerDeadDelay = 0.5f;
+
+        private const double WaveClearDelay = 1.0;
 
         // ROM 1D54..1D62; the 16th stored value is skipped by the wrap at 044C.
         private static readonly int[] _ufoScores = { 100, 50, 50, 100, 150, 100, 100, 50, 300, 100, 100, 100, 50, 150, 100 };
@@ -56,11 +64,13 @@ namespace UnityInvader
             if (_initialized)
             {
                 ApplyPlayingState();
+                StartWaveClearWait();
             }
         }
 
         private void OnDisable()
         {
+            SuspendWaveClearWait();
             _input?.Dispose();
             _input = null;
             if (_initialized)
@@ -73,6 +83,7 @@ namespace UnityInvader
 
         private void OnDestroy()
         {
+            CancelWaveClearWait();
             if (_initialized)
             {
                 _player.HitAccepted -= NotifyPlayerHit;
@@ -150,7 +161,6 @@ namespace UnityInvader
             }
             _player.SetInput(_input.Read());
             TryEnterWaveClear();
-            UpdateWaveClear();
             UpdatePlayerDead();
         }
 
@@ -160,7 +170,6 @@ namespace UnityInvader
             {
                 return;
             }
-            _waveClearElapsed = 0f;
             ChangeState(GameState.WaveClear);
         }
 
@@ -197,6 +206,7 @@ namespace UnityInvader
 
         private void BeginNewGame()
         {
+            CancelWaveClearWait();
             // Reuse initialized owners; do not recreate objects or subscribe a second time.
             _player.SetPlaying(false);
             _formation.SetPlaying(false);
@@ -205,7 +215,7 @@ namespace UnityInvader
             _score              = 0;
             _waveNumber         = 1;
             _lives              = 3;
-            _waveClearElapsed   = 0f;
+            _waveClearRemaining = 0.0;
             _playerDeadElapsed  = 0f;
             _player.Respawn();
             _player.ResetShotHistory();
@@ -231,15 +241,34 @@ namespace UnityInvader
             enabled = false;
         }
 
-        private void UpdateWaveClear()
+        private void StartWaveClearWait()
         {
-            if (_initialized == false || _currentState != GameState.WaveClear)
+            if (_initialized == false || isActiveAndEnabled == false ||
+                _currentState != GameState.WaveClear || _waveClearCancellation != null)
             {
                 return;
             }
-            _waveClearElapsed += Time.deltaTime;
-            if (_waveClearElapsed + 1e-7f >= 1f)
+            _waveClearCancellation = new CancellationTokenSource();
+            _waveClearStartedAt = Time.timeAsDouble;
+            WaitForNextWaveAsync(_waveClearCancellation).Forget(HandleWaveClearException);
+        }
+
+        private async UniTask WaitForNextWaveAsync(CancellationTokenSource inCancellation)
+        {
+            CancellationToken token = inCancellation.Token;
+            try
             {
+                // Scaled game time; resume after MonoBehaviour.Update, never inline on entry.
+                await UniTask.Delay(TimeSpan.FromSeconds(_waveClearRemaining),
+                    ignoreTimeScale: false, delayTiming: PlayerLoopTiming.LastUpdate,
+                    cancellationToken: token, cancelImmediately: true);
+                if (token.IsCancellationRequested || _waveClearCancellation != inCancellation ||
+                    _initialized == false || isActiveAndEnabled == false || _currentState != GameState.WaveClear)
+                {
+                    return;
+                }
+                _waveClearCancellation = null;
+                _waveClearRemaining = 0.0;
                 _formation.BeginWave();
                 _player.ResetShotHistory(); // ROM 09FD copies the mirror, including 208D/208F.
                 foreach (var shield in _shields)
@@ -249,6 +278,43 @@ namespace UnityInvader
                 _waveNumber++;
                 ChangeState(GameState.Playing);
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // State exit, Disable and destruction are expected cancellation paths.
+            }
+            finally
+            {
+                if (_waveClearCancellation == inCancellation)
+                {
+                    _waveClearCancellation = null;
+                }
+                inCancellation.Dispose();
+            }
+        }
+
+        private void SuspendWaveClearWait()
+        {
+            if (_waveClearCancellation != null)
+            {
+                _waveClearRemaining = Math.Max(0.0,
+                    _waveClearRemaining - Math.Max(0.0, Time.timeAsDouble - _waveClearStartedAt));
+            }
+            CancelWaveClearWait();
+        }
+
+        private void CancelWaveClearWait()
+        {
+            CancellationTokenSource cancellation = _waveClearCancellation;
+            // Detach before Cancel: immediate cancellation runs the async finally inline.
+            _waveClearCancellation = null;
+            cancellation?.Cancel();
+            // The async owner disposes its source in finally, including on cancellation.
+        }
+
+        private void HandleWaveClearException(Exception inException)
+        {
+            Debug.LogException(inException, this);
+            enabled = false;
         }
 
         private void UpdatePlayerDead()
@@ -274,8 +340,14 @@ namespace UnityInvader
 
         private void ChangeState(GameState inNextState)
         {
+            if (_currentState != inNextState)
+            {
+                CancelWaveClearWait();
+                _waveClearRemaining = inNextState == GameState.WaveClear ? WaveClearDelay : 0.0;
+            }
             _currentState = inNextState;
             ApplyPlayingState();
+            StartWaveClearWait();
         }
 
         private void ApplyPlayingState()

@@ -116,7 +116,19 @@ Issue #89では衝突対象をレイヤーで制限します。Player=8、Invade
 - Player.FixedUpdate：60px/秒相当で左右移動し、端でclamp。受付済みの発射を行う。左右同時押しは従来どおり右優先。
 - Formation.FixedUpdate：生存数Nに対しN/60秒を1移動とし、各FixedUpdateで移動進捗へ `fixedDeltaTime * 60 / N` を加算する（0体では移動しない）。進捗1ごとに一括移動し端数を保持するため、撃破前の時間を新周期で再計算しない。通常は2px横移動。左端反転時に1体なら以降の右行程を3pxとし、左行程は常に2px。右行程中の最後の撃破では次の左端反転まで2pxを維持する。端では8px下降・方向反転し、全個体のA/Bを交換する。開発用F長押しは移動用の経過時間加算だけを10倍にし、既存の各移動・侵食ステップを繰り返す。敵弾専用時計とTime.timeScale / fixedDeltaTimeは変更しない。離した後も処理済みステップを除いた端数だけを引き継ぐ。
 - Shot：Rigidbody2Dが240px/秒相当で上昇。FixedUpdateで画面上端を確認し、OnTriggerEnter2Dで接触対象を処理する。
-- Driver.Update：WaveClear待機とPlayerDead待機。次WaveではLives・Score・Player位置・Shot占有を保持し、編隊を初期化する。停止中の入力は受理せず、次Waveでも停止前の射撃受付状態を保持する。死亡からの復帰では編隊を初期化しない。
+- Driver.Update：全滅判定の補完とPlayerDeadの0.5秒待機。WaveClearの1秒待機はDriver所有のUniTaskで行う。次WaveではLives・Score・Player位置・Shot占有を保持し、編隊を初期化する。停止中の入力は受理せず、次Waveでも停止前の射撃受付状態を保持する。死亡からの復帰では編隊を初期化しない。
+
+### WaveClearの非同期待機
+
+加点後の`TryEnterWaveClear`→`ChangeState(WaveClear)`→所有者の停止までは同期処理のままです。Stateが変わるときに旧待機をキャンセルし、WaveClearへ入ると残時間を1秒に設定します。同じStateへの再設定では残時間をリセットせず、待機用CancellationTokenSourceがある間は二重に開始しません。待機の所有者は引き続きGameplayDriverで、他クラスの通知経路・責務は変更しません。
+
+`UniTask.Delay`は`ignoreTimeScale: false`で`Time.deltaTime`に従い、`PlayerLoopTiming.LastUpdate`（通常のMonoBehaviour.Update後）で再開します。TimeScale=0では進まず、UnityツールバーPause中はPlayerLoopが停止するため進みません。EditorのStepでは進んだフレーム分だけ時間が進みます。ゲーム用のAttractへ切り替えるデバッグPauseは別Stateへの遷移なので待機を破棄します。
+
+Disableではスケール付き`Time.timeAsDouble`の開始時との差分を残時間から差し引いて保存し、待機をキャンセルします。Enableではその残時間で再開し、無効中の時間は差し引きません。別State・新ゲーム・破棄では旧待機を破棄します。Cancel前に現在のSource参照を外し、非同期メソッドのfinallyがSourceをDisposeします。キャンセルは即時通知し、該当tokenによるOperationCanceledExceptionだけを正常終了として扱います。その他の例外はForgetの明示的ハンドラーでLogExceptionしDriverを無効にして進行を止めます。
+
+待機完了後はtoken・現在のSourceとの一致・初期化済み・有効・WaveClearを確認し、Formation.BeginWave→Player.ResetShotHistory→Shield4基.BeginWave→Wave番号加算→Playingの順で一度だけ実行します。得点確定・WaveClear遷移の同期順と、PlayerDeadの時計は維持します。
+
+厳密なフレーム一致は保証しません。旧Update方式は遷移フレームのdeltaTimeも加算し得ますが、UniTask 2.5.11のDelayは作成フレームを加算しないため、通常約1フレーム後ろへずれ得ます。再開も旧Driver.Update内からLastUpdateへ変わります。Disable境界の残時間はフレーム単位のスケール付き時刻差で保存し、Delay内部のfloat加算や旧方式の`1e-7f`許容とは丸め・境界フレームが異なり得ます。Physics2D内の通知から開始した場合は開始時刻が固定時間の値となるため、その差も物理step／フレーム単位に量子化されます。実測確認はPRの検証結果を参照してください。このDriver内に閉じた待機の変更は既存の非同期設計原則の適用として記録し、新しい汎用時計やADRは追加しません。
 
 Unityの既存Fixed Timestep（0.02秒）を使います。Issue #89のProjectSettings変更はレイヤー名・接触組合せで、物理stepや速度等の設定値は変更しません。全体の独自60Hz時計や「Player→Shot→Formation→Collision」の旧tick順序は廃止しました。Issue #77で追加した敵弾専用60Hz時計・種類別phaseは、Issue #116でEnemyShotControllerへ移し、Physics2Dは0.02秒刻みのままです。速度・周期は従来相当に換算しますが、接触タイミング・境界・端の到達frameは厳密一致を保証せず、描画FPS別の実測も未確認です。
 
