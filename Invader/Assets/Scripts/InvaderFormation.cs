@@ -50,6 +50,8 @@ namespace UnityInvader
         private readonly List<Invader> _invaders  = new List<Invader>();
 
         private const float FirstWaveY = (208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
+        // ROM AlienStartTable (1DA3..1DAA): Wave 2..9 repeat after the first wave.
+        private static readonly int[] _waveStartY = { 0x60, 0x50, 0x48, 0x48, 0x48, 0x40, 0x40, 0x40 };
         // Provisional sprite-center anchor, not the ROM's rotated drawing coordinate.
         private const float InvasionY  = (40f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
 
@@ -131,11 +133,11 @@ namespace UnityInvader
                 return FailInitialization();
             }
             _initialized = true;
-            BeginWave();
+            BeginWave(1);
             return true;
         }
 
-        internal void BeginWave()
+        internal void BeginWave(int inWaveNumber)
         {
             if (_initialized == false)
             {
@@ -148,8 +150,10 @@ namespace UnityInvader
             _enemyShots.ResetClock();
             _ufo.ResetCycle();
 
-            var initialPosition = new Vector2(32f - ArcadeViewport.ScreenWidth / 2f,
-                208f - ArcadeViewport.ScreenHeight / 2f) * ArcadeViewport.UnitsPerPixel;
+            int romStartY = inWaveNumber <= 1 ? 0x78 : _waveStartY[(inWaveNumber - 2) % _waveStartY.Length];
+            // Preserve Wave 1's sprite-center anchor; apply only the ROM's pixel delta.
+            var initialPosition = new Vector2((32f - ArcadeViewport.ScreenWidth / 2f) * ArcadeViewport.UnitsPerPixel,
+                FirstWaveY + (romStartY - 0x78) * ArcadeViewport.UnitsPerPixel);
             // Keep both poses aligned while simulation is disabled, before enabling it again.
             transform.position = new Vector3(initialPosition.x, initialPosition.y, transform.position.z);
             _body.position     = initialPosition;

@@ -154,13 +154,27 @@ Issue #59のRolling EnemyShotはScene・Prefab保存済みで、Unity 6000.6.4f1
 | 5×11個体と移動・A/B・端の下降反転 | Hierarchyに55個のInvader。全体が同期し、画像の比率・位置ぶれが退行しない |
 | Top/Middle/Bottomへ命中 | 命中した1体と弾だけが消える。DriverのScoreが30/20/10増える |
 | 隣接個体の境界へ1発、撃破済み個体へ再発射 | 1発で多重撃破・多重加点しない。対象の優先順位は未保証 |
-| 全55体を撃破 | 累計Score=990、WaveClearで約1秒停止、その後Wave=2・55体復帰。同じ個体/Renderer/Shotを使用し、Player位置とScoreを保持 |
+| 全55体を撃破 | 累計Score=990、WaveClearで約1秒停止、その後Wave=2・55体復帰。上段中心の開始Yは184px。同じ個体/Renderer/Shotを使用し、Player位置とScoreを保持 |
 | 弾の飛行中にPause (Attract)→Resume (Playing) | メニュー **Unity Invader > Component Gameplay** を使用。表示・移動・射撃・物理接触が停止し、位置・弾占有・生死を保持して再開。releaseはPlaying中に確認する |
 | Driverのチェックボックスを無効→有効 | 他Componentだけで進行しない。再有効化で現在Stateに応じて再開 |
 | Player/Formation単体のDisable→Enable | 自身と配下の表示/物理が停止し、復帰時に二重生成しない |
 | 30/60/120fpsなどで短く操作 | 実時間あたりの速度に大きな差がないこと。接触frameや左右優先の厳密一致は保証対象外 |
 
 ScoreとWave番号はDriver、生存数はFormationのInspectorで確認できます。Play中の `Verify Component Gameplay Setup` は55体と有効状態/生存集計の一致を確認し、Score・Wave・生存数をConsoleへ出します。観測はEditor側のSerializedObjectを使用し、ゲーム操作・接触の成功を自動検証するものではありません。
+
+Wave開始高さはROMのWave 1=`0x78`と[AlienStartTable](https://www.computerarcheology.com/Arcade/SpaceInvaders/Code.html#AlienStartTable)との差分を、既存Wave 1の上段中心208pxへ加えます。Xは32px、行間隔は16pxのままです。
+
+| Wave | ROM開始Y | 上段中心の論理Y | FormationのワールドY |
+| --- | --- | --- | --- |
+| 1 | 0x78 | 208 | 0.80 |
+| 2 | 0x60 | 184 | 0.56 |
+| 3 | 0x50 | 168 | 0.40 |
+| 4～6 | 0x48 | 160 | 0.32 |
+| 7～9 | 0x40 | 152 | 0.24 |
+| 10 | 0x60 | 184 | 0.56 |
+| 11 | 0x50 | 168 | 0.40 |
+
+以降はWave 2～9を8Wave周期で繰り返します。後日のPlay確認では各Waveへの復帰直後、横端で下降する前にPauseしてFormationのTransform／Rigidbody2DのYを上表と照合します。GameOver後にEnterで開始し、Wave=1・Y=0.80へ戻ること、通常の死亡復帰では高さを保持することも確認します。UFOカウンタの閾値はWave 1初期高さで固定のため、Wave 1では下降後、Wave 2以降では開始直後から進むことを確認します。実施済み／未実施の検証はPR本文を参照してください。
 
 旧GameplaySimulation・表示Push・論理モデル専用のEditor検証/設定メニューは削除しました。新メニューは `ComponentGameplayMigration` と `ComponentGameplayVerification` です。移行のバッチ入口は `-executeMethod UnityInvader.Editor.ComponentGameplayMigration.Migrate`（`-batchmode -quit`）、ログはリポジトリの `Logs/` へ指定します。
 
