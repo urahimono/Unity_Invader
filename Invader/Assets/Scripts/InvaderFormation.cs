@@ -17,6 +17,8 @@ namespace UnityInvader
         private Ufo       _ufo;
         [SerializeField]
         private EnemyDefeatEffects _defeatEffects;
+        [SerializeField]
+        private GameplayAudio _audio;
 
         [SerializeField]
         private EnemyShotController _enemyShots = new EnemyShotController();
@@ -212,6 +214,7 @@ namespace UnityInvader
                     invader.SetPlaying(false);
                     invader.Defeated += NotifyDefeated;
                     _defeatEffects?.Track(invader);
+                    _audio?.Track(invader);
                 }
             }
             return true;

@@ -25,6 +25,7 @@ namespace UnityInvader
         private bool             _shotOccupied;
 
         public event Action HitAccepted;
+        public event Action ShotLaunched;
         public event Action<HitTargetType> ShotResolved;
 
         public HitTargetType TargetType => HitTargetType.Player;
@@ -199,6 +200,10 @@ namespace UnityInvader
             {
                 _pendingFire  = false;
                 _shotOccupied = _shot.TryLaunch((Vector2)position + Vector2.up * (8f * ArcadeViewport.UnitsPerPixel));
+                if (_shotOccupied)
+                {
+                    ShotLaunched?.Invoke();
+                }
             }
         }
     }
