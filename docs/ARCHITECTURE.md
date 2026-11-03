@@ -88,6 +88,14 @@ flowchart TD
 
 `GameplaySimulation`、`PlayerUnit`、`PlayerBody`、`InvaderSlot`、`InvaderFormationSimulation`、旧表示Controller2種、表示/検証スナップショットは削除しました。互換モデルや旧AABB判定は残しません。管理Componentや配列を返すGetterもありません。
 
+### Player死亡演出
+
+ArcadeのPlayerDeathEffectは、既存Player.HitAcceptedを購読して被弾時のPosition値と表示開始時刻を記録し、LateUpdateでDriverが有効かつPlayerDeadの間だけ自作Spriteを表示します。Driverの通知購読順は仮定せず、被弾通知中は描画せずに記録だけ行います。被弾なしでPlayerDead/GameOverへStateを設定しても再生せず、Invader侵攻の直接GameOverでも誤再生しません。Player・Driver・GameplayHudのコードと、被弾判定・残機・復帰・追加残機・待機時間は変更しません。
+
+表示期間は既存PlayerDeadの0.5秒待機に従い、独自の終了待機やState変更を持ちません。Time.timeAsDoubleから2フレームの描画indexだけを選ぶため、新しい非同期処理・CTS・完了通知は不要です。復帰・GameOver・その他Stateへの移行は次のLateUpdateで非表示へ戻します。GameStarting、自身のDisableでは即座に表示要求を破棄し、再Enable時もリセットしてから購読するため古い演出を再開しません。Player/Driverの無効化はLateUpdateで検出して破棄します。ツールバーPauseとTimeScale=0では表示フレームの時計も止まります。
+
+Notion「原作仕様・調査」には2種類の爆発spriteを交互表示する記録がありますが、模様・正確な切替間隔は直接確認できていません。今回はEditor設定ツールが生成する自作16×8模様2枚を緑で描画し、切替間隔0.1秒は暫定の見た目だけの値とします。原作画像を抽出・複製せず、音・無敵時間・新しいゲーム機能は追加しません。Configure Player Death Effectで素材とScene参照を保存します。演出ルートにCollider/Rigidbodyは置かず、既存Player Prefabと当たり判定は維持します。既存の表示分離原則への局所追加としてArchitectureへ記録し、新規ADRは追加しません。
+
 ### 正式HUD
 
 GameplayHudはSceneに保存されたDriver・Score/Lives/GameOverのText参照だけを保持し、公開int/enumの現在値を表示へ反映します。ScoreとLivesは全Stateで表示し、GAME OVERはGameOver時だけ表示します。値を再計算せず、新ゲーム・加点・被弾・GameOverの変更をLateUpdateで読み直すため、通知経路やゲーム状態のコピーは追加しません。参照不足ではHUD自身を停止してエラーを記録し、本編の進行は変更しません。

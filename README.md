@@ -27,6 +27,12 @@ Unity Hubから `Invader/` を指定して、上記バージョンのEditorで�
 
 EditorとDevelopment Buildでは、Gameビュー左上の黒背景に開発用の`DEBUG`表示（State・Lives・Wave）が出ます。GameplayDriverの現在値を直接読み、PlayerDead・GameOver中も表示します。通常の製品ビルドでは描画しません。原作HUDとは別の確認用表示です。保存済みArcadeに設定済みで、再設定は **Unity Invader > Configure Debug Status Overlay** を使います。
 
+## Player死亡演出
+
+自機の被弾時は、その位置に自作の簡易死亡Spriteを2パターンで表示します。表示期間は既存PlayerDeadの0.5秒待機に従い、復帰・GameOverで消えます。Invader侵攻の直接GameOverでは被弾演出を出しません。新ゲームや無効化で古い表示要求を破棄し、再Enableだけでは再生しません。
+
+Notion資料には2種類の爆発spriteを交互表示する記録がありますが、具体的な模様・切替間隔は未照合です。16×8の自作模様と0.1秒切替は暫定表示で、原作を厳密再現したものではありません。音・当たり判定・残機・待機時間は変更しません。再設定はPlay停止中に **Unity Invader > Configure Player Death Effect** を使います。実施済み検証と後日のPlay確認項目はPR本文を参照してください。
+
 ## ゲーム画面HUD
 
 Arcadeには、通常製品ビルドでも表示される正式HUD（上部のSCORE、下部のLIVES、GameOver時のGAME OVER）を保存しています。LIVESは操作中の1機を含む総数です。GameplayDriverの現在値を表示するだけで、得点計算・残機管理・入力は変更しません。配置・内蔵フォントは参考動画未指定の暫定表示で、原作の厳密な見た目を再現済みとは扱いません。
