@@ -43,6 +43,49 @@ EditorとDevelopment Buildでは、Gameビュー左上の黒背景に開発用�
 
 Unityのバージョンは更新後の `Invader/ProjectSettings/ProjectVersion.txt` から読み、標準の `C:\Program Files\Unity\Hub\Editor\<version>\Editor\Unity.exe` を使用します。カスタム配置では、環境変数 `UNITY_EDITOR_PATH` に対応バージョンのUnity.exeのフルパスを設定してください（値自体に引用符は含めません）。例: `D:\Unity Editors\6000.6.4f1\Editor\Unity.exe`。バッチ冒頭の設定例でも指定できますが、追跡ファイルの編集は未コミット変更として検出されるため、環境変数の使用を推奨します。
 
+## Unity CLI Loop（Windowsでのローカルセットアップ）
+
+UnityパッケージはOpenUPMのScoped Registry経由で **3.21.3** に固定しています。以下はユーザーのWindows PCで行う後続手順です。Web版CodexからPCやUnity Editorへ直接接続できることは前提にしていません。[公式手順（V3.21.3）](https://github.com/hatayama/unity-cli-loop/blob/v3.21.3/README_ja.md)も参照してください。
+
+1. Unity Hubから、このブランチの `Invader/` をUnity **6000.6.4f1**で開き、Package Managerの解決とコンパイルの完了を待ちます。Unity CLI Loopが3.21.3になり、Consoleにコンパイルエラーがないことを確認してください。`Packages/packages-lock.json` の更新はUnityに任せ、差分をレビューしてGit管理します。手動で依存関係やハッシュを補完しません。
+2. リポジトリルートでPowerShellを開き、CLIインストーラーを保存して内容を確認します。ダウンロードしただけではインストールされません。
+
+   ```powershell
+   New-Item -ItemType Directory -Force .\Logs | Out-Null
+   Invoke-WebRequest 'https://raw.githubusercontent.com/hatayama/unity-cli-loop/v3.21.3/scripts/install.ps1' -OutFile .\Logs\install-uloop.ps1
+   Get-Content .\Logs\install-uloop.ps1
+   ```
+
+   内容を確認した後、次を実行します。実行ポリシーなどで拒否された場合は、表示された原因を確認してください。
+
+   ```powershell
+   & .\Logs\install-uloop.ps1
+   ```
+
+   CLI本体の既定の配置先は `%LOCALAPPDATA%\Programs\uloop\bin` です。インストーラーの案内に従ってPowerShellを開き直し、`uloop -v` で検出を確認します。グローバルCLIとUnityパッケージのバージョンは別管理で、プロジェクト用runnerはパッケージ由来のpinに従って取得されます。
+3. **リポジトリルートから `Invader/` に移動**して、解決済みパッケージからCodex用Skillsをインストールします。`--root git` により保存先をリポジトリ直下の `.agents/skills/` にします。
+
+   ```powershell
+   Set-Location .\Invader
+   uloop skills install --agents --root git
+   uloop status
+   uloop list
+   ```
+
+   この後も `uloop` は `Invader/` 内で実行してください。Skillsをリポジトリルートから使うエージェントにも、この作業ディレクトリを指定します。`status` が対象Editorの応答可能な状態を返し、`list` がツール一覧を返すことを確認します。失敗した場合は `Window > Unity CLI Loop > Settings` とConsoleを確認してください。
+4. 接続後の最小確認として、次を `Invader/` で実行します。出力ログはリポジトリ直下の `Logs/` に保存します。
+
+   ```powershell
+   uloop compile *> ..\Logs\uloop-compile.log
+   uloop get-logs --max-count 20 *> ..\Logs\uloop-console.log
+   ```
+
+   compileの成功結果とエラーログの有無を確認します。Play Modeの確認は `Assets/Scenes/Bootstrap.unity` を開き、インストールした `uloop-control-play-mode` Skillの手順で再生・停止し、上記「起動方法」のAttract→Enter→Playingを確認してください。コンパイル成功だけをゲームの動作確認とは扱いません。
+
+`LaunchDevelopUnity.bat` はdevelopへ切り替えるため、作業ブランチの導入確認には使わず、Hubから `Invader/` を直接開いてください。developへマージされた後は従来どおり利用できます。バッチ自体の変更はありません。
+
+生成物は、`Invader/.uloop/`（パッケージから自動同期される `project-runner-pin.json` とローカル出力を含む）、`.agents/skills/uloop-*/`、既存の `Library/`・`UserSettings/`、リポジトリ直下の `Logs/` をGit管理しません。pinやSkillsは手編集せず、パッケージ解決・Skillsインストールで再生成します。CLI本体とrunnerキャッシュもPC側で管理します。設定の再現元となるmanifestとUnityが更新したPackage LockはGit管理します。
+
 ## Component版Playingの再生成（通常の起動には不要）
 
 保存済みのScene・Prefabを使用する通常の起動では移行操作は不要です。以下はSceneの再生成が必要な場合だけの手順です。Issue #59では既存のPlayer・Invader・PlayerShotを作り直さず、敵弾だけをEditor APIで追加しました。
