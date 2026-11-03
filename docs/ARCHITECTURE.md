@@ -116,7 +116,7 @@ Issue #89では衝突対象をレイヤーで制限します。Player=8、Invade
 - Player.FixedUpdate：60px/秒相当で左右移動し、端でclamp。受付済みの発射を行う。左右同時押しは従来どおり右優先。
 - Formation.FixedUpdate：生存数Nに対しN/60秒を1移動とし、各FixedUpdateで移動進捗へ `fixedDeltaTime * 60 / N` を加算する（0体では移動しない）。進捗1ごとに一括移動し端数を保持するため、撃破前の時間を新周期で再計算しない。通常は2px横移動。左端反転時に1体なら以降の右行程を3pxとし、左行程は常に2px。右行程中の最後の撃破では次の左端反転まで2pxを維持する。端では8px下降・方向反転し、全個体のA/Bを交換する。開発用F長押しは移動用の経過時間加算だけを10倍にし、既存の各移動・侵食ステップを繰り返す。敵弾専用時計とTime.timeScale / fixedDeltaTimeは変更しない。離した後も処理済みステップを除いた端数だけを引き継ぐ。
 - Shot：Rigidbody2Dが240px/秒相当で上昇。FixedUpdateで画面上端を確認し、OnTriggerEnter2Dで接触対象を処理する。
-- Driver.Update：全滅判定の補完とPlayerDeadの0.5秒待機。WaveClearの1秒待機はDriver所有のUniTaskで行う。次WaveではLives・Score・Player位置・Shot占有を保持し、編隊を初期化する。停止中の入力は受理せず、次Waveでも停止前の射撃受付状態を保持する。死亡からの復帰では編隊を初期化しない。
+- Driver.Update：入力と全滅判定の補完。WaveClearの1秒待機とPlayerDeadの0.5秒待機はDriver所有のUniTaskで行う。次WaveではLives・Score・Player位置・Shot占有を保持し、編隊を初期化する。停止中の入力は受理せず、次Waveでも停止前の射撃受付状態を保持する。死亡からの復帰では編隊を初期化しない。
 
 ### WaveClearの非同期待機
 
@@ -126,7 +126,15 @@ Issue #89では衝突対象をレイヤーで制限します。Player=8、Invade
 
 Disableではスケール付き`Time.timeAsDouble`の開始時との差分を残時間から差し引いて保存し、待機をキャンセルします。Enableではその残時間で再開し、無効中の時間は差し引きません。別State・新ゲーム・破棄では旧待機を破棄します。Cancel前に現在のSource参照を外し、非同期メソッドのfinallyがSourceをDisposeします。キャンセルは即時通知し、該当tokenによるOperationCanceledExceptionだけを正常終了として扱います。その他の例外はForgetの明示的ハンドラーでLogExceptionしDriverを無効にして進行を止めます。
 
-待機完了後はtoken・現在のSourceとの一致・初期化済み・有効・WaveClearを確認し、Formation.BeginWave→Player.ResetShotHistory→Shield4基.BeginWave→Wave番号加算→Playingの順で一度だけ実行します。得点確定・WaveClear遷移の同期順と、PlayerDeadの時計は維持します。
+待機完了後はtoken・現在のSourceとの一致・初期化済み・有効・WaveClearを確認し、Formation.BeginWave→Player.ResetShotHistory→Shield4基.BeginWave→Wave番号加算→Playingの順で一度だけ実行します。得点確定・WaveClear遷移の同期順は維持します。
+
+### PlayerDeadの非同期待機
+
+被弾通知でLivesを減らしてPlayerDeadへ移る同期処理は維持し、進入時にDriverが専用のCTS・残時間0.5秒を用意して一度だけUniTask.Delayを開始します。WaveClearと同じscaled時間・LastUpdate再開を使い、TimeScale=0とツールバーPauseでは進みません。Disableはスケール付き時刻差を残時間から引いてキャンセルし、Enableは残時間で再開します。別State・新規ゲーム・破棄は旧待機をキャンセルします。同じStateの再設定では待機を重複開始・リセットしません。
+
+完了時はtoken・現在のCTSとの一致・初期化・有効・PlayerDeadを確認します。Lives=0ならGameOver、残機があればFormation.PreparePlayerRespawn→Player.Respawn→Playingの順です。Score・Wave・Shield損傷・編隊の生存個体や位置は保持し、BeginWaveや通常弾履歴リセットは行いません。CTSは参照を外してからCancelし、各待機のfinallyでDisposeします。想定キャンセル以外は共通のHandleStateWaitExceptionで記録してDriverを無効にします。
+
+共通化は例外ハンドラーに留め、WaveClearとPlayerDeadの待機・残時間・完了処理は専用メソッドで管理します。既存WaveClearの時計・初期化順・キャンセル方式を変えず、汎用Timer等は追加しません。PlayerDeadも旧Update方式に対して、作成フレームの加算スキップ、Update内からLastUpdateへの再開位置変更、Disable境界の時刻差とfloat加算の丸めにより、通常約1フレーム・物理step単位の差があり得ます。実測はPRの検証結果を参照してください。既存の非同期原則の適用であり、新規ADRは追加しません。
 
 厳密なフレーム一致は保証しません。旧Update方式は遷移フレームのdeltaTimeも加算し得ますが、UniTask 2.5.11のDelayは作成フレームを加算しないため、通常約1フレーム後ろへずれ得ます。再開も旧Driver.Update内からLastUpdateへ変わります。Disable境界の残時間はフレーム単位のスケール付き時刻差で保存し、Delay内部のfloat加算や旧方式の`1e-7f`許容とは丸め・境界フレームが異なり得ます。Physics2D内の通知から開始した場合は開始時刻が固定時間の値となるため、その差も物理step／フレーム単位に量子化されます。実測確認はPRの検証結果を参照してください。このDriver内に閉じた待機の変更は既存の非同期設計原則の適用として記録し、新しい汎用時計やADRは追加しません。
 

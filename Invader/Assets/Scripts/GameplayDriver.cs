@@ -28,13 +28,16 @@ namespace UnityInvader
         private int              _lives        = 3;
 
         private PlayerInputReader _input;
-        private float             _playerDeadElapsed;
         private bool              _initialized;
         private bool              _initializationAttempted;
 
         private CancellationTokenSource _waveClearCancellation;
         private double                  _waveClearRemaining;
         private double                  _waveClearStartedAt;
+
+        private CancellationTokenSource _playerDeadCancellation;
+        private double                  _playerDeadRemaining;
+        private double                  _playerDeadStartedAt;
 
         // Provisional death wait; exact animation/video timing is a later task.
         private const float PlayerDeadDelay = 0.5f;
@@ -65,12 +68,14 @@ namespace UnityInvader
             {
                 ApplyPlayingState();
                 StartWaveClearWait();
+                StartPlayerDeadWait();
             }
         }
 
         private void OnDisable()
         {
             SuspendWaveClearWait();
+            SuspendPlayerDeadWait();
             _input?.Dispose();
             _input = null;
             if (_initialized)
@@ -84,6 +89,7 @@ namespace UnityInvader
         private void OnDestroy()
         {
             CancelWaveClearWait();
+            CancelPlayerDeadWait();
             if (_initialized)
             {
                 _player.HitAccepted -= NotifyPlayerHit;
@@ -109,7 +115,6 @@ namespace UnityInvader
                 return;
             }
             _lives--;
-            _playerDeadElapsed = 0f;
             ChangeState(GameState.PlayerDead);
         }
 
@@ -161,7 +166,6 @@ namespace UnityInvader
             }
             _player.SetInput(_input.Read());
             TryEnterWaveClear();
-            UpdatePlayerDead();
         }
 
         private void TryEnterWaveClear()
@@ -207,6 +211,7 @@ namespace UnityInvader
         private void BeginNewGame()
         {
             CancelWaveClearWait();
+            CancelPlayerDeadWait();
             // Reuse initialized owners; do not recreate objects or subscribe a second time.
             _player.SetPlaying(false);
             _formation.SetPlaying(false);
@@ -216,7 +221,7 @@ namespace UnityInvader
             _waveNumber         = 1;
             _lives              = 3;
             _waveClearRemaining = 0.0;
-            _playerDeadElapsed  = 0f;
+            _playerDeadRemaining = 0.0;
             _player.Respawn();
             _player.ResetShotHistory();
             _formation.BeginWave();
@@ -250,7 +255,7 @@ namespace UnityInvader
             }
             _waveClearCancellation = new CancellationTokenSource();
             _waveClearStartedAt = Time.timeAsDouble;
-            WaitForNextWaveAsync(_waveClearCancellation).Forget(HandleWaveClearException);
+            WaitForNextWaveAsync(_waveClearCancellation).Forget(HandleStateWaitException);
         }
 
         private async UniTask WaitForNextWaveAsync(CancellationTokenSource inCancellation)
@@ -311,31 +316,80 @@ namespace UnityInvader
             // The async owner disposes its source in finally, including on cancellation.
         }
 
-        private void HandleWaveClearException(Exception inException)
+        private void HandleStateWaitException(Exception inException)
         {
             Debug.LogException(inException, this);
             enabled = false;
         }
 
-        private void UpdatePlayerDead()
+        private void StartPlayerDeadWait()
         {
-            if (_initialized == false || _currentState != GameState.PlayerDead)
+            if (_initialized == false || isActiveAndEnabled == false ||
+                _currentState != GameState.PlayerDead || _playerDeadCancellation != null)
             {
                 return;
             }
-            _playerDeadElapsed += Time.deltaTime;
-            if (_playerDeadElapsed + 1e-7f < PlayerDeadDelay)
+            _playerDeadCancellation = new CancellationTokenSource();
+            _playerDeadStartedAt = Time.timeAsDouble;
+            WaitForPlayerDeadAsync(_playerDeadCancellation).Forget(HandleStateWaitException);
+        }
+
+        private async UniTask WaitForPlayerDeadAsync(CancellationTokenSource inCancellation)
+        {
+            CancellationToken token = inCancellation.Token;
+            try
             {
-                return;
+                // Match the WaveClear clock and continuation phase; keep the outcomes separate.
+                await UniTask.Delay(TimeSpan.FromSeconds(_playerDeadRemaining),
+                    ignoreTimeScale: false, delayTiming: PlayerLoopTiming.LastUpdate,
+                    cancellationToken: token, cancelImmediately: true);
+                if (token.IsCancellationRequested || _playerDeadCancellation != inCancellation ||
+                    _initialized == false || isActiveAndEnabled == false || _currentState != GameState.PlayerDead)
+                {
+                    return;
+                }
+                _playerDeadCancellation = null;
+                _playerDeadRemaining = 0.0;
+                if (_lives == 0)
+                {
+                    ChangeState(GameState.GameOver);
+                    return;
+                }
+                _formation.PreparePlayerRespawn();
+                _player.Respawn();
+                ChangeState(GameState.Playing);
             }
-            if (_lives == 0)
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
-                ChangeState(GameState.GameOver);
-                return;
+                // State exit, Disable and destruction are expected cancellation paths.
             }
-            _formation.PreparePlayerRespawn();
-            _player.Respawn();
-            ChangeState(GameState.Playing);
+            finally
+            {
+                if (_playerDeadCancellation == inCancellation)
+                {
+                    _playerDeadCancellation = null;
+                }
+                inCancellation.Dispose();
+            }
+        }
+
+        private void SuspendPlayerDeadWait()
+        {
+            if (_playerDeadCancellation != null)
+            {
+                _playerDeadRemaining = Math.Max(0.0,
+                    _playerDeadRemaining - Math.Max(0.0, Time.timeAsDouble - _playerDeadStartedAt));
+            }
+            CancelPlayerDeadWait();
+        }
+
+        private void CancelPlayerDeadWait()
+        {
+            CancellationTokenSource cancellation = _playerDeadCancellation;
+            // Cancel may synchronously execute the async finally; detach first.
+            _playerDeadCancellation = null;
+            cancellation?.Cancel();
+            // WaitForPlayerDeadAsync owns Dispose, including the cancellation path.
         }
 
         private void ChangeState(GameState inNextState)
@@ -343,11 +397,14 @@ namespace UnityInvader
             if (_currentState != inNextState)
             {
                 CancelWaveClearWait();
+                CancelPlayerDeadWait();
                 _waveClearRemaining = inNextState == GameState.WaveClear ? WaveClearDelay : 0.0;
+                _playerDeadRemaining = inNextState == GameState.PlayerDead ? PlayerDeadDelay : 0.0;
             }
             _currentState = inNextState;
             ApplyPlayingState();
             StartWaveClearWait();
+            StartPlayerDeadWait();
         }
 
         private void ApplyPlayingState()
