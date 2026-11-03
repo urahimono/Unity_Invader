@@ -27,6 +27,14 @@ Unity Hubから `Invader/` を指定して、上記バージョンのEditorで�
 
 EditorとDevelopment Buildでは、Gameビュー左上の黒背景に開発用の`DEBUG`表示（State・Lives・Wave）が出ます。GameplayDriverの現在値を直接読み、PlayerDead・GameOver中も表示します。通常の製品ビルドでは描画しません。原作HUDとは別の確認用表示です。保存済みArcadeに設定済みで、再設定は **Unity Invader > Configure Debug Status Overlay** を使います。
 
+## ゲーム画面HUD
+
+Arcadeには、通常製品ビルドでも表示される正式HUD（上部のSCORE、下部のLIVES、GameOver時のGAME OVER）を保存しています。LIVESは操作中の1機を含む総数です。GameplayDriverの現在値を表示するだけで、得点計算・残機管理・入力は変更しません。配置・内蔵フォントは参考動画未指定の暫定表示で、原作の厳密な見た目を再現済みとは扱いません。
+
+既存のDEBUG表示とは独立しています。見た目を確認する際は必要に応じてPlay中のDebugStatusOverlayだけを無効にできます。正式HUDの再設定は、Play停止中に **Unity Invader > Configure Gameplay HUD** を実行します。ArcadeのHUDだけを配置・設定して保存するため、ゲーム本編の再生成は不要です。
+
+確認は、BootstrapからPlay→AttractでSCORE 0／LIVES 3／GAME OVER非表示→Enterで開始→撃破による加点→被弾によるLIVES減少→GameOverでGAME OVER表示→Enterの新ゲームで0／3・GAME OVER非表示へ戻る順に行います。DEBUG無効でも正式HUDが更新され、横長・縦長のGameビューでもカメラの224:256領域内に収まることを確認してください。実施済み・未実施の範囲はPR本文を参照します。
+
 ## Windowsでdevelopを更新してUnityを起動する
 
 ルートの `LaunchDevelopUnity.bat` をダブルクリックすると、作業ツリーを確認し、`develop` へ切り替えて `git pull --ff-only origin develop` を実行した後、`Invader/` をUnity Editorで開きます。GitがPATH上で使用でき、originへアクセスできる必要があります。

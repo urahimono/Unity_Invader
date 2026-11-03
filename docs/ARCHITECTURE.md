@@ -20,7 +20,7 @@ BootstrapはStartから一度だけ非同期読み込みを起動し、開始済
 
 待機はScene読み込み要求の完了まで継続する方針で、staticな非同期メソッドは完了後にBootstrapやArcadeの状態を操作しません。UniTask 2.5.11のToUniTaskは既定UpdateでのisDone確認に加えてAsyncOperation.completed通知でも完了するため、特定のPlayerLoop位置やArcadeのAwake/Startとの新しい順序保証は追加しません。読み込みの所要フレームは同期方式と異なり得ます。Bootstrap→Arcade→初期化成功後Attract→EnterでPlayingという契約と2Scene構成は維持します。Play停止時のエンジン側の読み込み終了を独自に制御せず、停止・再実行の実確認状況はPRに記録します。既存の非同期設計原則を局所適用するため新規ADRは追加しません。
 
-1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食、Issue #79でUFO、Issue #81でInvader侵攻によるGameOverを追加しています。待機デモ・追加残機/Lives HUD・HighScore保存は未実装です。弾の相殺と爆発待機は実装済みですが、精密な視覚再現は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md)・[UFO](UFO.md)・[侵攻GameOver](GAME_OVER.md) を参照してください。
+1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食、Issue #79でUFO、Issue #81でInvader侵攻によるGameOverを追加しています。待機デモ・追加残機・HighScore保存は未実装です。弾の相殺と爆発待機は実装済みですが、精密な視覚再現は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md)・[UFO](UFO.md)・[侵攻GameOver](GAME_OVER.md) を参照してください。
 
 ## 1P開始とGameOver後の新規ゲーム（Issue #131）
 
@@ -72,6 +72,7 @@ flowchart TD
 | Component | 所有する責務・状態 |
 | --- | --- |
 | GameplayDriver | 入力Readerと全体進行・State・Score・Wave・Livesを所有。PlayerのHitAcceptedとShotResolvedを購読し、更新済みの終了履歴からUFO得点を導出。得点表を所有し、加点後とUpdateでFormation.IsClearedを確認。WaveClearの暫定1秒待機とPlayerDeadの暫定0.5秒待機を管理。PlayerShot参照・終了履歴は持たない |
+| GameplayHud | Arcadeの専用Canvas上で、DriverのScore・Lives・CurrentStateをOnEnable/LateUpdateに読み、uGUI Textへ反映する。状態・得点・残機の管理や入力処理は持たず、通常製品ビルドでも表示する |
 | Shield | 各基の画素占有を所有し、描画・穴通過・方向別局所破壊を担当。弾の移動区間とInvader Colliderのswept boundsを既存Triggerで検索し、残存画素を判定・消去。死亡・停止時は保持、次Waveで初期画像から復元 |
 | DebugCarpetBomb | Editor/Development Build限定のB長押し入力、専用PlayerShot 96発の遅延生成・再利用、23レーンの一巡シャッフル。DriverのState/Waveを読み、非Playing・Driver無効・Wave変更・自身の無効化で専用弾を回収。生成時にFlightEndedを一度購読し、Driverの共通NotifyShotResolvedへ命中種別を渡す。破棄時に解除し、Playerの通常終了履歴には加算しない。Score・全滅・Wave進行はDriverへ任せる。製品ビルドにも型とScene参照は残すが入力・生成・結果通知処理は含めない |
 | DebugFormationSpeed | Formationと同じGameObjectでF長押しを読み、Editor/Development Build限定の内部操作で移動経過時間の倍率を10/1へ設定。FixedUpdate実行順-100でFormationより先に反映し、自身またはFormation無効時は1へ戻す。製品ビルドにも型は残すが入力・倍率処理は含めない |
@@ -86,6 +87,14 @@ flowchart TD
 | ArcadeViewport | 224:256の表示領域と論理px→Unity単位の倍率 |
 
 `GameplaySimulation`、`PlayerUnit`、`PlayerBody`、`InvaderSlot`、`InvaderFormationSimulation`、旧表示Controller2種、表示/検証スナップショットは削除しました。互換モデルや旧AABB判定は残しません。管理Componentや配列を返すGetterもありません。
+
+### 正式HUD
+
+GameplayHudはSceneに保存されたDriver・Score/Lives/GameOverのText参照だけを保持し、公開int/enumの現在値を表示へ反映します。ScoreとLivesは全Stateで表示し、GAME OVERはGameOver時だけ表示します。値を再計算せず、新ゲーム・加点・被弾・GameOverの変更をLateUpdateで読み直すため、通知経路やゲーム状態のコピーは追加しません。参照不足ではHUD自身を停止してエラーを記録し、本編の進行は変更しません。
+
+Canvasは224×256、倍率0.01のWorld Spaceとしてカメラ内のゲーム領域に合わせます。テキストは入力を受け取らず、EventSystemや新しいパッケージは不要です。既存のDebugStatusOverlayはコード・Scene設定とも変更せず、独立して有効／無効にできます。Editor APIのConfigure Gameplay HUDでHUDだけを配置・参照設定してArcadeへ保存します。
+
+現在の白文字・Unity内蔵フォント・上部Score／下部Lives／中央GAME OVERの配置は、参考動画が未指定のため原作一致を未確認の暫定表示です。Livesは既存仕様どおり操作中の1機を含む総数を数値表示します。原作フォントや予備機アイコン、HighScore、追加残機などは追加しません。既存の値読み取り原則に従う表示追加としてArchitectureへ記録し、新規ADRは追加しません。
 
 ### DebugCarpetBombの連続発射
 
