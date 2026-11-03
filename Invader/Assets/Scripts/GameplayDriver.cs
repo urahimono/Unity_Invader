@@ -57,6 +57,7 @@ namespace UnityInvader
         private bool _developmentStartPlaying;
 
         internal event System.Action GameStarting;
+        internal event Action<int> UfoScoreAwarded;
 
         public GameState CurrentState => _currentState;
 
@@ -157,6 +158,10 @@ namespace UnityInvader
             {
                 _extraLifeAwarded = true;
                 _lives++;
+            }
+            if (inTargetType == HitTargetType.Ufo)
+            {
+                UfoScoreAwarded?.Invoke(_score - previousScore);
             }
             TryEnterWaveClear();
         }
