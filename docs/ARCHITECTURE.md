@@ -12,9 +12,13 @@ Issue #124では初期化失敗を例外ではなく成功・失敗の値で扱�
 
 | Scene | 役割 |
 | --- | --- |
-| Bootstrap | StartでArcadeをSingleロード。今回変更なし |
+| Bootstrap | StartでArcadeをLoadSceneAsyncのSingleモードで読み込み、UniTaskで完了を待つ |
 | Arcade | Driver、Player、単一PlayerShot、Formation、Rolling/Plunger/Squiggly各1個のEnemyShot、単一Ufo、Shield4基、カメラ |
 | SampleScene | 既存サンプル。今回変更なし |
+
+BootstrapはStartから一度だけ非同期読み込みを起動し、開始済みフラグで同じインスタンスからの再起動を防ぎます。`LoadSceneAsync`を`ToUniTask()`で変換してawaitし、例外は`Forget(Debug.LogException)`でUnity Consoleへ記録します。読み込みに失敗しても自動リトライしません。Single遷移によるBootstrap破棄は正常なため、破棄・Disableによる待機キャンセルやCTSは導入しません。CancellationTokenで待機を中断してもUnityのScene読み込みそのものを取り消せるとは扱いません。
+
+待機はScene読み込み要求の完了まで継続する方針で、staticな非同期メソッドは完了後にBootstrapやArcadeの状態を操作しません。UniTask 2.5.11のToUniTaskは既定UpdateでのisDone確認に加えてAsyncOperation.completed通知でも完了するため、特定のPlayerLoop位置やArcadeのAwake/Startとの新しい順序保証は追加しません。読み込みの所要フレームは同期方式と異なり得ます。Bootstrap→Arcade→初期化成功後Attract→EnterでPlayingという契約と2Scene構成は維持します。Play停止時のエンジン側の読み込み終了を独自に制御せず、停止・再実行の実確認状況はPRに記録します。既存の非同期設計原則を局所適用するため新規ADRは追加しません。
 
 1P専用・クレジットなしです。Issue #61のPlayer被弾、Issue #63のLives・復帰・GameOverに加え、Issue #69でShield4基の弾による画素破壊とWave復元、Issue #71でInvader Colliderによる画素侵食、Issue #79でUFO、Issue #81でInvader侵攻によるGameOverを追加しています。待機デモ・追加残機/Lives HUD・HighScore保存は未実装です。弾の相殺と爆発待機は実装済みですが、精密な視覚再現は未実装です。検証状況は [Lives・復帰](LIVES.md) と [Shield](SHIELDS.md)・[UFO](UFO.md)・[侵攻GameOver](GAME_OVER.md) を参照してください。
 
