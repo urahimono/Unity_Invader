@@ -9,6 +9,8 @@
 # Unity CLI Loop: package-derived skills, runner pin and local output.
 /.agents/skills/uloop-*/
 /Invader/.uloop/
+# Unity Package Manager local registry selection and draft state.
+/Invader/ProjectSettings/PackageManagerSettings.asset
 /[Ll]ibrary/
 /[Tt]emp/
 /[Oo]bj/
